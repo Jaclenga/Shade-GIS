@@ -59,6 +59,10 @@ def save_shading_data(df: pd.DataFrame) -> None:
     df.loc[:, ["stop_id", "shading"]].to_csv(SHADE_FILE, index=False)
 
 
+def format_stop_option(stop_id: str, stop_name: str) -> str:
+    return f"{stop_name} ({stop_id})"
+
+
 def _hash_password(password: str) -> str:
     return hashlib.sha256(password.encode("utf-8")).hexdigest()
 
@@ -150,6 +154,7 @@ def build_deck_chart(df: pd.DataFrame):
     layer = pdk.Layer(
         "ScatterplotLayer",
         data=df,
+        id="stops_layer",
         get_position="[stop_lon, stop_lat]",
         get_fill_color="fill_color",
         get_radius=90,
@@ -158,7 +163,7 @@ def build_deck_chart(df: pd.DataFrame):
         pickable=True,
         auto_highlight=True,
     )
-    return pdk.Deck(initial_view_state=view_state, layers=[layer])
+    return pdk.Deck(initial_view_state=view_state, layers=[layer], tooltip={"text": "{stop_name} ({stop_id})\nShading: {shading}"})
 
 
 def main():
@@ -180,6 +185,41 @@ def main():
 
     stops = load_stops()
     counts = stops["shading"].value_counts().reindex(SHADING_STATUS, fill_value=0)
+    stop_options = [format_stop_option(row["stop_id"], row["stop_name"]) for _, row in stops.iterrows()]
+    if stop_options:
+        st.session_state.setdefault("vote_stop", stop_options[0])
+        st.session_state.setdefault("manual_stop", stop_options[0])
+
+    st.subheader("Map of Tampa Bus Stops")
+    st.write("Use the map to explore stops; colors represent current shading status.")
+    map_selection = st.pydeck_chart(
+        build_deck_chart(stops),
+        on_select="rerun",
+        selection_mode="single-object",
+        key="stops_map",
+    )
+
+    if map_selection is not None:
+        selected = None
+        selection_objects = getattr(map_selection.selection, "objects", {})
+        layer_objects = selection_objects.get("stops_layer") if isinstance(selection_objects, dict) else None
+        if layer_objects:
+            selected = layer_objects[0].get("stop_id")
+        if selected is None:
+            selected_indices = getattr(map_selection.selection, "indices", {})
+            layer_indices = selected_indices.get("stops_layer") if isinstance(selected_indices, dict) else None
+            if layer_indices:
+                selected = stops.iloc[int(layer_indices[0])]["stop_id"]
+
+        if selected is not None:
+            selected_option = next(
+                (opt for opt in stop_options if opt.endswith(f"({selected})")),
+                None,
+            )
+            if selected_option is not None:
+                st.session_state["vote_stop"] = selected_option
+                st.session_state["manual_stop"] = selected_option
+
     with st.sidebar:
         st.header("Account")
         if st.session_state["user"] is None:
@@ -235,6 +275,7 @@ def main():
                 stops.loc[stops["stop_id"] == stop_id, "shading"] = shading_choice
                 save_shading_data(stops)
                 st.success(f"Saved {shading_choice} for stop {stop_select}")
+                st.experimental_rerun()
 
         st.write("---")
         st.subheader("Upload shading data")
@@ -254,6 +295,7 @@ def main():
                         stops["shading"] = stops["shading"].fillna("Unknown")
                         save_shading_data(stops)
                         st.success("Uploaded shading data and saved locally.")
+                        st.experimental_rerun()
                 except Exception as exc:
                     st.error(f"Unable to process upload: {exc}")
 
@@ -262,26 +304,6 @@ def main():
             st.info("Admin accounts are required to set shading manually or upload shading corrections.")
         st.write("---")
         st.info("A local file named `shading_data.csv` is created in the app folder when shading is saved.")
-        uploaded = st.file_uploader("Upload CSV with stop_id, shading", type=["csv"], key="uploader")
-        if uploaded is not None:
-            try:
-                uploaded_df = pd.read_csv(uploaded, dtype={"stop_id": str})
-                if "shading" not in uploaded_df.columns:
-                    st.error("Uploaded file must contain 'stop_id' and 'shading' columns.")
-                else:
-                    stops = stops.drop(columns=["shading"]).merge(uploaded_df.loc[:, ["stop_id", "shading"]], on="stop_id", how="left")
-                    stops["shading"] = stops["shading"].fillna("Unknown")
-                    save_shading_data(stops)
-                    st.success("Uploaded shading data and saved locally.")
-            except Exception as exc:
-                st.error(f"Unable to process upload: {exc}")
-
-        st.write("---")
-        st.info("A local file named `shading_data.csv` is created in the app folder when shading is saved.")
-
-    st.subheader("Map of Tampa Bus Stops")
-    st.write("Use the map to explore stops; colors represent current shading status.")
-    st.pydeck_chart(build_deck_chart(stops))
 
     # Voting controls for logged-in users
     st.sidebar.write("---")
