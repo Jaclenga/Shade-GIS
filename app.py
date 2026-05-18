@@ -1,6 +1,8 @@
 import hashlib
+import os
 import time
 from datetime import datetime
+from typing import Optional
 
 import pandas as pd
 import pydeck as pdk
@@ -11,6 +13,7 @@ DATA_PATH = Path(__file__).parent / "stops.txt"
 SHADE_FILE = Path(__file__).parent / "shading_data.csv"
 USERS_FILE = Path(__file__).parent / "users.csv"
 VOTES_FILE = Path(__file__).parent / "shading_votes.csv"
+ADMIN_REGISTRATION_CODE = os.environ.get("ADMIN_REGISTRATION_CODE", "adminpass")
 SHADING_STATUS = ["Unknown", "Shaded", "No Shade"]
 COLOR_MAP = {
     "Shaded": [34, 139, 34],
@@ -62,17 +65,47 @@ def _hash_password(password: str) -> str:
 
 def load_users() -> pd.DataFrame:
     if USERS_FILE.exists():
-        return pd.read_csv(USERS_FILE, dtype={"username": str, "password_hash": str})
-    return pd.DataFrame(columns=["username", "password_hash"])
+        users = pd.read_csv(USERS_FILE, dtype={"username": str, "password_hash": str})
+        if "role" not in users.columns:
+            users["role"] = "user"
+        return users
+    return pd.DataFrame(columns=["username", "password_hash", "role"])
 
 
-def save_user(username: str, password: str) -> None:
+def save_user(username: str, password: str, role: str = "user", admin_code: Optional[str] = None) -> None:
     users = load_users()
     password_hash = _hash_password(password)
     if username in users["username"].values:
         raise ValueError("User already exists")
-    users = pd.concat([users, pd.DataFrame([{"username": username, "password_hash": password_hash}])], ignore_index=True)
+    role = role.lower()
+    if role == "admin":
+        if admin_code != ADMIN_REGISTRATION_CODE:
+            raise ValueError("Invalid admin registration code")
+    users = pd.concat(
+        [
+            users,
+            pd.DataFrame(
+                [
+                    {
+                        "username": username,
+                        "password_hash": password_hash,
+                        "role": role,
+                    }
+                ]
+            ),
+        ],
+        ignore_index=True,
+    )
     users.to_csv(USERS_FILE, index=False)
+
+
+def get_user_role(username: str) -> str:
+    users = load_users()
+    row = users[users["username"] == username]
+    if row.empty:
+        return "user"
+    role = row.iloc[0].get("role", "user")
+    return str(role) if pd.notna(role) else "user"
 
 
 def authenticate(username: str, password: str) -> bool:
@@ -143,35 +176,44 @@ def main():
     # simple session-based user tracking
     if "user" not in st.session_state:
         st.session_state["user"] = None
+        st.session_state["user_role"] = "user"
 
     stops = load_stops()
     counts = stops["shading"].value_counts().reindex(SHADING_STATUS, fill_value=0)
     with st.sidebar:
         st.header("Account")
         if st.session_state["user"] is None:
-            auth_mode = st.selectbox("Action", ["Login", "Register"])
+            auth_mode = st.selectbox("Action", ["Login", "Register"], key="auth_mode")
             username = st.text_input("Username", key="auth_user")
             password = st.text_input("Password", key="auth_pass", type="password")
+            role_selection = "User"
+            admin_code = None
+            if auth_mode == "Register":
+                role_selection = st.selectbox("Register as", ["User", "Admin"], key="auth_role")
+                if role_selection == "Admin":
+                    admin_code = st.text_input("Admin registration code", key="auth_admin_code", type="password")
             if st.button("Submit", key="auth_submit"):
                 if not username or not password:
                     st.error("Please provide username and password.")
                 else:
                     try:
                         if auth_mode == "Register":
-                            save_user(username, password)
+                            save_user(username, password, role=role_selection, admin_code=admin_code)
                             st.success("Registered. You can now log in.")
                         else:
                             if authenticate(username, password):
                                 st.session_state["user"] = username
+                                st.session_state["user_role"] = get_user_role(username)
                                 st.success(f"Logged in as {username}")
                             else:
                                 st.error("Invalid username or password.")
                     except Exception as exc:
                         st.error(f"Auth error: {exc}")
         else:
-            st.markdown(f"**Logged in as:** {st.session_state['user']}")
+            st.markdown(f"**Logged in as:** {st.session_state['user']} ({st.session_state['user_role']})")
             if st.button("Log out"):
                 st.session_state["user"] = None
+                st.session_state["user_role"] = "user"
 
         st.write("---")
         st.header("Shading status")
@@ -180,16 +222,46 @@ def main():
 
         st.write("---")
         st.subheader("Update a stop (manual)")
-        stop_select = st.selectbox("Choose stop", stops["stop_name"] + " (" + stops["stop_id"] + ")", key="manual_stop")
-        shading_choice = st.selectbox("Shading status", SHADING_STATUS, key="manual_choice")
-        if st.button("Save shading status", key="manual_save"):
-            stop_id = stop_select.split("(")[-1].replace(")", "")
-            stops.loc[stops["stop_id"] == stop_id, "shading"] = shading_choice
-            save_shading_data(stops)
-            st.success(f"Saved {shading_choice} for stop {stop_select}")
+        is_admin = st.session_state["user_role"] == "admin"
+        if not st.session_state.get("user"):
+            st.info("Log in as an admin to update stop shading manually.")
+        elif not is_admin:
+            st.warning("Manual shading updates are available to admin accounts only.")
+        else:
+            stop_select = st.selectbox("Choose stop", stops["stop_name"] + " (" + stops["stop_id"] + ")", key="manual_stop")
+            shading_choice = st.selectbox("Shading status", SHADING_STATUS, key="manual_choice")
+            if st.button("Save shading status", key="manual_save"):
+                stop_id = stop_select.split("(")[-1].replace(")", "")
+                stops.loc[stops["stop_id"] == stop_id, "shading"] = shading_choice
+                save_shading_data(stops)
+                st.success(f"Saved {shading_choice} for stop {stop_select}")
 
         st.write("---")
         st.subheader("Upload shading data")
+        if not st.session_state.get("user"):
+            st.info("Log in to upload shading files.")
+        elif not is_admin:
+            st.warning("File uploads for shading data are available to admin accounts only.")
+        else:
+            uploaded = st.file_uploader("Upload CSV with stop_id, shading", type=["csv"], key="uploader")
+            if uploaded is not None:
+                try:
+                    uploaded_df = pd.read_csv(uploaded, dtype={"stop_id": str})
+                    if "shading" not in uploaded_df.columns:
+                        st.error("Uploaded file must contain 'stop_id' and 'shading' columns.")
+                    else:
+                        stops = stops.drop(columns=["shading"]).merge(uploaded_df.loc[:, ["stop_id", "shading"]], on="stop_id", how="left")
+                        stops["shading"] = stops["shading"].fillna("Unknown")
+                        save_shading_data(stops)
+                        st.success("Uploaded shading data and saved locally.")
+                except Exception as exc:
+                    st.error(f"Unable to process upload: {exc}")
+
+        if not st.session_state.get("user") or not is_admin:
+            st.write("---")
+            st.info("Admin accounts are required to set shading manually or upload shading corrections.")
+        st.write("---")
+        st.info("A local file named `shading_data.csv` is created in the app folder when shading is saved.")
         uploaded = st.file_uploader("Upload CSV with stop_id, shading", type=["csv"], key="uploader")
         if uploaded is not None:
             try:
