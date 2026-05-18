@@ -34,3 +34,41 @@ If you move the file, update the `DATA_PATH` constant in `app.py`.
 - The map color codes: green = shaded, red = no shade, gray = unknown.
 - You can update individual stops in the sidebar.
 - You can upload a CSV file with `stop_id, shading` to bulk import shading statuses.
+
+## Login and voting (crowdsourced)
+
+- Register a simple account in the sidebar and log in to cast votes for stops.
+- Each logged-in user may cast one vote per stop (`Shaded` or `No Shade`).
+- Votes are saved to `shading_votes.csv` in the app folder.
+- If a stop accumulates 100 or more total votes, the majority vote will automatically set the stop's shading in `shading_data.csv` unless the votes are an exact tie (50/50), in which case the shading remains `Unknown`.
+
+Note: This is a minimal local authentication system for prototyping and is not secure for production. For deployment, replace with a proper auth backend.
+
+## Postgres (optional): local database for stops, users, votes
+
+The project includes a `docker-compose.yml` and SQL schema to run Postgres locally and populate the `stops` table.
+
+1. Start Postgres with Docker Compose:
+
+```bash
+docker-compose up -d
+```
+
+2. Install database Python deps and run the init script to load `stops.txt`:
+
+```bash
+pip install -r requirements.txt
+python scripts/init_db.py
+```
+
+3. The Postgres database defaults are:
+
+- host: `localhost`
+- port: `5432`
+- db: `tampa_shade`
+- user: `postgres`
+- password: `postgres`
+
+You can change these via environment variables `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD` before running the init script.
+
+Integration note: `app.py` currently uses local CSV files by default. I can update it to use Postgres for users/votes/shading if you'd like — tell me and I'll wire it up.
