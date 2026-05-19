@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS stops (
   stop_name TEXT,
   stop_lat DOUBLE PRECISION,
   stop_lon DOUBLE PRECISION,
-  shading TEXT DEFAULT 'Unknown'
+  shading TEXT DEFAULT 'Unknown' CHECK (shading IN ('Unknown', 'No Shade', 'Natural Shade', 'Manmade Shade'))
 );
 
 CREATE TABLE IF NOT EXISTS users (

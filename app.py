@@ -14,12 +14,35 @@ SHADE_FILE = Path(__file__).parent / "shading_data.csv"
 USERS_FILE = Path(__file__).parent / "users.csv"
 VOTES_FILE = Path(__file__).parent / "shading_votes.csv"
 ADMIN_REGISTRATION_CODE = os.environ.get("ADMIN_REGISTRATION_CODE", "adminpass")
-SHADING_STATUS = ["Unknown", "Shaded", "No Shade"]
+SHADING_STATUS = ["Unknown", "Natural Shade", "Manmade Shade", "No Shade"]
+VALID_SHADING_VALUES = set(SHADING_STATUS)
+LEGACY_SHADING_MAP = {
+    "shaded": "Natural Shade",
+    "natural shade": "Natural Shade",
+    "manmade shade": "Manmade Shade",
+    "no shade": "No Shade",
+    "unknown": "Unknown",
+}
 COLOR_MAP = {
-    "Shaded": [34, 139, 34],
+    "Natural Shade": [34, 139, 34],
+    "Manmade Shade": [70, 130, 180],
     "No Shade": [220, 20, 60],
     "Unknown": [128, 128, 128],
 }
+
+
+def normalize_shading_value(value: str) -> str:
+    if pd.isna(value):
+        return "Unknown"
+    value = str(value).strip()
+    if not value:
+        return "Unknown"
+    normalized = LEGACY_SHADING_MAP.get(value.lower())
+    if normalized:
+        return normalized
+    if value in VALID_SHADING_VALUES:
+        return value
+    return value
 
 
 def load_stops() -> pd.DataFrame:
@@ -29,6 +52,7 @@ def load_stops() -> pd.DataFrame:
     if SHADE_FILE.exists():
         shading = pd.read_csv(SHADE_FILE, dtype={"stop_id": str})
         shading = shading.loc[:, ["stop_id", "shading"]].drop_duplicates(subset=["stop_id"])
+        shading["shading"] = shading["shading"].apply(normalize_shading_value)
         df = df.merge(shading, on="stop_id", how="left", suffixes=("", "_saved"))
         df["shading"] = df["shading_saved"].fillna(df["shading"]) if "shading_saved" in df.columns else df["shading"]
         df = df.drop(columns=[col for col in df.columns if col.endswith("_saved")])
@@ -41,13 +65,28 @@ def load_stops() -> pd.DataFrame:
         total = agg.sum(axis=1)
         for stop_id, row in agg.iterrows():
             t = int(total.loc[stop_id])
-            shaded = int(row.get("Shaded", 0))
+            natural = int(row.get("Natural Shade", 0))
+            manmade = int(row.get("Manmade Shade", 0))
             noshade = int(row.get("No Shade", 0))
             if t >= 100:
-                if shaded > noshade:
-                    df.loc[df["stop_id"] == stop_id, "shading"] = "Shaded"
-                elif noshade > shaded:
-                    df.loc[df["stop_id"] == stop_id, "shading"] = "No Shade"
+                winner = max(
+                    [
+                        (natural, "Natural Shade"),
+                        (manmade, "Manmade Shade"),
+                        (noshade, "No Shade"),
+                    ],
+                    key=lambda x: x[0],
+                )
+                top_counts = [
+                    v for v, _ in [
+                        (natural, "Natural Shade"),
+                        (manmade, "Manmade Shade"),
+                        (noshade, "No Shade"),
+                    ]
+                    if v == winner[0]
+                ]
+                if len(top_counts) == 1:
+                    df.loc[df["stop_id"] == stop_id, "shading"] = winner[1]
                 else:
                     df.loc[df["stop_id"] == stop_id, "shading"] = "Unknown"
 
@@ -56,7 +95,9 @@ def load_stops() -> pd.DataFrame:
 
 
 def save_shading_data(df: pd.DataFrame) -> None:
-    df.loc[:, ["stop_id", "shading"]].to_csv(SHADE_FILE, index=False)
+    saved = df.loc[:, ["stop_id", "shading"]].copy()
+    saved["shading"] = saved["shading"].apply(normalize_shading_value)
+    saved.to_csv(SHADE_FILE, index=False)
 
 
 def format_stop_option(stop_id: str, stop_name: str) -> str:
@@ -122,15 +163,34 @@ def authenticate(username: str, password: str) -> bool:
 
 def load_votes() -> pd.DataFrame:
     if VOTES_FILE.exists():
-        return pd.read_csv(VOTES_FILE, dtype={"stop_id": str, "user": str, "vote": str, "ts": float})
+        votes = pd.read_csv(VOTES_FILE, dtype={"stop_id": str, "user": str, "vote": str, "ts": float})
+        if "vote" in votes.columns:
+            votes["vote"] = votes["vote"].apply(normalize_shading_value)
+        return votes
     return pd.DataFrame(columns=["stop_id", "user", "vote", "ts"])
 
 
 def save_vote(stop_id: str, user: str, vote: str) -> None:
     votes = load_votes()
+    vote = normalize_shading_value(vote)
     # allow one vote per user per stop; overwrite any existing
     votes = votes[~((votes["stop_id"] == stop_id) & (votes["user"] == user))]
-    votes = pd.concat([votes, pd.DataFrame([{"stop_id": stop_id, "user": user, "vote": vote, "ts": time.time()}])], ignore_index=True)
+    votes = pd.concat(
+        [
+            votes,
+            pd.DataFrame(
+                [
+                    {
+                        "stop_id": stop_id,
+                        "user": user,
+                        "vote": vote,
+                        "ts": time.time(),
+                    }
+                ]
+            ),
+        ],
+        ignore_index=True,
+    )
     votes.to_csv(VOTES_FILE, index=False)
 
 
@@ -138,7 +198,8 @@ def get_vote_counts(stop_id: str):
     votes = load_votes()
     sel = votes[votes["stop_id"] == stop_id]
     return {
-        "Shaded": int((sel["vote"] == "Shaded").sum()),
+        "Natural Shade": int((sel["vote"] == "Natural Shade").sum()),
+        "Manmade Shade": int((sel["vote"] == "Manmade Shade").sum()),
         "No Shade": int((sel["vote"] == "No Shade").sum()),
         "Total": len(sel),
     }
@@ -258,7 +319,14 @@ def main():
         st.write("---")
         st.header("Shading status")
         st.write("Counts of current stop states")
-        st.write({"Shaded": int(counts["Shaded"]), "No Shade": int(counts["No Shade"]), "Unknown": int(counts["Unknown"])})
+        st.write(
+            {
+                "Natural Shade": int(counts["Natural Shade"]),
+                "Manmade Shade": int(counts["Manmade Shade"]),
+                "No Shade": int(counts["No Shade"]),
+                "Unknown": int(counts["Unknown"]),
+            }
+        )
 
         st.write("---")
         st.subheader("Update a stop (manual)")
@@ -275,7 +343,6 @@ def main():
                 stops.loc[stops["stop_id"] == stop_id, "shading"] = shading_choice
                 save_shading_data(stops)
                 st.success(f"Saved {shading_choice} for stop {stop_select}")
-                st.experimental_rerun()
 
         st.write("---")
         st.subheader("Upload shading data")
@@ -291,11 +358,18 @@ def main():
                     if "shading" not in uploaded_df.columns:
                         st.error("Uploaded file must contain 'stop_id' and 'shading' columns.")
                     else:
-                        stops = stops.drop(columns=["shading"]).merge(uploaded_df.loc[:, ["stop_id", "shading"]], on="stop_id", how="left")
-                        stops["shading"] = stops["shading"].fillna("Unknown")
-                        save_shading_data(stops)
-                        st.success("Uploaded shading data and saved locally.")
-                        st.experimental_rerun()
+                        uploaded_df["shading"] = uploaded_df["shading"].apply(normalize_shading_value)
+                        invalid = uploaded_df.loc[~uploaded_df["shading"].isin(VALID_SHADING_VALUES), "shading"]
+                        if not invalid.empty:
+                            st.error(
+                                "Uploaded file must contain valid shading values: "
+                                + ", ".join(SHADING_STATUS)
+                            )
+                        else:
+                            stops = stops.drop(columns=["shading"]).merge(uploaded_df.loc[:, ["stop_id", "shading"]], on="stop_id", how="left")
+                            stops["shading"] = stops["shading"].fillna("Unknown")
+                            save_shading_data(stops)
+                            st.success("Uploaded shading data and saved locally.")
                 except Exception as exc:
                     st.error(f"Unable to process upload: {exc}")
 
@@ -309,34 +383,45 @@ def main():
     st.sidebar.write("---")
     st.sidebar.header("Vote on a stop")
     vote_stop = st.sidebar.selectbox("Select stop to vote", stops["stop_name"] + " (" + stops["stop_id"] + ")", key="vote_stop")
+    stop_id = vote_stop.split("(")[-1].replace(")", "")
     if st.session_state.get("user") is None:
         st.sidebar.info("Log in to cast votes.")
     else:
-        vote_choice = st.sidebar.radio("Your vote", ["Shaded", "No Shade"], index=0, key="vote_choice")
+        vote_choice = st.sidebar.radio("Your vote", ["Natural Shade", "Manmade Shade", "No Shade"], index=0, key="vote_choice")
         if st.sidebar.button("Submit vote", key="vote_submit"):
-            stop_id = vote_stop.split("(")[-1].replace(")", "")
             save_vote(stop_id, st.session_state["user"], vote_choice)
             st.sidebar.success("Vote recorded.")
             # check threshold and apply if necessary
             counts = get_vote_counts(stop_id)
             if counts["Total"] >= 100:
-                if counts["Shaded"] > counts["No Shade"]:
-                    # update manual shading
-                    stops.loc[stops["stop_id"] == stop_id, "shading"] = "Shaded"
-                elif counts["No Shade"] > counts["Shaded"]:
-                    stops.loc[stops["stop_id"] == stop_id, "shading"] = "No Shade"
-                else:
-                    stops.loc[stops["stop_id"] == stop_id, "shading"] = "Unknown"
-                save_shading_data(stops)
-
-        # display current vote counts for selected stop
-        stop_id = vote_stop.split("(")[-1].replace(")", "")
-        vc = get_vote_counts(stop_id)
-        st.sidebar.markdown(f"**Votes:** {vc['Total']} (Shaded: {vc['Shaded']}, No Shade: {vc['No Shade']})")
+                winner = max(
+                    [
+                        (counts["Natural Shade"], "Natural Shade"),
+                        (counts["Manmade Shade"], "Manmade Shade"),
+                        (counts["No Shade"], "No Shade"),
+                    ],
+                    key=lambda x: x[0],
+                )
+                top_counts = [
+                    v for v, label in [
+                        (counts["Natural Shade"], "Natural Shade"),
+                        (counts["Manmade Shade"], "Manmade Shade"),
+                        (counts["No Shade"], "No Shade"),
+                    ]
+                    if v == winner[0]
+                ]
+                if len(top_counts) == 1:
+                    stops.loc[stops["stop_id"] == stop_id, "shading"] = winner[1]
+                    save_shading_data(stops)
+    vc = get_vote_counts(stop_id)
+    st.sidebar.markdown(
+        f"**Votes:** {vc['Total']} (Natural Shade: {vc['Natural Shade']}, Manmade Shade: {vc['Manmade Shade']}, No Shade: {vc['No Shade']})"
+    )
 
     st.markdown("### Legend")
     st.markdown(
-        "- **Shaded**: green marker\n"
+        "- **Natural Shade**: green marker\n"
+        "- **Manmade Shade**: steel blue marker\n"
         "- **No Shade**: red marker\n"
         "- **Unknown**: gray marker"
     )

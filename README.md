@@ -31,16 +31,16 @@ The app reads from the GTFS stops file at:
 If you move the file, update the `DATA_PATH` constant in `app.py`.
 
 ## Shading tracking
-- The map color codes: green = shaded, red = no shade, gray = unknown.
+- The map color codes: green = natural shade, blue = manmade shade, red = no shade, gray = unknown.
 - You can update individual stops in the sidebar.
-- You can upload a CSV file with `stop_id, shading` to bulk import shading statuses.
+- You can upload a CSV file with `stop_id, shading` to bulk import shading statuses. Valid shading values are `Unknown`, `Natural Shade`, `Manmade Shade`, and `No Shade`.
 
 ## Login and voting (crowdsourced)
 
 - Register a simple account in the sidebar and log in to cast votes for stops.
 - Users can submit shading votes, while admin accounts can also manually set stop shading and upload shading CSV files.
 - Admin registration requires the admin code from `ADMIN_REGISTRATION_CODE` in your environment (default: `adminpass`).
-- Each logged-in user may cast one vote per stop (`Shaded` or `No Shade`).
+- Each logged-in user may cast one vote per stop (`Natural Shade`, `Manmade Shade`, or `No Shade`).
 - Votes are saved to `shading_votes.csv` in the app folder.
 - If a stop accumulates 100 or more total votes, the majority vote will automatically set the stop's shading in `shading_data.csv` unless the votes are an exact tie (50/50), in which case the shading remains `Unknown`.
 
