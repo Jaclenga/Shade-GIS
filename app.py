@@ -33,7 +33,7 @@ COLOR_MAP = {
 APP_TITLE = "Tampa Bus Stops Shade Map"
 STUDY_SUMMARY = "Visualizing bus stop shade for a more comfortable and resilient transit system"
 DATA_CITATION = (
-    "Hillsborough Area Regional Transit. (Year). General Transit Feed Specification (GTFS) "
+    "Hillsborough Area Regional Transit. (2026). General Transit Feed Specification (GTFS) "
     "data feed [Data set]. Retrieved June 17, 2026, from the HART GTFS feed."
 )
 NAV_PAGES = ["Voting", "About"]
