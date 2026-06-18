@@ -1,76 +1,67 @@
 # Tampa Bus Shade Web App
 
-This app visualizes Tampa bus stops from the GTFS `stops.txt` file and prepares the project for future shading data collection.
+Streamlit app for visualizing bus stop shading to provide better insights on Tampa's transport, using Tampa-area GTFS stop data and lightweight anonymous shade votes.
 
-## Files
-- `app.py`: Streamlit web app that loads `stops.txt`, displays the stops on a map, and saves shading annotations locally.
-- `requirements.txt`: Python dependencies for the app.
-- `shading_data.csv`: generated local file with shading states once you save updates.
+## What it does
 
-## How to run
+- Displays Tampa bus stops on an interactive PyDeck map.
+- Colors stops by current shade status: natural shade, manmade shade, no shade, or unknown.
+- Lets each browser session submit one anonymous vote per stop.
+- Applies a stop's shade status automatically once it reaches 5 valid votes.
+- Uses the majority vote as the status; if top statuses are tied, the tied status with the oldest vote wins.
+- Saves runtime votes to `shading_votes.csv` and saved shade status to `shading_data.csv`.
 
-1. Install dependencies:
+## About the study
+
+This study focuses on visualizing bus stop shading to provide better insights on Tampa's transport. The app uses GTFS stop locations together with community shading votes to support exploratory analysis, fieldwork planning, and transit-focused discussion.
+
+Citation when referencing the GTFS source:
+`Hillsborough Area Regional Transit. (Year). General Transit Feed Specification (GTFS) data feed [Data set]. Retrieved June 17, 2026, from the HART GTFS feed.`
+
+## Run locally
 
 ```bash
 pip install -r requirements.txt
-```
-
-2. Run the app:
-
-```bash
 streamlit run app.py
 ```
 
-3. Open the local URL printed by Streamlit in your browser.
+The app reads `stops.txt` from this project directory. The committed `shading_data.csv` is used as seed shade data.
 
-## Data source
-The app reads from the GTFS stops file at:
+## Deploy
 
-`C:\Users\jack3\OneDrive\Documents\Data_Sci\tampa_bus\stops.txt`
+This repo is ready for a basic Streamlit deployment using:
 
-If you move the file, update the `DATA_PATH` constant in `app.py`.
+- main file: `app.py`
+- Python dependencies: `requirements.txt`
 
-## Shading tracking
-- The map color codes: green = natural shade, blue = manmade shade, red = no shade, gray = unknown.
-- You can update individual stops in the sidebar.
-- You can upload a CSV file with `stop_id, shading` to bulk import shading statuses. Valid shading values are `Unknown`, `Natural Shade`, `Manmade Shade`, and `No Shade`.
+The app writes votes and updated shade status to local CSV files. On hosts with ephemeral or read-only source directories, set `APP_DATA_DIR` to a writable directory or mounted volume:
 
-## Login and voting (crowdsourced)
+```bash
+APP_DATA_DIR=/tmp/tampa-shade streamlit run app.py
+```
 
-- Register a simple account in the sidebar and log in to cast votes for stops.
-- Users can submit shading votes, while admin accounts can also manually set stop shading and upload shading CSV files.
-- Admin registration requires the admin code from `ADMIN_REGISTRATION_CODE` in your environment (default: `adminpass`).
-- Each logged-in user may cast one vote per stop (`Natural Shade`, `Manmade Shade`, or `No Shade`).
-- Votes are saved to `shading_votes.csv` in the app folder.
-- If a stop accumulates 100 or more total votes, the majority vote will automatically set the stop's shading in `shading_data.csv` unless the votes are an exact tie (50/50), in which case the shading remains `Unknown`.
+Without persistent storage, votes recorded after deployment may be lost when the app restarts.
 
-Note: This is a minimal local authentication system for prototyping and is not secure for production. For deployment, replace with a proper auth backend.
+## Optional Postgres setup
 
-## Postgres (optional): local database for stops, users, votes
+Postgres is only used by the database initialization script; the Streamlit app currently uses CSV files at runtime.
 
-The project includes a `docker-compose.yml` and SQL schema to run Postgres locally and populate the `stops` table.
-
-1. Start Postgres with Docker Compose:
+1. Start Postgres:
 
 ```bash
 docker-compose up -d
 ```
 
-2. Install database Python deps and run the init script to load `stops.txt`:
+2. Install the optional database dependencies:
 
 ```bash
-pip install -r requirements.txt
+pip install -r requirements-db.txt
+```
+
+3. Load the stops table:
+
+```bash
 python scripts/init_db.py
 ```
 
-3. The Postgres database defaults are:
-
-- host: `localhost`
-- port: `5432`
-- db: `tampa_shade`
-- user: `postgres`
-- password: `postgres`
-
-You can change these via environment variables `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD` before running the init script.
-
-Integration note: `app.py` currently uses local CSV files by default. I can update it to use Postgres for users/votes/shading if you'd like — tell me and I'll wire it up.
+Default connection values are `localhost:5432`, database `tampa_shade`, user `postgres`, and password `postgres`. Override them with `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, and `PGPASSWORD`.

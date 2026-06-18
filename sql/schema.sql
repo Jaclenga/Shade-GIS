@@ -18,8 +18,8 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS votes (
   id SERIAL PRIMARY KEY,
   stop_id TEXT REFERENCES stops(stop_id),
-  username TEXT REFERENCES users(username),
-  vote TEXT CHECK (vote IN ('Shaded', 'No Shade')),
+  voter_id TEXT NOT NULL,
+  vote TEXT CHECK (vote IN ('Natural Shade', 'Manmade Shade', 'No Shade')),
   ts TIMESTAMP DEFAULT now(),
-  UNIQUE (stop_id, username)
+  UNIQUE (stop_id, voter_id)
 );

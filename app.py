@@ -1,21 +1,22 @@
-import hashlib
 import os
 import time
-from datetime import datetime
-from typing import Optional
+import uuid
+from pathlib import Path
 
 import pandas as pd
 import pydeck as pdk
 import streamlit as st
-from pathlib import Path
 
-DATA_PATH = Path(__file__).parent / "stops.txt"
-SHADE_FILE = Path(__file__).parent / "shading_data.csv"
-USERS_FILE = Path(__file__).parent / "users.csv"
-VOTES_FILE = Path(__file__).parent / "shading_votes.csv"
-ADMIN_REGISTRATION_CODE = os.environ.get("ADMIN_REGISTRATION_CODE", "adminpass")
+APP_DIR = Path(__file__).parent
+DATA_DIR = Path(os.environ.get("APP_DATA_DIR", APP_DIR))
+DATA_PATH = APP_DIR / "stops.txt"
+SEED_SHADE_FILE = APP_DIR / "shading_data.csv"
+SHADE_FILE = DATA_DIR / "shading_data.csv"
+VOTES_FILE = DATA_DIR / "shading_votes.csv"
 SHADING_STATUS = ["Unknown", "Natural Shade", "Manmade Shade", "No Shade"]
 VALID_SHADING_VALUES = set(SHADING_STATUS)
+VOTE_OPTIONS = ["Natural Shade", "Manmade Shade", "No Shade"]
+VOTE_THRESHOLD = 5
 LEGACY_SHADING_MAP = {
     "shaded": "Natural Shade",
     "natural shade": "Natural Shade",
@@ -29,6 +30,12 @@ COLOR_MAP = {
     "No Shade": [220, 20, 60],
     "Unknown": [128, 128, 128],
 }
+APP_TITLE = "Tampa Bus Stops Shade Map"
+STUDY_SUMMARY = "Visualizing bus stop shading to provide better insights on Tampa's transport."
+DATA_CITATION = (
+    "Hillsborough Area Regional Transit. (Year). General Transit Feed Specification (GTFS) "
+    "data feed [Data set]. Retrieved June 17, 2026, from the HART GTFS feed."
+)
 
 
 def normalize_shading_value(value: str) -> str:
@@ -42,59 +49,45 @@ def normalize_shading_value(value: str) -> str:
         return normalized
     if value in VALID_SHADING_VALUES:
         return value
-    return value
+    return "Unknown"
+
+
+def get_readable_shading_file() -> Path:
+    return SHADE_FILE if SHADE_FILE.exists() else SEED_SHADE_FILE
 
 
 def load_stops() -> pd.DataFrame:
     df = pd.read_csv(DATA_PATH, dtype={"stop_id": str})
+    if df.empty:
+        return df
+
     df["shading"] = "Unknown"
     # apply manual saved shading first
-    if SHADE_FILE.exists():
-        shading = pd.read_csv(SHADE_FILE, dtype={"stop_id": str})
-        shading = shading.loc[:, ["stop_id", "shading"]].drop_duplicates(subset=["stop_id"])
-        shading["shading"] = shading["shading"].apply(normalize_shading_value)
-        df = df.merge(shading, on="stop_id", how="left", suffixes=("", "_saved"))
-        df["shading"] = df["shading_saved"].fillna(df["shading"]) if "shading_saved" in df.columns else df["shading"]
-        df = df.drop(columns=[col for col in df.columns if col.endswith("_saved")])
+    shading_file = get_readable_shading_file()
+    if shading_file.exists():
+        shading = pd.read_csv(shading_file, dtype={"stop_id": str})
+        if {"stop_id", "shading"}.issubset(shading.columns):
+            shading = shading.loc[:, ["stop_id", "shading"]].drop_duplicates(subset=["stop_id"])
+            shading["shading"] = shading["shading"].apply(normalize_shading_value)
+            df = df.merge(shading, on="stop_id", how="left", suffixes=("", "_saved"))
+            if "shading_saved" in df.columns:
+                df["shading"] = df["shading_saved"].fillna(df["shading"])
+            df = df.drop(columns=[col for col in df.columns if col.endswith("_saved")])
 
     # now apply aggregated votes if present
     if VOTES_FILE.exists():
         votes = load_votes()
-        # compute vote counts per stop
-        agg = votes.groupby(["stop_id", "vote"]).size().unstack(fill_value=0)
-        total = agg.sum(axis=1)
-        for stop_id, row in agg.iterrows():
-            t = int(total.loc[stop_id])
-            natural = int(row.get("Natural Shade", 0))
-            manmade = int(row.get("Manmade Shade", 0))
-            noshade = int(row.get("No Shade", 0))
-            if t >= 100:
-                winner = max(
-                    [
-                        (natural, "Natural Shade"),
-                        (manmade, "Manmade Shade"),
-                        (noshade, "No Shade"),
-                    ],
-                    key=lambda x: x[0],
-                )
-                top_counts = [
-                    v for v, _ in [
-                        (natural, "Natural Shade"),
-                        (manmade, "Manmade Shade"),
-                        (noshade, "No Shade"),
-                    ]
-                    if v == winner[0]
-                ]
-                if len(top_counts) == 1:
-                    df.loc[df["stop_id"] == stop_id, "shading"] = winner[1]
-                else:
-                    df.loc[df["stop_id"] == stop_id, "shading"] = "Unknown"
+        for stop_id, stop_votes in votes.groupby("stop_id"):
+            winner = get_vote_decision(stop_votes)
+            if winner is not None:
+                df.loc[df["stop_id"] == stop_id, "shading"] = winner
 
     df["fill_color"] = df["shading"].map(COLOR_MAP)
     return df
 
 
 def save_shading_data(df: pd.DataFrame) -> None:
+    SHADE_FILE.parent.mkdir(parents=True, exist_ok=True)
     saved = df.loc[:, ["stop_id", "shading"]].copy()
     saved["shading"] = saved["shading"].apply(normalize_shading_value)
     saved.to_csv(SHADE_FILE, index=False)
@@ -104,61 +97,10 @@ def format_stop_option(stop_id: str, stop_name: str) -> str:
     return f"{stop_name} ({stop_id})"
 
 
-def _hash_password(password: str) -> str:
-    return hashlib.sha256(password.encode("utf-8")).hexdigest()
-
-
-def load_users() -> pd.DataFrame:
-    if USERS_FILE.exists():
-        users = pd.read_csv(USERS_FILE, dtype={"username": str, "password_hash": str})
-        if "role" not in users.columns:
-            users["role"] = "user"
-        return users
-    return pd.DataFrame(columns=["username", "password_hash", "role"])
-
-
-def save_user(username: str, password: str, role: str = "user", admin_code: Optional[str] = None) -> None:
-    users = load_users()
-    password_hash = _hash_password(password)
-    if username in users["username"].values:
-        raise ValueError("User already exists")
-    role = role.lower()
-    if role == "admin":
-        if admin_code != ADMIN_REGISTRATION_CODE:
-            raise ValueError("Invalid admin registration code")
-    users = pd.concat(
-        [
-            users,
-            pd.DataFrame(
-                [
-                    {
-                        "username": username,
-                        "password_hash": password_hash,
-                        "role": role,
-                    }
-                ]
-            ),
-        ],
-        ignore_index=True,
-    )
-    users.to_csv(USERS_FILE, index=False)
-
-
-def get_user_role(username: str) -> str:
-    users = load_users()
-    row = users[users["username"] == username]
-    if row.empty:
-        return "user"
-    role = row.iloc[0].get("role", "user")
-    return str(role) if pd.notna(role) else "user"
-
-
-def authenticate(username: str, password: str) -> bool:
-    users = load_users()
-    row = users[users["username"] == username]
-    if row.empty:
-        return False
-    return row.iloc[0]["password_hash"] == _hash_password(password)
+def get_or_create_voter_id() -> str:
+    if "voter_id" not in st.session_state:
+        st.session_state["voter_id"] = str(uuid.uuid4())
+    return st.session_state["voter_id"]
 
 
 def load_votes() -> pd.DataFrame:
@@ -171,8 +113,11 @@ def load_votes() -> pd.DataFrame:
 
 
 def save_vote(stop_id: str, user: str, vote: str) -> None:
+    VOTES_FILE.parent.mkdir(parents=True, exist_ok=True)
     votes = load_votes()
     vote = normalize_shading_value(vote)
+    if vote not in VOTE_OPTIONS:
+        raise ValueError("Invalid vote")
     # allow one vote per user per stop; overwrite any existing
     votes = votes[~((votes["stop_id"] == stop_id) & (votes["user"] == user))]
     votes = pd.concat(
@@ -197,12 +142,38 @@ def save_vote(stop_id: str, user: str, vote: str) -> None:
 def get_vote_counts(stop_id: str):
     votes = load_votes()
     sel = votes[votes["stop_id"] == stop_id]
-    return {
+    counts = {
         "Natural Shade": int((sel["vote"] == "Natural Shade").sum()),
         "Manmade Shade": int((sel["vote"] == "Manmade Shade").sum()),
         "No Shade": int((sel["vote"] == "No Shade").sum()),
-        "Total": len(sel),
     }
+    counts["Total"] = sum(counts.values())
+    return counts
+
+
+def get_vote_decision(votes: pd.DataFrame) -> str | None:
+    valid_votes = votes[votes["vote"].isin(VOTE_OPTIONS)].copy()
+    if len(valid_votes) < VOTE_THRESHOLD:
+        return None
+
+    counts = valid_votes["vote"].value_counts()
+    results = [(int(counts.get(label, 0)), label) for label in VOTE_OPTIONS]
+    winning_count = max(count for count, _ in results)
+    winners = [label for count, label in results if count == winning_count]
+    if len(winners) == 1:
+        return winners[0]
+
+    tied_votes = valid_votes[valid_votes["vote"].isin(winners)].copy()
+    tied_votes["ts"] = pd.to_numeric(tied_votes["ts"], errors="coerce")
+    tied_votes = tied_votes.dropna(subset=["ts"])
+    if tied_votes.empty:
+        return winners[0]
+    return str(tied_votes.sort_values("ts", kind="stable").iloc[0]["vote"])
+
+
+def get_vote_decision_for_stop(stop_id: str) -> str | None:
+    votes = load_votes()
+    return get_vote_decision(votes[votes["stop_id"] == stop_id])
 
 
 def build_deck_chart(df: pd.DataFrame):
@@ -227,24 +198,38 @@ def build_deck_chart(df: pd.DataFrame):
     return pdk.Deck(initial_view_state=view_state, layers=[layer], tooltip={"text": "{stop_name} ({stop_id})\nShading: {shading}"})
 
 
-def main():
-    st.set_page_config(page_title="Tampa Bus Shade Map", layout="wide")
-    st.title("Tampa Bus Stops Shade Map")
+def render_about_page() -> None:
+    st.title("About the Study")
+    st.markdown(STUDY_SUMMARY)
+    st.write(
+        "This project studies how shading conditions at bus stops may affect the transit experience in Tampa. "
+        "The app combines GTFS stop locations with community shading votes so the map can support screening, "
+        "fieldwork planning, and broader transportation insight."
+    )
+    st.markdown("### Data source")
+    st.caption(DATA_CITATION)
+
+
+def render_map_page() -> None:
+    st.title(APP_TITLE)
     st.markdown(
-        "This app visualizes Tampa bus stops and lets you track shading status for future field data collection. "
+        "This app visualizes bus stop shading to provide better insights on Tampa's transport. "
         "Stops are loaded from the GTFS `stops.txt` dataset, and shading status can be saved locally."
     )
+    st.caption(DATA_CITATION)
 
     if not DATA_PATH.exists():
         st.error(f"Could not find stops file at: {DATA_PATH}")
         return
 
-    # simple session-based user tracking
-    if "user" not in st.session_state:
-        st.session_state["user"] = None
-        st.session_state["user_role"] = "user"
+    # lightweight anonymous voting: one readable session identity per browser
+    voter_id = get_or_create_voter_id()
 
     stops = load_stops()
+    if stops.empty:
+        st.warning("No stops were found in the GTFS stops file.")
+        return
+
     counts = stops["shading"].value_counts().reindex(SHADING_STATUS, fill_value=0)
     stop_options = [format_stop_option(row["stop_id"], row["stop_name"]) for _, row in stops.iterrows()]
     if stop_options:
@@ -282,41 +267,6 @@ def main():
                 st.session_state["manual_stop"] = selected_option
 
     with st.sidebar:
-        st.header("Account")
-        if st.session_state["user"] is None:
-            auth_mode = st.selectbox("Action", ["Login", "Register"], key="auth_mode")
-            username = st.text_input("Username", key="auth_user")
-            password = st.text_input("Password", key="auth_pass", type="password")
-            role_selection = "User"
-            admin_code = None
-            if auth_mode == "Register":
-                role_selection = st.selectbox("Register as", ["User", "Admin"], key="auth_role")
-                if role_selection == "Admin":
-                    admin_code = st.text_input("Admin registration code", key="auth_admin_code", type="password")
-            if st.button("Submit", key="auth_submit"):
-                if not username or not password:
-                    st.error("Please provide username and password.")
-                else:
-                    try:
-                        if auth_mode == "Register":
-                            save_user(username, password, role=role_selection, admin_code=admin_code)
-                            st.success("Registered. You can now log in.")
-                        else:
-                            if authenticate(username, password):
-                                st.session_state["user"] = username
-                                st.session_state["user_role"] = get_user_role(username)
-                                st.success(f"Logged in as {username}")
-                            else:
-                                st.error("Invalid username or password.")
-                    except Exception as exc:
-                        st.error(f"Auth error: {exc}")
-        else:
-            st.markdown(f"**Logged in as:** {st.session_state['user']} ({st.session_state['user_role']})")
-            if st.button("Log out"):
-                st.session_state["user"] = None
-                st.session_state["user_role"] = "user"
-
-        st.write("---")
         st.header("Shading status")
         st.write("Counts of current stop states")
         st.write(
@@ -329,94 +279,31 @@ def main():
         )
 
         st.write("---")
-        st.subheader("Update a stop (manual)")
-        is_admin = st.session_state["user_role"] == "admin"
-        if not st.session_state.get("user"):
-            st.info("Log in as an admin to update stop shading manually.")
-        elif not is_admin:
-            st.warning("Manual shading updates are available to admin accounts only.")
-        else:
-            stop_select = st.selectbox("Choose stop", stops["stop_name"] + " (" + stops["stop_id"] + ")", key="manual_stop")
-            shading_choice = st.selectbox("Shading status", SHADING_STATUS, key="manual_choice")
-            if st.button("Save shading status", key="manual_save"):
-                stop_id = stop_select.split("(")[-1].replace(")", "")
-                stops.loc[stops["stop_id"] == stop_id, "shading"] = shading_choice
-                save_shading_data(stops)
-                st.success(f"Saved {shading_choice} for stop {stop_select}")
+        st.info(
+            "Voting is anonymous in this lightweight setup. Each browser session gets a temporary voter ID so you can vote without logging in."
+        )
+        st.caption(f"Session voter ID: {voter_id[:8]}")
 
-        st.write("---")
-        st.subheader("Upload shading data")
-        if not st.session_state.get("user"):
-            st.info("Log in to upload shading files.")
-        elif not is_admin:
-            st.warning("File uploads for shading data are available to admin accounts only.")
-        else:
-            uploaded = st.file_uploader("Upload CSV with stop_id, shading", type=["csv"], key="uploader")
-            if uploaded is not None:
-                try:
-                    uploaded_df = pd.read_csv(uploaded, dtype={"stop_id": str})
-                    if "shading" not in uploaded_df.columns:
-                        st.error("Uploaded file must contain 'stop_id' and 'shading' columns.")
-                    else:
-                        uploaded_df["shading"] = uploaded_df["shading"].apply(normalize_shading_value)
-                        invalid = uploaded_df.loc[~uploaded_df["shading"].isin(VALID_SHADING_VALUES), "shading"]
-                        if not invalid.empty:
-                            st.error(
-                                "Uploaded file must contain valid shading values: "
-                                + ", ".join(SHADING_STATUS)
-                            )
-                        else:
-                            stops = stops.drop(columns=["shading"]).merge(uploaded_df.loc[:, ["stop_id", "shading"]], on="stop_id", how="left")
-                            stops["shading"] = stops["shading"].fillna("Unknown")
-                            save_shading_data(stops)
-                            st.success("Uploaded shading data and saved locally.")
-                except Exception as exc:
-                    st.error(f"Unable to process upload: {exc}")
-
-        if not st.session_state.get("user") or not is_admin:
-            st.write("---")
-            st.info("Admin accounts are required to set shading manually or upload shading corrections.")
-        st.write("---")
-        st.info("A local file named `shading_data.csv` is created in the app folder when shading is saved.")
-
-    # Voting controls for logged-in users
+    # Voting controls for anonymous users
     st.sidebar.write("---")
     st.sidebar.header("Vote on a stop")
     vote_stop = st.sidebar.selectbox("Select stop to vote", stops["stop_name"] + " (" + stops["stop_id"] + ")", key="vote_stop")
     stop_id = vote_stop.split("(")[-1].replace(")", "")
-    if st.session_state.get("user") is None:
-        st.sidebar.info("Log in to cast votes.")
-    else:
-        vote_choice = st.sidebar.radio("Your vote", ["Natural Shade", "Manmade Shade", "No Shade"], index=0, key="vote_choice")
-        if st.sidebar.button("Submit vote", key="vote_submit"):
-            save_vote(stop_id, st.session_state["user"], vote_choice)
-            st.sidebar.success("Vote recorded.")
-            # check threshold and apply if necessary
-            counts = get_vote_counts(stop_id)
-            if counts["Total"] >= 100:
-                winner = max(
-                    [
-                        (counts["Natural Shade"], "Natural Shade"),
-                        (counts["Manmade Shade"], "Manmade Shade"),
-                        (counts["No Shade"], "No Shade"),
-                    ],
-                    key=lambda x: x[0],
-                )
-                top_counts = [
-                    v for v, label in [
-                        (counts["Natural Shade"], "Natural Shade"),
-                        (counts["Manmade Shade"], "Manmade Shade"),
-                        (counts["No Shade"], "No Shade"),
-                    ]
-                    if v == winner[0]
-                ]
-                if len(top_counts) == 1:
-                    stops.loc[stops["stop_id"] == stop_id, "shading"] = winner[1]
-                    save_shading_data(stops)
+
+    vote_choice = st.sidebar.radio("Your vote", VOTE_OPTIONS, index=0, key="vote_choice")
+    if st.sidebar.button("Submit vote", key="vote_submit"):
+        save_vote(stop_id, voter_id, vote_choice)
+        st.sidebar.success("Vote recorded.")
+        # check threshold and apply if necessary
+        winner = get_vote_decision_for_stop(stop_id)
+        if winner is not None:
+            stops.loc[stops["stop_id"] == stop_id, "shading"] = winner
+            save_shading_data(stops)
     vc = get_vote_counts(stop_id)
     st.sidebar.markdown(
         f"**Votes:** {vc['Total']} (Natural Shade: {vc['Natural Shade']}, Manmade Shade: {vc['Manmade Shade']}, No Shade: {vc['No Shade']})"
     )
+    st.sidebar.caption(f"Decision after {VOTE_THRESHOLD} votes. Ties go to the tied status with the oldest vote.")
 
     st.markdown("### Legend")
     st.markdown(
@@ -426,13 +313,25 @@ def main():
         "- **Unknown**: gray marker"
     )
 
-    if SHADE_FILE.exists():
+    shading_file = get_readable_shading_file()
+    if shading_file.exists():
         st.sidebar.download_button(
             "Download shading data",
-            data=SHADE_FILE.read_bytes(),
+            data=shading_file.read_bytes(),
             file_name="shading_data.csv",
             mime="text/csv",
         )
+
+
+def main():
+    st.set_page_config(page_title=APP_TITLE, layout="wide")
+    page = st.sidebar.radio("Page", ["Map", "About"], index=0)
+
+    if page == "About":
+        render_about_page()
+        return
+
+    render_map_page()
 
 
 if __name__ == "__main__":
