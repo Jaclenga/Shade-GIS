@@ -31,11 +31,12 @@ COLOR_MAP = {
     "Unknown": [128, 128, 128],
 }
 APP_TITLE = "Tampa Bus Stops Shade Map"
-STUDY_SUMMARY = "Visualizing bus stop shading to provide better insights on Tampa's transport."
+STUDY_SUMMARY = "Visualizing bus stop shade for a more comfortable and resilient transit system"
 DATA_CITATION = (
     "Hillsborough Area Regional Transit. (Year). General Transit Feed Specification (GTFS) "
     "data feed [Data set]. Retrieved June 17, 2026, from the HART GTFS feed."
 )
+NAV_PAGES = ["Voting", "About"]
 
 
 def normalize_shading_value(value: str) -> str:
@@ -199,14 +200,41 @@ def build_deck_chart(df: pd.DataFrame):
 
 
 def render_about_page() -> None:
-    st.title("About the Study")
-    st.markdown(STUDY_SUMMARY)
-    st.write(
-        "This project studies how shading conditions at bus stops may affect the transit experience in Tampa. "
-        "The app combines GTFS stop locations with community shading votes so the map can support screening, "
-        "fieldwork planning, and broader transportation insight."
+    st.title("Tampa Shade Study")
+    st.markdown(f"### {STUDY_SUMMARY}")
+    st.markdown(
+        """
+        ## About the Study
+
+        Tampa's hot and humid climate can make waiting for transit uncomfortable, particularly at bus stops with
+        limited protection from direct sunlight. Inspired by research from Austin, Texas, examining the relationship
+        between bus stop shade, extreme heat, and transit use, this project explores how shade is distributed across
+        Tampa's bus network and provides a platform for community-driven data collection.
+
+        The Tampa Shade Study combines official bus stop locations from HART's GTFS feed with community-submitted
+        shade observations to create an open map of shade conditions throughout the city. The goal is to support
+        transportation planning, accessibility research, climate resilience initiatives, and public understanding of
+        the rider experience.
+
+        By identifying which stops provide meaningful shade and which do not, the project helps highlight
+        opportunities for tree planting, shelter installation, and other improvements that can make transit more
+        comfortable and accessible for riders.
+
+        ## Data Sources
+
+        - Hillsborough Area Regional Transit (HART) General Transit Feed Specification (GTFS) Data Feed
+        - Community-submitted shade observations and votes
+
+        ## References
+
+        Hillsborough Area Regional Transit. *General Transit Feed Specification (GTFS) Data Feed* [Data set].
+        Retrieved June 17, 2026.
+
+        Lanza, K., & Durand, C. P. (2021). *Heat-Moderating Effects of Bus Stop Shelters and Tree Shade on Public
+        Transport Ridership*. International Journal of Environmental Research and Public Health, 18(2), 463.
+        [https://doi.org/10.3390/ijerph18020463](https://doi.org/10.3390/ijerph18020463)
+        """
     )
-    st.markdown("### Data source")
     st.caption(DATA_CITATION)
 
 
@@ -291,7 +319,7 @@ def render_map_page() -> None:
     stop_id = vote_stop.split("(")[-1].replace(")", "")
 
     vote_choice = st.sidebar.radio("Your vote", VOTE_OPTIONS, index=0, key="vote_choice")
-    if st.sidebar.button("Submit vote", key="vote_submit"):
+    if st.sidebar.button("Submit vote", key="vote_submit", type="primary"):
         save_vote(stop_id, voter_id, vote_choice)
         st.sidebar.success("Vote recorded.")
         # check threshold and apply if necessary
@@ -323,9 +351,133 @@ def render_map_page() -> None:
         )
 
 
+def render_site_header() -> str:
+    current_page = st.session_state.get("page", "Voting")
+    st.markdown(
+        """
+        <style>
+        .site-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.15rem 0 1rem 0;
+        }
+        .site-brand {
+            color: #166534;
+            font-size: 1.2rem;
+            font-weight: 700;
+            letter-spacing: 0;
+            line-height: 1.15;
+        }
+        .site-subtitle {
+            color: #6b7280;
+            font-size: 0.9rem;
+            margin-top: 0.2rem;
+        }
+        .site-nav {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 0.65rem;
+            flex-wrap: wrap;
+        }
+        .stButton button[kind="secondary"] {
+            background: #ffffff;
+            border: 1px solid #d7dee5;
+            border-radius: 999px;
+            color: #1f2937;
+            font-size: 0.95rem;
+            font-weight: 600;
+            min-height: 2.7rem;
+            padding: 0.55rem 1rem;
+            width: 100%;
+        }
+        .stButton button[kind="secondary"]:hover {
+            background: #f8fafc;
+            border-color: #c5d0da;
+            color: #111827;
+        }
+        .stButton button[kind="secondary"]:focus {
+            box-shadow: none;
+        }
+        .stButton button[kind="primary"] {
+            border-radius: 999px;
+            font-weight: 600;
+            min-height: 2.7rem;
+        }
+        .stButton button[kind="primary"] {
+            background: #22c55e;
+            border-color: #22c55e;
+            color: #ffffff;
+            border-radius: 999px;
+            font-weight: 600;
+            min-height: 2.7rem;
+        }
+        .stButton button[kind="primary"]:hover {
+            background: #16a34a;
+            border-color: #16a34a;
+            color: #ffffff;
+        }
+        @media (max-width: 640px) {
+            .site-header {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+            .site-nav {
+                justify-content: flex-start;
+                width: 100%;
+            }
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+    brand_col, spacer_col, voting_col, about_col = st.columns([4.6, 2.2, 1.25, 1.25])
+    with brand_col:
+        st.markdown(
+            """
+            <div class="site-header">
+                <div>
+                    <div class="site-brand">Tampa Shade Study</div>
+                    <div class="site-subtitle">Visualizing bus stop shading for better transit insight</div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with spacer_col:
+        st.markdown("", unsafe_allow_html=True)
+    with voting_col:
+        voting_clicked = st.button(
+            "Voting",
+            key="nav_voting",
+            use_container_width=True,
+            type="primary" if current_page == "Voting" else "secondary",
+        )
+    with about_col:
+        about_clicked = st.button(
+            "About",
+            key="nav_about",
+            use_container_width=True,
+            type="primary" if current_page == "About" else "secondary",
+        )
+
+    if voting_clicked:
+        current_page = "Voting"
+        st.session_state["page"] = current_page
+    elif about_clicked:
+        current_page = "About"
+        st.session_state["page"] = current_page
+    else:
+        st.session_state.setdefault("page", current_page)
+
+    return current_page
+
+
 def main():
     st.set_page_config(page_title=APP_TITLE, layout="wide")
-    page = st.sidebar.radio("Page", ["Map", "About"], index=0)
+    page = render_site_header()
 
     if page == "About":
         render_about_page()
