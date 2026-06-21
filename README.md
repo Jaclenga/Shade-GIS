@@ -4,7 +4,7 @@ Streamlit app for visualizing bus stop shading to provide better insights on Tam
 
 ## What it does
 
-- Displays Tampa bus stops on an interactive PyDeck map.
+- Displays all Tampa-area bus stops in an interactive PyDeck map whose camera and dragging stay within the Tampa region.
 - Colors stops by current shade status: natural shade, manmade shade, no shade, or unknown.
 - Adds four heat-context fields for each stop: weighted HVI, vulnerability category, tree canopy percentage, and median land surface temperature.
 - Lets each browser session submit one anonymous vote per stop.

@@ -94,6 +94,24 @@ DATASET_FIELD_GUIDE = [
     },
 ]
 NAV_PAGES = ["Voting", "About"]
+TAMPA_MAP_VIEW = {
+    "latitude": 27.95,
+    "longitude": -82.40,
+    "zoom": 9.2,
+    "min_zoom": 9.0,
+    "max_zoom": 18,
+}
+TAMPA_MAP_BOUNDS = [[-82.70, 27.60], [-82.10, 28.30]]
+TAMPA_MAP_CONTROLLER = {
+    "dragPan": True,
+    "dragRotate": False,
+    "keyboard": False,
+    "scrollZoom": True,
+    "doubleClickZoom": True,
+    "touchZoom": True,
+    "touchRotate": False,
+    "maxBounds": TAMPA_MAP_BOUNDS,
+}
 
 
 def normalize_shading_value(value: str) -> str:
@@ -355,9 +373,7 @@ def get_vote_decision_for_stop(stop_id: str) -> str | None:
 
 def build_deck_chart(df: pd.DataFrame):
     view_state = pdk.ViewState(
-        latitude=float(df["stop_lat"].mean()),
-        longitude=float(df["stop_lon"].mean()),
-        zoom=11.2,
+        **TAMPA_MAP_VIEW,
         pitch=0,
     )
     layer = pdk.Layer(
@@ -375,6 +391,7 @@ def build_deck_chart(df: pd.DataFrame):
 
     return pdk.Deck(
         initial_view_state=view_state,
+        views=[pdk.View(type="MapView", controller=TAMPA_MAP_CONTROLLER)],
         layers=[layer],
         tooltip={
             "text": (
