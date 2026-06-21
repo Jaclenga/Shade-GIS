@@ -5,6 +5,7 @@ def render_about_page(
     study_summary: str,
     data_citation: str,
     heat_vulnerability_citation: str,
+    heat_vulnerability_metadata_citation: str,
 ) -> None:
     st.title("Tampa Shade Study")
     st.markdown(f"### {study_summary}")
@@ -41,6 +42,19 @@ def render_about_page(
         - Hillsborough County Heat Vulnerability Index ArcGIS Feature Layer
         - Community-submitted shade observations and votes
 
+        ## Dataset Fields Used In The App
+
+        - `shading`: the observed or voted shade condition at the stop itself. This is the most direct measure of
+          what a rider experiences while waiting.
+        - `heat_vulnerability_index`: the county's weighted heat-vulnerability score for the surrounding block
+          group. Higher values indicate greater relative vulnerability.
+        - `heat_vulnerability_label`: the category label paired with the weighted HVI score, such as Least, Low,
+          Moderate, Elevated, or Most Vulnerable.
+        - `tree_canopy_pct`: the estimated share of surrounding tree canopy. Higher values suggest more nearby
+          canopy and potentially more natural cooling in the area.
+        - `lst_median`: the median land surface temperature for the surrounding block group. Higher values suggest
+          hotter nearby surfaces and stronger local heat exposure.
+
         ## References
 
         Hillsborough Area Regional Transit. *General Transit Feed Specification (GTFS) Data Feed* [Data set].
@@ -49,6 +63,10 @@ def render_about_page(
         Hillsborough County. (n.d.). *Heat Vulnerability Index* [Feature layer]. ArcGIS Feature Server.
         Retrieved June 20, 2026, from
         https://services1.arcgis.com/IbNXlmt2RVVRCZ6M/arcgis/rest/services/HeatVulnerabilityIndex/FeatureServer
+
+        Hillsborough County. (n.d.). *Heat Vulnerability Index (FeatureServer)* [Layer metadata].
+        ArcGIS REST Services Directory. Retrieved June 20, 2026, from
+        https://services1.arcgis.com/IbNXlmt2RVVRCZ6M/arcgis/rest/services/HeatVulnerabilityIndex/FeatureServer/0
 
         Lanza, K., & Durand, C. P. (2021). *Heat-Moderating Effects of Bus Stop Shelters and Tree Shade on Public
         Transport Ridership*. International Journal of Environmental Research and Public Health, 18(2), 463.
@@ -62,3 +80,4 @@ def render_about_page(
     )
     st.caption(data_citation)
     st.caption(heat_vulnerability_citation)
+    st.caption(heat_vulnerability_metadata_citation)

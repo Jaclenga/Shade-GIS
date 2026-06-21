@@ -43,6 +43,56 @@ HEAT_VULNERABILITY_CITATION = (
     "Retrieved June 20, 2026, from "
     "https://services1.arcgis.com/IbNXlmt2RVVRCZ6M/arcgis/rest/services/HeatVulnerabilityIndex/FeatureServer"
 )
+HEAT_VULNERABILITY_METADATA_CITATION = (
+    "Hillsborough County. (n.d.). Heat Vulnerability Index (FeatureServer) [Layer metadata]. "
+    "ArcGIS REST Services Directory. Retrieved June 20, 2026, from "
+    "https://services1.arcgis.com/IbNXlmt2RVVRCZ6M/arcgis/rest/services/HeatVulnerabilityIndex/FeatureServer/0"
+)
+HEAT_DATA_COLUMNS = [
+    "heat_vulnerability_index",
+    "heat_vulnerability_label",
+    "tree_canopy_pct",
+    "lst_median",
+]
+HEAT_VULNERABILITY_KEY = [
+    {"Weighted HVI range": "1-2", "Category": "Least Vulnerable"},
+    {"Weighted HVI range": "3-4", "Category": "Low Vulnerability"},
+    {"Weighted HVI range": "5-6", "Category": "Moderate Vulnerability"},
+    {"Weighted HVI range": "7-8", "Category": "Elevated Vulnerability"},
+    {"Weighted HVI range": "9-10", "Category": "Most Vulnerable"},
+]
+DATASET_FIELD_GUIDE = [
+    {
+        "Field": "shading",
+        "What it measures": "Observed or voted shade condition at the stop itself.",
+        "How to read it": "Natural Shade, Manmade Shade, No Shade, or Unknown.",
+        "What it implies": "This is the direct rider experience variable. No Shade suggests the least protection while waiting.",
+    },
+    {
+        "Field": "heat_vulnerability_index",
+        "What it measures": "The county's weighted Heat Vulnerability Index score for the surrounding block group.",
+        "How to read it": "Higher values mean greater relative vulnerability on a 1 to 10 scale.",
+        "What it implies": "High values suggest the stop sits in an area where heat-related risks are more concentrated.",
+    },
+    {
+        "Field": "heat_vulnerability_label",
+        "What it measures": "The county's category label for the weighted HVI score.",
+        "How to read it": "Least, Low, Moderate, Elevated, or Most Vulnerable.",
+        "What it implies": "This makes the HVI easier to interpret on the map without reading the raw number first.",
+    },
+    {
+        "Field": "tree_canopy_pct",
+        "What it measures": "Estimated tree canopy share in the surrounding block group.",
+        "How to read it": "Shown as a percentage; higher values mean more canopy cover nearby.",
+        "What it implies": "Lower canopy can suggest less natural cooling and fewer opportunities for shade in the broader area.",
+    },
+    {
+        "Field": "lst_median",
+        "What it measures": "Median land surface temperature for the surrounding block group.",
+        "How to read it": "Higher values mean hotter ground and built surfaces nearby.",
+        "What it implies": "Higher LST suggests stronger local heat exposure, especially where shade and cooling surfaces are limited.",
+    },
+]
 NAV_PAGES = ["Voting", "About"]
 
 
@@ -64,6 +114,11 @@ def get_readable_shading_file() -> Path:
     return SHADE_FILE if SHADE_FILE.exists() else SEED_SHADE_FILE
 
 
+def normalize_text_column(series: pd.Series) -> pd.Series:
+    values = series.astype("string").str.strip()
+    return values.mask(values == "").fillna("Not available")
+
+
 def load_stops() -> pd.DataFrame:
     df = pd.read_csv(DATA_PATH, dtype={"stop_id": str})
     if df.empty:
@@ -82,25 +137,19 @@ def load_stops() -> pd.DataFrame:
                 df["shading"] = df["shading_saved"].fillna(df["shading"])
             df = df.drop(columns=[col for col in df.columns if col.endswith("_saved")])
 
-        optional_heat_cols = [
-            "heat_vulnerability_index",
-            "heat_vulnerability_label",
-        ]
-        if all(col in shading.columns for col in ["stop_id", *optional_heat_cols]):
-            heat = shading.loc[:, ["stop_id", *optional_heat_cols]].drop_duplicates(subset=["stop_id"])
+        available_heat_cols = [col for col in HEAT_DATA_COLUMNS if col in shading.columns]
+        if available_heat_cols:
+            heat = shading.loc[:, ["stop_id", *available_heat_cols]].drop_duplicates(subset=["stop_id"])
             df = df.merge(heat, on="stop_id", how="left")
 
-    if "heat_vulnerability_index" not in df.columns:
-        df["heat_vulnerability_index"] = pd.NA
-    heat_index = pd.to_numeric(df["heat_vulnerability_index"], errors="coerce")
-    df["heat_vulnerability_index"] = heat_index.apply(
-        lambda value: "Not available" if pd.isna(value) else f"{value:.2f}"
-    )
+    for column in ["heat_vulnerability_index", "tree_canopy_pct", "lst_median"]:
+        if column not in df.columns:
+            df[column] = pd.NA
+        df[column] = pd.to_numeric(df[column], errors="coerce")
 
     if "heat_vulnerability_label" not in df.columns:
         df["heat_vulnerability_label"] = pd.NA
-    heat_label = df["heat_vulnerability_label"].astype("string").str.strip()
-    df["heat_vulnerability_label"] = heat_label.mask(heat_label == "").fillna("Not available")
+    df["heat_vulnerability_label"] = normalize_text_column(df["heat_vulnerability_label"])
 
     # now apply aggregated votes if present
     if VOTES_FILE.exists():
@@ -112,6 +161,105 @@ def load_stops() -> pd.DataFrame:
 
     df["fill_color"] = df["shading"].map(COLOR_MAP)
     return df
+
+
+def format_numeric_value(value: object, decimals: int = 2, suffix: str = "") -> str:
+    if pd.isna(value):
+        return "Not available"
+    return f"{float(value):.{decimals}f}{suffix}"
+
+
+def format_percentage_value(value: object, decimals: int = 1) -> str:
+    if pd.isna(value):
+        return "Not available"
+    return f"{float(value) * 100:.{decimals}f}%"
+
+
+def prepare_map_display_data(df: pd.DataFrame) -> pd.DataFrame:
+    map_df = df.copy()
+    map_df["heat_vulnerability_index_display"] = map_df["heat_vulnerability_index"].apply(
+        lambda value: format_numeric_value(value, decimals=2)
+    )
+    map_df["heat_vulnerability_label_display"] = normalize_text_column(map_df["heat_vulnerability_label"])
+    map_df["tree_canopy_pct_display"] = map_df["tree_canopy_pct"].apply(format_percentage_value)
+    map_df["lst_median_display"] = map_df["lst_median"].apply(
+        lambda value: format_numeric_value(value, decimals=1)
+    )
+    return map_df
+
+
+def build_heat_summary_table(df: pd.DataFrame) -> pd.DataFrame:
+    summary = (
+        df.groupby("shading", dropna=False)
+        .agg(
+            stops=("stop_id", "size"),
+            avg_weighted_hvi=("heat_vulnerability_index", "mean"),
+            avg_tree_canopy_pct=("tree_canopy_pct", "mean"),
+            avg_lst_median=("lst_median", "mean"),
+        )
+        .reindex(SHADING_STATUS)
+        .reset_index()
+    )
+    summary["stops"] = summary["stops"].fillna(0).astype(int)
+    summary["avg_weighted_hvi"] = summary["avg_weighted_hvi"].apply(format_numeric_value)
+    summary["avg_tree_canopy_pct"] = summary["avg_tree_canopy_pct"].apply(format_percentage_value)
+    summary["avg_lst_median"] = summary["avg_lst_median"].apply(
+        lambda value: format_numeric_value(value, decimals=1)
+    )
+    return summary.rename(
+        columns={
+            "shading": "Current shading",
+            "stops": "Stops",
+            "avg_weighted_hvi": "Avg weighted HVI",
+            "avg_tree_canopy_pct": "Avg tree canopy",
+            "avg_lst_median": "Avg median LST",
+        }
+    )
+
+
+def build_priority_stop_table(df: pd.DataFrame, limit: int = 10) -> pd.DataFrame:
+    priority_order = {
+        "No Shade": 0,
+        "Unknown": 1,
+        "Manmade Shade": 2,
+        "Natural Shade": 3,
+    }
+    sortable = df.copy()
+    sortable["priority_group"] = sortable["shading"].map(priority_order).fillna(len(priority_order))
+    sortable = sortable.dropna(subset=["heat_vulnerability_index"])
+    if sortable.empty:
+        return pd.DataFrame()
+
+    sortable = sortable.sort_values(
+        by=["priority_group", "heat_vulnerability_index", "lst_median", "tree_canopy_pct"],
+        ascending=[True, False, False, True],
+        kind="stable",
+    )
+    preview = sortable.head(limit).copy()
+    preview["Weighted HVI"] = preview["heat_vulnerability_index"].apply(format_numeric_value)
+    preview["Tree canopy"] = preview["tree_canopy_pct"].apply(format_percentage_value)
+    preview["Median LST"] = preview["lst_median"].apply(
+        lambda value: format_numeric_value(value, decimals=1)
+    )
+    return preview.loc[
+        :,
+        [
+            "stop_name",
+            "stop_id",
+            "shading",
+            "Weighted HVI",
+            "heat_vulnerability_label",
+            "Tree canopy",
+            "Median LST",
+        ],
+    ].rename(
+        columns={
+            "stop_name": "Stop name",
+            "stop_id": "Stop ID",
+            "shading": "Current shading",
+            "heat_vulnerability_label": "Vulnerability label",
+        }
+    )
 
 
 def save_shading_data(df: pd.DataFrame) -> None:
@@ -232,8 +380,10 @@ def build_deck_chart(df: pd.DataFrame):
             "text": (
                 "{stop_name} ({stop_id})\n"
                 "Shading: {shading}\n"
-                "Heat vulnerability index: {heat_vulnerability_index}\n"
-                "Heat vulnerability label: {heat_vulnerability_label}"
+                "Weighted HVI: {heat_vulnerability_index_display}\n"
+                "Vulnerability label: {heat_vulnerability_label_display}\n"
+                "Tree canopy: {tree_canopy_pct_display}\n"
+                "Median LST: {lst_median_display}"
             )
         },
     )
@@ -258,6 +408,7 @@ def render_map_page() -> None:
     if stops.empty:
         st.warning("No stops were found in the GTFS stops file.")
         return
+    map_stops = prepare_map_display_data(stops)
 
     counts = stops["shading"].value_counts().reindex(SHADING_STATUS, fill_value=0)
     stop_options = [format_stop_option(row["stop_id"], row["stop_name"]) for _, row in stops.iterrows()]
@@ -268,14 +419,25 @@ def render_map_page() -> None:
     st.subheader("Map of Tampa Bus Stops")
     st.write(
         "Use the map to explore stops; colors represent current shading status. Hover over a stop "
-        "to see its heat vulnerability index and label. The index describes relative heat "
-        "vulnerability in the surrounding area, not the amount of shade at the stop; higher values "
-        "indicate greater vulnerability."
+        "to see its weighted heat vulnerability index, vulnerability category, tree canopy, and median "
+        "land surface temperature. The HVI fields describe relative neighborhood vulnerability, tree canopy "
+        "helps explain local shade context, and LST reflects nearby heat exposure."
     )
     st.caption(f"Heat vulnerability source: {HEAT_VULNERABILITY_CITATION}")
+    st.markdown("### Heat Vulnerability Key")
+    st.caption(
+        "The county metadata defines the heat-vulnerability categories in five weighted-HVI bands."
+    )
+    st.dataframe(pd.DataFrame(HEAT_VULNERABILITY_KEY), use_container_width=True, hide_index=True)
+    st.caption(f"Heat vulnerability key citation: {HEAT_VULNERABILITY_METADATA_CITATION}")
+    st.markdown("### What The Dataset Fields Mean")
+    st.caption(
+        "These are the main fields used in the app. Some describe the stop itself, while others describe the surrounding block group."
+    )
+    st.dataframe(pd.DataFrame(DATASET_FIELD_GUIDE), use_container_width=True, hide_index=True)
 
     map_selection = st.pydeck_chart(
-        build_deck_chart(stops),
+        build_deck_chart(map_stops),
         on_select="rerun",
         selection_mode="single-object",
         key="stops_map",
@@ -348,6 +510,23 @@ def render_map_page() -> None:
         "- **No Shade**: red marker\n"
         "- **Unknown**: gray marker"
     )
+    st.markdown("### Heat Exposure Snapshot")
+    st.caption(
+        "Weighted HVI, tree canopy, and median LST are averaged within each current shading group so you can "
+        "compare shade conditions with broader heat exposure patterns."
+    )
+    st.dataframe(build_heat_summary_table(stops), use_container_width=True, hide_index=True)
+
+    priority_stops = build_priority_stop_table(stops)
+    st.markdown("### Priority Stops")
+    st.caption(
+        "This ranking prioritizes stops with no shade or unknown shade first, then sorts by higher weighted HVI, "
+        "hotter median LST, and lower tree canopy."
+    )
+    if priority_stops.empty:
+        st.info("No heat-vulnerability values are available yet for priority ranking.")
+    else:
+        st.dataframe(priority_stops, use_container_width=True, hide_index=True)
 
     shading_file = get_readable_shading_file()
     if shading_file.exists():
@@ -488,7 +667,12 @@ def main():
     page = render_site_header()
 
     if page == "About":
-        render_about_page(STUDY_SUMMARY, DATA_CITATION, HEAT_VULNERABILITY_CITATION)
+        render_about_page(
+            STUDY_SUMMARY,
+            DATA_CITATION,
+            HEAT_VULNERABILITY_CITATION,
+            HEAT_VULNERABILITY_METADATA_CITATION,
+        )
         return
 
     render_map_page()
