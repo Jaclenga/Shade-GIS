@@ -70,12 +70,32 @@ def load_stops() -> pd.DataFrame:
     if shading_file.exists():
         shading = pd.read_csv(shading_file, dtype={"stop_id": str})
         if {"stop_id", "shading"}.issubset(shading.columns):
-            shading = shading.loc[:, ["stop_id", "shading"]].drop_duplicates(subset=["stop_id"])
-            shading["shading"] = shading["shading"].apply(normalize_shading_value)
-            df = df.merge(shading, on="stop_id", how="left", suffixes=("", "_saved"))
+            saved_shading = shading.loc[:, ["stop_id", "shading"]].drop_duplicates(subset=["stop_id"])
+            saved_shading["shading"] = saved_shading["shading"].apply(normalize_shading_value)
+            df = df.merge(saved_shading, on="stop_id", how="left", suffixes=("", "_saved"))
             if "shading_saved" in df.columns:
                 df["shading"] = df["shading_saved"].fillna(df["shading"])
             df = df.drop(columns=[col for col in df.columns if col.endswith("_saved")])
+
+        optional_heat_cols = [
+            "heat_vulnerability_index",
+            "heat_vulnerability_label",
+        ]
+        if all(col in shading.columns for col in ["stop_id", *optional_heat_cols]):
+            heat = shading.loc[:, ["stop_id", *optional_heat_cols]].drop_duplicates(subset=["stop_id"])
+            df = df.merge(heat, on="stop_id", how="left")
+
+    if "heat_vulnerability_index" not in df.columns:
+        df["heat_vulnerability_index"] = pd.NA
+    heat_index = pd.to_numeric(df["heat_vulnerability_index"], errors="coerce")
+    df["heat_vulnerability_index"] = heat_index.apply(
+        lambda value: "Not available" if pd.isna(value) else f"{value:.2f}"
+    )
+
+    if "heat_vulnerability_label" not in df.columns:
+        df["heat_vulnerability_label"] = pd.NA
+    heat_label = df["heat_vulnerability_label"].astype("string").str.strip()
+    df["heat_vulnerability_label"] = heat_label.mask(heat_label == "").fillna("Not available")
 
     # now apply aggregated votes if present
     if VOTES_FILE.exists():
@@ -91,8 +111,9 @@ def load_stops() -> pd.DataFrame:
 
 def save_shading_data(df: pd.DataFrame) -> None:
     SHADE_FILE.parent.mkdir(parents=True, exist_ok=True)
-    saved = df.loc[:, ["stop_id", "shading"]].copy()
-    saved["shading"] = saved["shading"].apply(normalize_shading_value)
+    saved = df.drop(columns=["fill_color"], errors="ignore").copy()
+    if "shading" in saved.columns:
+        saved["shading"] = saved["shading"].apply(normalize_shading_value)
     saved.to_csv(SHADE_FILE, index=False)
 
 
@@ -198,7 +219,19 @@ def build_deck_chart(df: pd.DataFrame):
         pickable=True,
         auto_highlight=True,
     )
-    return pdk.Deck(initial_view_state=view_state, layers=[layer], tooltip={"text": "{stop_name} ({stop_id})\nShading: {shading}"})
+
+    return pdk.Deck(
+        initial_view_state=view_state,
+        layers=[layer],
+        tooltip={
+            "text": (
+                "{stop_name} ({stop_id})\n"
+                "Shading: {shading}\n"
+                "Heat vulnerability index: {heat_vulnerability_index}\n"
+                "Heat vulnerability label: {heat_vulnerability_label}"
+            )
+        },
+    )
 
 
 def render_map_page() -> None:
@@ -228,7 +261,13 @@ def render_map_page() -> None:
         st.session_state.setdefault("manual_stop", stop_options[0])
 
     st.subheader("Map of Tampa Bus Stops")
-    st.write("Use the map to explore stops; colors represent current shading status.")
+    st.write(
+        "Use the map to explore stops; colors represent current shading status. Hover over a stop "
+        "to see its heat vulnerability index and label. The index describes relative heat "
+        "vulnerability in the surrounding area, not the amount of shade at the stop; higher values "
+        "indicate greater vulnerability."
+    )
+
     map_selection = st.pydeck_chart(
         build_deck_chart(stops),
         on_select="rerun",

@@ -1,2316 +1,2316 @@
-stop_id,shading
-86,Unknown
-403,Unknown
-404,Unknown
-407,Unknown
-424,Unknown
-439,Unknown
-447,Unknown
-453,Unknown
-462,Unknown
-469,Unknown
-478,Unknown
-484,Unknown
-487,Unknown
-495,Unknown
-499,Unknown
-501,Unknown
-509,Unknown
-522,Unknown
-524,Unknown
-526,Unknown
-538,Unknown
-546,Unknown
-551,Unknown
-553,Unknown
-554,Unknown
-556,Unknown
-558,Unknown
-559,Unknown
-562,Unknown
-563,Unknown
-564,Unknown
-566,Unknown
-569,Unknown
-572,Unknown
-574,Unknown
-575,Unknown
-580,Unknown
-582,Unknown
-583,Unknown
-585,Unknown
-587,Unknown
-588,Unknown
-590,Unknown
-591,Unknown
-592,Unknown
-593,Unknown
-595,Unknown
-596,Unknown
-597,Unknown
-598,Unknown
-599,Unknown
-600,Unknown
-601,Unknown
-619,Unknown
-624,Unknown
-626,Unknown
-629,Unknown
-632,Unknown
-633,Unknown
-634,Unknown
-640,Unknown
-643,Unknown
-644,Unknown
-646,Unknown
-647,Unknown
-649,Unknown
-652,Unknown
-653,Unknown
-656,Unknown
-657,Unknown
-661,Unknown
-662,Unknown
-663,Unknown
-664,Unknown
-665,Unknown
-667,Unknown
-668,Unknown
-670,Unknown
-671,Unknown
-672,Unknown
-674,Unknown
-675,Unknown
-677,Unknown
-680,Unknown
-682,Unknown
-683,Unknown
-685,Unknown
-687,Unknown
-688,Unknown
-690,Unknown
-691,Unknown
-692,Unknown
-695,Unknown
-698,Unknown
-703,Unknown
-706,Unknown
-710,Unknown
-717,Unknown
-720,Unknown
-722,Unknown
-723,Unknown
-725,Unknown
-727,Unknown
-731,Unknown
-732,Unknown
-733,Unknown
-734,Unknown
-737,Unknown
-738,Unknown
-743,Unknown
-744,Unknown
-765,Unknown
-767,Unknown
-769,Unknown
-771,Unknown
-775,Unknown
-777,Unknown
-779,Unknown
-781,Unknown
-782,Unknown
-791,Unknown
-792,Unknown
-793,Unknown
-794,Unknown
-797,Unknown
-799,Unknown
-801,Unknown
-806,Unknown
-807,Unknown
-808,Unknown
-809,Unknown
-810,Unknown
-813,Unknown
-815,Unknown
-816,Unknown
-817,Unknown
-818,Unknown
-828,Unknown
-830,Unknown
-832,Unknown
-834,Unknown
-836,Unknown
-837,Unknown
-838,Unknown
-839,Unknown
-840,Unknown
-841,Unknown
-842,Unknown
-847,Unknown
-849,Unknown
-851,Unknown
-852,Unknown
-855,Unknown
-857,Unknown
-858,Unknown
-859,Unknown
-862,Unknown
-867,Unknown
-869,Unknown
-874,Unknown
-878,Unknown
-879,Unknown
-881,Unknown
-886,Unknown
-887,Unknown
-889,Unknown
-890,Unknown
-893,Unknown
-894,Unknown
-898,Unknown
-899,Unknown
-900,Unknown
-910,Unknown
-913,Unknown
-917,Unknown
-920,Unknown
-921,Unknown
-923,Unknown
-924,Unknown
-928,Unknown
-933,Unknown
-935,Unknown
-938,Unknown
-951,Unknown
-953,Unknown
-954,Unknown
-956,Unknown
-958,Unknown
-959,Unknown
-1013,Unknown
-1014,Unknown
-1015,Unknown
-1029,Unknown
-1035,Unknown
-1037,Unknown
-1038,Unknown
-1046,Unknown
-1047,Unknown
-1048,Unknown
-1049,Unknown
-1051,Unknown
-1053,Unknown
-1055,Unknown
-1056,Unknown
-1058,Unknown
-1061,Unknown
-1064,Unknown
-1065,Unknown
-1068,Unknown
-1071,Unknown
-1075,Unknown
-1077,Unknown
-1078,Unknown
-1081,Unknown
-1082,Unknown
-1085,Unknown
-1086,Unknown
-1088,Unknown
-1097,Unknown
-1104,Unknown
-1107,Unknown
-1108,Unknown
-1109,Unknown
-1110,Unknown
-1111,Unknown
-1113,Unknown
-1114,Unknown
-1116,Unknown
-1119,Unknown
-1120,Unknown
-1121,Unknown
-1122,Unknown
-1124,Unknown
-1125,Unknown
-1129,Unknown
-1130,Unknown
-1131,Unknown
-1133,Unknown
-1134,Unknown
-1135,Unknown
-1136,Unknown
-1140,Unknown
-1143,Unknown
-1149,Unknown
-1150,Unknown
-1152,Unknown
-1153,Unknown
-1154,Unknown
-1156,Unknown
-1157,Unknown
-1158,Unknown
-1160,Unknown
-1161,Unknown
-1163,Unknown
-1165,Unknown
-1166,Unknown
-1167,Unknown
-1168,Unknown
-1169,Unknown
-1170,Unknown
-1171,Unknown
-1178,Unknown
-1179,Unknown
-1180,Unknown
-1181,Unknown
-1185,Unknown
-1186,Unknown
-1188,Unknown
-1190,Unknown
-1199,Unknown
-1200,Unknown
-1202,Unknown
-1203,Unknown
-1204,Unknown
-1207,Unknown
-1209,Unknown
-1212,Unknown
-1214,Unknown
-1215,Unknown
-1217,Unknown
-1219,Unknown
-1220,Unknown
-1225,Unknown
-1227,Unknown
-1228,Unknown
-1233,Unknown
-1234,Unknown
-1238,Unknown
-1240,Unknown
-1241,Unknown
-1242,Unknown
-1244,Unknown
-1245,Unknown
-1246,Unknown
-1248,Unknown
-1249,Unknown
-1251,Unknown
-1254,Unknown
-1257,Unknown
-1259,Unknown
-1261,Unknown
-1269,Unknown
-1274,Unknown
-1277,Unknown
-1278,Unknown
-1280,Unknown
-1282,Unknown
-1283,Unknown
-1284,Unknown
-1285,Unknown
-1287,Unknown
-1289,Unknown
-1290,Unknown
-1291,Unknown
-1294,Unknown
-1295,Unknown
-1297,Unknown
-1298,Unknown
-1301,Unknown
-1302,Unknown
-1304,Unknown
-1305,Unknown
-1306,Unknown
-1307,Unknown
-1310,Unknown
-1314,Unknown
-1316,Unknown
-1317,Unknown
-1360,Unknown
-1370,Unknown
-1412,Unknown
-1414,Unknown
-1417,Unknown
-1419,Unknown
-1421,Unknown
-1422,Unknown
-1423,Unknown
-1424,Unknown
-1425,Unknown
-1426,Unknown
-1427,Unknown
-1429,Unknown
-1430,Unknown
-1431,Unknown
-1433,Unknown
-1435,Unknown
-1437,Unknown
-1438,Unknown
-1439,Unknown
-1440,Unknown
-1441,Unknown
-1442,Unknown
-1447,Unknown
-1448,Unknown
-1450,Unknown
-1451,Unknown
-1453,Unknown
-1454,Unknown
-1457,Unknown
-1460,Unknown
-1467,Unknown
-1468,Unknown
-1472,Unknown
-1473,Unknown
-1475,Unknown
-1476,Unknown
-1480,Unknown
-1481,Unknown
-1482,Unknown
-1484,Unknown
-1485,Unknown
-1486,Unknown
-1487,Unknown
-1489,Unknown
-1490,Unknown
-1491,Unknown
-1492,Unknown
-1493,Unknown
-1494,Unknown
-1495,Unknown
-1496,Unknown
-1497,Unknown
-1499,Unknown
-1500,Unknown
-1502,Unknown
-1504,Unknown
-1520,Unknown
-1537,Unknown
-1576,Unknown
-1583,Unknown
-1591,Unknown
-1592,Unknown
-1594,Unknown
-1597,Unknown
-1598,Unknown
-1601,Unknown
-1607,Unknown
-1610,Unknown
-1611,Unknown
-1612,Unknown
-1615,Unknown
-1616,Unknown
-1617,Unknown
-1618,Unknown
-1622,Unknown
-1630,Unknown
-1631,Unknown
-1634,Unknown
-1638,Unknown
-1639,Unknown
-1640,Unknown
-1644,Unknown
-1645,Unknown
-1648,Unknown
-1649,Unknown
-1656,Unknown
-1658,Unknown
-1659,Unknown
-1661,Unknown
-1664,Unknown
-1665,Unknown
-1666,Unknown
-1668,Unknown
-1669,Unknown
-1670,Unknown
-1680,Unknown
-1681,Unknown
-1682,Unknown
-1685,Unknown
-1688,Unknown
-1689,Unknown
-1692,Unknown
-1695,Unknown
-1697,Unknown
-1700,Unknown
-1708,Unknown
-1713,Unknown
-1715,Unknown
-1716,Unknown
-1718,Unknown
-1720,Unknown
-1722,Unknown
-1726,Unknown
-1728,Unknown
-1729,Unknown
-1731,Unknown
-1732,Unknown
-1733,Unknown
-1736,Unknown
-1738,Unknown
-1739,Unknown
-1740,Unknown
-1741,Unknown
-1742,Unknown
-1743,Unknown
-1744,Unknown
-1745,Unknown
-1746,Unknown
-1748,Unknown
-1749,Unknown
-1751,Unknown
-1754,Unknown
-1755,Unknown
-1756,Unknown
-1757,Unknown
-1762,Unknown
-1763,Unknown
-1764,Unknown
-1766,Unknown
-1767,Unknown
-1771,Unknown
-1774,Unknown
-1775,Unknown
-1777,Unknown
-1778,Unknown
-1779,Unknown
-1796,Unknown
-1797,Unknown
-1798,Unknown
-1799,Unknown
-1800,Unknown
-1803,Unknown
-1804,Unknown
-1805,Unknown
-1806,Unknown
-1807,Unknown
-1808,Unknown
-1809,Unknown
-1810,Unknown
-1812,Unknown
-1813,Unknown
-1815,Unknown
-1816,Unknown
-1817,Unknown
-1818,Unknown
-1820,Unknown
-1821,Unknown
-1822,Unknown
-1823,Unknown
-1824,Unknown
-1825,Unknown
-1828,Unknown
-1829,Unknown
-1830,Unknown
-1831,Unknown
-1833,Unknown
-1835,Unknown
-1836,Unknown
-1839,Unknown
-1841,Unknown
-1842,Unknown
-1843,Unknown
-1844,Unknown
-1845,Unknown
-1846,Unknown
-1847,Unknown
-1848,Unknown
-1849,Unknown
-1851,Unknown
-1853,Unknown
-1855,Unknown
-1857,Unknown
-1858,Unknown
-1859,Unknown
-1860,Unknown
-1861,Manmade Shade
-1863,Unknown
-1864,Unknown
-1865,Unknown
-1866,Unknown
-1867,Unknown
-1868,Unknown
-1869,Unknown
-1870,No Shade
-1871,No Shade
-1872,Unknown
-1873,No Shade
-1874,Manmade Shade
-1875,Unknown
-1876,Unknown
-1878,No Shade
-1879,Unknown
-1880,Unknown
-1883,Unknown
-1884,Unknown
-1885,Unknown
-1888,Unknown
-1890,Unknown
-1891,Unknown
-1892,Unknown
-1893,Unknown
-1894,Unknown
-1895,Unknown
-1896,Unknown
-1897,Unknown
-1898,Unknown
-1899,Unknown
-1908,Unknown
-1910,Unknown
-1911,Unknown
-1912,Unknown
-1913,Unknown
-1915,Unknown
-1916,Unknown
-1917,Unknown
-1919,Unknown
-1922,Unknown
-1923,Unknown
-1951,Unknown
-1955,Unknown
-1956,Unknown
-1957,Unknown
-1959,Unknown
-1972,Unknown
-1974,Unknown
-1976,Unknown
-1978,Unknown
-1987,Unknown
-1991,Unknown
-1992,Unknown
-1993,Unknown
-1994,Unknown
-2000,Unknown
-2001,Unknown
-2003,Unknown
-2005,Unknown
-2006,Unknown
-2008,Unknown
-2012,Unknown
-2019,Unknown
-2021,Unknown
-2022,Unknown
-2025,Unknown
-2026,Unknown
-2028,Unknown
-2029,Unknown
-2031,Unknown
-2032,Unknown
-2037,Unknown
-2039,Unknown
-2045,Unknown
-2046,Unknown
-2050,Unknown
-2051,Unknown
-2052,Unknown
-2055,Unknown
-2056,Unknown
-2057,Unknown
-2058,Unknown
-2060,Unknown
-2061,Unknown
-2062,Unknown
-2063,Unknown
-2067,Unknown
-2068,Unknown
-2069,Unknown
-2071,Unknown
-2073,Unknown
-2074,Unknown
-2075,Unknown
-2078,Unknown
-2079,Unknown
-2080,Unknown
-2086,Unknown
-2087,Unknown
-2095,Unknown
-2096,Unknown
-2097,Unknown
-2100,Unknown
-2101,Unknown
-2102,Unknown
-2103,Unknown
-2105,Unknown
-2107,Unknown
-2112,Unknown
-2113,Unknown
-2115,Unknown
-2118,Unknown
-2119,Unknown
-2147,Unknown
-2149,Unknown
-2156,Unknown
-2158,Unknown
-2160,Unknown
-2162,Unknown
-2165,Unknown
-2166,Unknown
-2168,Unknown
-2201,Unknown
-2236,Unknown
-2237,Unknown
-2265,Unknown
-2267,Unknown
-2268,Unknown
-2270,Unknown
-2272,Unknown
-2276,Unknown
-2279,Unknown
-2281,Unknown
-2283,Unknown
-2297,Unknown
-2301,Unknown
-2303,Unknown
-2306,Unknown
-2307,Unknown
-2308,Unknown
-2316,Unknown
-2318,Unknown
-2321,Unknown
-2326,Unknown
-2327,Unknown
-2330,Unknown
-2332,Unknown
-2333,Unknown
-2336,Unknown
-2341,Unknown
-2343,Unknown
-2345,Unknown
-2347,Unknown
-2349,Unknown
-2355,Unknown
-2356,Unknown
-2357,Unknown
-2361,Unknown
-2363,Unknown
-2368,Unknown
-2369,Unknown
-2371,Unknown
-2372,Unknown
-2382,Unknown
-2384,Unknown
-2386,Unknown
-2387,Unknown
-2388,Unknown
-2391,Unknown
-2392,Unknown
-2394,Unknown
-2397,Unknown
-2398,Unknown
-2400,Unknown
-2406,Unknown
-2408,Unknown
-2409,Unknown
-2411,Unknown
-2412,Unknown
-2414,Unknown
-2416,Unknown
-2418,Unknown
-2420,Unknown
-2422,Unknown
-2432,Unknown
-2433,Unknown
-2435,Unknown
-2436,Unknown
-2437,Unknown
-2438,Unknown
-2439,Unknown
-2440,Unknown
-2441,Unknown
-2443,Unknown
-2444,Unknown
-2445,Unknown
-2446,Unknown
-2448,Unknown
-2451,Unknown
-2453,Unknown
-2455,Unknown
-2457,Unknown
-2461,Unknown
-2502,Unknown
-2504,Unknown
-2506,Unknown
-2519,Unknown
-2520,Unknown
-2522,Unknown
-2524,Unknown
-2526,Unknown
-2607,Unknown
-2611,Unknown
-2619,Unknown
-2621,Unknown
-2634,Unknown
-2635,Unknown
-2636,Unknown
-2637,Unknown
-2640,Unknown
-2642,Unknown
-2647,Unknown
-2648,Unknown
-2650,Unknown
-2655,Unknown
-2656,Unknown
-2657,Unknown
-2658,Unknown
-2660,Unknown
-2667,Unknown
-2668,Unknown
-2682,Unknown
-2683,Unknown
-2688,Unknown
-2689,Unknown
-2690,Unknown
-2706,Unknown
-2709,Unknown
-2711,Unknown
-2713,Unknown
-2718,Unknown
-2724,Unknown
-2730,Unknown
-2732,Unknown
-2733,Unknown
-2734,Unknown
-2736,Unknown
-2737,Unknown
-2738,Unknown
-2740,Unknown
-2742,Unknown
-2744,Unknown
-2745,Unknown
-2747,Unknown
-2748,Unknown
-2750,Unknown
-2753,Unknown
-2757,Unknown
-2759,Unknown
-2760,Unknown
-2775,Unknown
-2778,Unknown
-2779,Unknown
-2781,Unknown
-2782,Unknown
-2785,Unknown
-2790,Unknown
-2791,Unknown
-2811,Unknown
-2813,Unknown
-2817,Unknown
-2832,Unknown
-2833,Unknown
-2835,Unknown
-2836,Unknown
-2837,Unknown
-2839,Unknown
-2863,Unknown
-2864,Unknown
-2890,Unknown
-2893,Unknown
-2894,Unknown
-2896,Unknown
-2904,Unknown
-2905,Unknown
-2907,Unknown
-2908,Unknown
-2910,Unknown
-2914,Unknown
-2916,Unknown
-2917,Unknown
-2918,Unknown
-2920,Unknown
-2921,Unknown
-2923,Unknown
-2924,Unknown
-2926,Unknown
-2927,Unknown
-2929,Unknown
-2930,Unknown
-2931,Unknown
-2935,Unknown
-2939,Unknown
-2940,Unknown
-2941,Unknown
-2943,Unknown
-2944,Unknown
-2956,Unknown
-2958,Unknown
-2959,Unknown
-2961,Unknown
-2972,Unknown
-2973,Unknown
-2974,Unknown
-2976,Unknown
-2977,Unknown
-2978,Unknown
-2980,Unknown
-2982,Unknown
-2987,Unknown
-2989,Unknown
-2990,Unknown
-2991,Unknown
-2992,Unknown
-2993,Unknown
-2995,Unknown
-2996,Unknown
-2997,Unknown
-2999,Unknown
-3001,Unknown
-3003,Unknown
-3005,Unknown
-3006,Unknown
-3008,Unknown
-3010,Unknown
-3011,Unknown
-3013,Unknown
-3014,Unknown
-3015,Unknown
-3017,Unknown
-3018,Unknown
-3019,Unknown
-3020,Unknown
-3022,Unknown
-3024,Unknown
-3026,Unknown
-3028,Unknown
-3030,Unknown
-3032,Unknown
-3033,Unknown
-3034,Unknown
-3035,Unknown
-3037,Unknown
-3038,Unknown
-3039,Unknown
-3041,Unknown
-3042,Unknown
-3045,Unknown
-3046,Unknown
-3047,Unknown
-3048,Unknown
-3050,Unknown
-3052,Unknown
-3054,Unknown
-3056,Unknown
-3057,Unknown
-3061,Unknown
-3063,Unknown
-3064,Unknown
-3067,Unknown
-3068,Unknown
-3075,Unknown
-3077,Unknown
-3080,Unknown
-3081,Unknown
-3082,Unknown
-3086,Unknown
-3104,Unknown
-3110,Unknown
-3113,Unknown
-3114,Unknown
-3116,Unknown
-3169,Unknown
-3172,Unknown
-3173,Unknown
-3175,Unknown
-3176,Unknown
-3177,Unknown
-3182,Unknown
-3183,Unknown
-3185,Unknown
-3186,Unknown
-3188,Unknown
-3189,Unknown
-3191,Unknown
-3192,Unknown
-3196,Unknown
-3198,Unknown
-3200,Unknown
-3201,Unknown
-3203,Unknown
-3214,Unknown
-3215,Unknown
-3216,Unknown
-3218,Unknown
-3220,Unknown
-3222,Unknown
-3224,Unknown
-3229,Unknown
-3231,Unknown
-3234,Unknown
-3238,Unknown
-3245,Unknown
-3248,Unknown
-3250,Unknown
-3252,Unknown
-3255,Unknown
-3267,Unknown
-3270,Unknown
-3272,Unknown
-3274,Unknown
-3275,Unknown
-3276,Unknown
-3282,Unknown
-3284,Unknown
-3285,Unknown
-3294,Unknown
-3297,Unknown
-3298,Unknown
-3301,Unknown
-3303,Unknown
-3305,Unknown
-3307,Unknown
-3309,Unknown
-3316,Unknown
-3319,Unknown
-3320,Unknown
-3322,Unknown
-3325,Unknown
-3328,Unknown
-3329,Unknown
-3332,Unknown
-3334,Unknown
-3340,Unknown
-3341,Unknown
-3342,Unknown
-3343,Unknown
-3348,Unknown
-3350,Unknown
-3359,Unknown
-3361,Unknown
-3366,Unknown
-3367,Unknown
-3372,Unknown
-3374,Unknown
-3376,Unknown
-3388,Unknown
-3401,Unknown
-3406,Unknown
-3407,Unknown
-3408,Unknown
-3409,Unknown
-3411,Unknown
-3412,Unknown
-3414,Unknown
-3418,Unknown
-3419,Unknown
-3420,Unknown
-3422,Unknown
-3423,Unknown
-3424,Unknown
-3426,Unknown
-3427,Unknown
-3429,Unknown
-3431,Unknown
-3432,Unknown
-3435,Unknown
-3436,Unknown
-3437,Unknown
-3438,Unknown
-3439,Unknown
-3445,Unknown
-3446,Unknown
-3457,Unknown
-3466,Unknown
-3468,Unknown
-3470,Unknown
-3471,Unknown
-3473,Unknown
-3479,Unknown
-3513,Unknown
-3515,Unknown
-3516,Unknown
-3517,Unknown
-3518,Unknown
-3519,Unknown
-3520,Unknown
-3578,Unknown
-3580,Unknown
-3593,Unknown
-3595,Unknown
-3600,Unknown
-3602,Unknown
-3607,Unknown
-3610,Unknown
-3634,Unknown
-3655,Unknown
-3658,Unknown
-3659,Unknown
-3661,Unknown
-3662,Unknown
-3664,Unknown
-3730,Unknown
-3731,Unknown
-3732,Unknown
-3734,Unknown
-3736,Unknown
-3739,Unknown
-3740,Unknown
-3743,Unknown
-3745,Unknown
-3748,Unknown
-3751,Unknown
-3753,Unknown
-3754,Unknown
-3758,Unknown
-3759,Unknown
-3761,Unknown
-3772,Unknown
-3774,Unknown
-3775,Unknown
-3777,Unknown
-3782,Unknown
-3783,Unknown
-3784,Unknown
-3785,Unknown
-3788,Unknown
-3789,Unknown
-3791,Unknown
-3792,Unknown
-3797,Unknown
-3800,Unknown
-3802,Unknown
-3804,Unknown
-3806,Unknown
-3808,Unknown
-3810,Unknown
-3867,Unknown
-3869,Unknown
-3917,Unknown
-3942,Unknown
-3943,Unknown
-3955,Unknown
-3956,Unknown
-3957,Unknown
-3958,Unknown
-3960,Unknown
-3961,Unknown
-3966,Unknown
-3967,Unknown
-3970,Unknown
-3971,Unknown
-3972,Unknown
-3973,Unknown
-3987,Unknown
-3996,Unknown
-3998,Unknown
-4006,Unknown
-4009,Unknown
-4013,Unknown
-4015,Unknown
-4016,Unknown
-4020,Unknown
-4021,Unknown
-4044,Unknown
-4047,Unknown
-4048,Unknown
-4052,Unknown
-4055,Unknown
-4059,Unknown
-4063,Unknown
-4065,Unknown
-4069,Unknown
-4074,Unknown
-4078,Unknown
-4085,Unknown
-4090,Unknown
-4091,Unknown
-4095,Unknown
-4102,Unknown
-4112,Unknown
-4126,Unknown
-4129,Unknown
-4130,Unknown
-4132,Unknown
-4133,Unknown
-4135,Unknown
-4142,Unknown
-4177,Unknown
-4184,Unknown
-4190,Unknown
-4196,Unknown
-4213,Unknown
-4217,Unknown
-4219,Unknown
-4222,Unknown
-4228,Unknown
-4229,Unknown
-4231,Unknown
-4233,Unknown
-4234,Unknown
-4235,Unknown
-4241,Unknown
-4244,Unknown
-4247,Unknown
-4254,Unknown
-4255,Unknown
-4261,Unknown
-4264,Unknown
-4271,Unknown
-4273,Unknown
-4284,Unknown
-4285,Unknown
-4289,Unknown
-4296,Unknown
-4298,Unknown
-4301,Unknown
-4304,Unknown
-4317,Unknown
-4319,Unknown
-4329,Unknown
-4330,Unknown
-4333,Unknown
-4340,Unknown
-4341,Unknown
-4345,Unknown
-4346,Unknown
-4347,Unknown
-4348,Unknown
-4350,Unknown
-4352,Unknown
-4356,Unknown
-4357,Unknown
-4360,Unknown
-4361,Unknown
-4363,Unknown
-4364,Unknown
-4365,Unknown
-4368,Unknown
-4404,Unknown
-4406,Unknown
-4409,Unknown
-4414,Unknown
-4429,Unknown
-4441,Unknown
-4445,Unknown
-4446,Unknown
-4451,Unknown
-4452,Unknown
-4456,Unknown
-4458,Unknown
-4467,Unknown
-4471,Unknown
-4472,Unknown
-4478,Unknown
-4480,Unknown
-4486,Unknown
-4487,Unknown
-4488,Unknown
-4491,Unknown
-4516,Unknown
-4521,Unknown
-4530,Unknown
-4531,Unknown
-4532,Unknown
-4534,Unknown
-4539,Unknown
-4540,Unknown
-4541,Unknown
-4543,Unknown
-4551,Unknown
-4552,Unknown
-4553,Unknown
-4555,Unknown
-4559,Unknown
-4560,Unknown
-4561,Unknown
-4563,Unknown
-4566,Unknown
-4571,Unknown
-4579,Unknown
-4580,Unknown
-4581,Unknown
-4584,Unknown
-4585,Unknown
-4586,Unknown
-4587,Unknown
-4592,Unknown
-4597,Unknown
-4598,Unknown
-4600,Unknown
-4601,Unknown
-4603,Unknown
-4607,Unknown
-4610,Unknown
-4613,Unknown
-4614,Unknown
-4616,Unknown
-4617,Unknown
-4619,Unknown
-4621,Unknown
-4625,Unknown
-4634,Unknown
-4636,Unknown
-4638,Unknown
-4641,Unknown
-4644,Unknown
-4645,Unknown
-4646,Unknown
-4651,Unknown
-4653,Unknown
-4656,Unknown
-4657,Unknown
-4659,Unknown
-4661,Unknown
-4662,Unknown
-4663,Unknown
-4666,Unknown
-4667,Unknown
-4668,Unknown
-4670,Unknown
-4671,Unknown
-4682,Unknown
-4683,Unknown
-4684,Unknown
-4688,Unknown
-4689,Unknown
-4701,Unknown
-4703,Unknown
-4706,Unknown
-4707,Unknown
-4708,Unknown
-4719,Unknown
-4720,Unknown
-4722,Unknown
-4723,Unknown
-4724,Unknown
-4727,Unknown
-4729,Unknown
-4733,Unknown
-4735,Unknown
-4736,Unknown
-4740,Unknown
-4747,Unknown
-4748,Unknown
-4749,Unknown
-4751,Unknown
-4760,Unknown
-4761,Unknown
-4763,Unknown
-4775,Unknown
-4776,Unknown
-4778,Unknown
-4781,Unknown
-4782,Unknown
-4784,Unknown
-4789,Unknown
-4794,Unknown
-4795,Unknown
-4798,Unknown
-4813,Unknown
-4816,Unknown
-4819,Unknown
-4828,Unknown
-4830,Unknown
-4831,Unknown
-4849,Unknown
-4850,Unknown
-4858,Unknown
-4860,Unknown
-4863,Unknown
-4869,Unknown
-4870,Unknown
-4879,Unknown
-4880,Unknown
-4882,Unknown
-4884,Unknown
-4886,Unknown
-4888,Unknown
-4892,Unknown
-4894,Unknown
-4895,Unknown
-4906,Unknown
-4908,Unknown
-4909,Unknown
-4910,Unknown
-4911,Unknown
-4912,Unknown
-4913,Unknown
-4914,Unknown
-4915,Unknown
-4916,Unknown
-4917,Unknown
-4919,Unknown
-4920,Unknown
-4921,Unknown
-4923,Unknown
-4924,Unknown
-4925,Unknown
-4929,Unknown
-4951,Unknown
-4953,Unknown
-4959,Unknown
-4963,Unknown
-4964,Unknown
-4965,Unknown
-4966,Unknown
-4968,Unknown
-4969,Unknown
-4970,Unknown
-4971,Unknown
-4973,Unknown
-4974,Unknown
-4975,Unknown
-4977,Unknown
-4978,Unknown
-4979,Unknown
-4980,Unknown
-4981,Unknown
-4984,Unknown
-4985,Unknown
-4986,Unknown
-4987,Unknown
-4989,Unknown
-4993,Unknown
-4994,Unknown
-4996,Unknown
-4997,Unknown
-4998,Unknown
-4999,Unknown
-5002,Unknown
-5003,Unknown
-5004,Unknown
-5005,Unknown
-5011,Unknown
-5013,Unknown
-5014,Unknown
-5018,Unknown
-5019,Unknown
-5020,Unknown
-5021,Unknown
-5022,Unknown
-5025,Unknown
-5027,Unknown
-5028,Unknown
-5029,Unknown
-5030,Unknown
-5043,Unknown
-5044,Unknown
-5045,Unknown
-5046,Unknown
-5047,Unknown
-5049,Unknown
-5050,Unknown
-5051,Unknown
-5052,Unknown
-5053,Unknown
-5055,Unknown
-5058,Unknown
-5097,Unknown
-5099,Unknown
-5100,Unknown
-5101,Unknown
-5102,Unknown
-5103,Unknown
-5104,Unknown
-5105,Unknown
-5106,Unknown
-5108,Unknown
-5110,Unknown
-5111,Unknown
-5112,Unknown
-5113,Unknown
-5114,Unknown
-5117,Unknown
-5118,Unknown
-5119,Unknown
-5120,Unknown
-5121,Unknown
-5122,Unknown
-5123,Unknown
-5124,Unknown
-5125,Unknown
-5126,Unknown
-5130,Unknown
-5131,Unknown
-5156,Unknown
-5164,Unknown
-5166,Unknown
-5167,Unknown
-5168,Unknown
-5175,Unknown
-5176,Unknown
-5177,Unknown
-5178,Unknown
-5180,Unknown
-5181,Unknown
-5184,Unknown
-5220,Unknown
-5221,Unknown
-5222,Unknown
-5223,Unknown
-5225,Unknown
-5226,Unknown
-5238,Unknown
-5246,Unknown
-5248,Unknown
-5249,Unknown
-5250,Unknown
-5251,Unknown
-5252,Unknown
-5253,Unknown
-5254,Unknown
-5264,Unknown
-5265,Unknown
-5267,Unknown
-5268,Unknown
-5276,Unknown
-5277,Unknown
-5280,Unknown
-5281,Unknown
-5282,Unknown
-5283,Unknown
-5284,Unknown
-5285,Unknown
-5290,Unknown
-5292,Unknown
-5295,Unknown
-5296,Unknown
-5299,Unknown
-5312,Unknown
-5313,Unknown
-5314,Unknown
-5316,Unknown
-5317,Unknown
-5318,Unknown
-5319,Unknown
-5321,Unknown
-5323,Unknown
-5324,Unknown
-5325,Unknown
-5327,Unknown
-5331,Unknown
-5334,Unknown
-5335,Unknown
-5336,Unknown
-5337,Unknown
-5338,Unknown
-5341,Unknown
-5342,Unknown
-5343,Unknown
-5344,Unknown
-5346,Unknown
-5347,Unknown
-5348,Unknown
-5349,Unknown
-5362,Unknown
-5363,Unknown
-5364,Unknown
-5365,Unknown
-5366,Unknown
-5368,Unknown
-5369,Unknown
-5371,Unknown
-5372,Unknown
-5379,Unknown
-5380,Unknown
-5382,Unknown
-5383,Unknown
-5385,Unknown
-5414,Unknown
-5415,Unknown
-5423,Unknown
-5443,Unknown
-5446,Unknown
-5447,Unknown
-5448,Unknown
-5451,Unknown
-5452,Unknown
-5453,Unknown
-5454,Unknown
-5455,Unknown
-5457,Unknown
-5458,Unknown
-5461,Unknown
-5462,Unknown
-5465,Unknown
-5470,Unknown
-5473,Unknown
-5476,Unknown
-5477,Unknown
-5478,Unknown
-5479,Unknown
-5480,Unknown
-5484,Unknown
-5509,Unknown
-5510,Unknown
-5512,Unknown
-5514,Unknown
-5515,Unknown
-5516,Unknown
-5517,Unknown
-5518,Unknown
-5519,Unknown
-5520,Unknown
-5521,Unknown
-5523,Unknown
-5524,Unknown
-5525,Unknown
-5526,Unknown
-5527,Unknown
-5529,Unknown
-5531,Unknown
-5532,Unknown
-5533,Unknown
-5534,Unknown
-5535,Unknown
-5536,Unknown
-5537,Unknown
-5538,Unknown
-5539,Unknown
-5540,Unknown
-5541,Unknown
-5542,Unknown
-5545,Unknown
-5547,Unknown
-5550,Unknown
-5551,Unknown
-5552,Unknown
-5554,Unknown
-5556,Unknown
-5557,Unknown
-5559,Unknown
-5562,Unknown
-5563,Unknown
-5565,Unknown
-5566,Unknown
-5568,Unknown
-5569,Unknown
-5570,Unknown
-5571,Unknown
-5572,Unknown
-5573,Unknown
-5574,Unknown
-5575,Unknown
-5576,Unknown
-5577,Unknown
-5578,Unknown
-5579,Unknown
-5580,Unknown
-5581,Unknown
-5595,Unknown
-5596,Unknown
-5597,Unknown
-5598,Unknown
-5599,Unknown
-5600,Unknown
-5604,Unknown
-5605,Unknown
-5616,Unknown
-5617,Unknown
-5618,Unknown
-5619,Unknown
-5621,Unknown
-5622,Unknown
-5623,Unknown
-5624,Unknown
-5625,Unknown
-5626,Unknown
-5627,Unknown
-5628,Unknown
-5629,Unknown
-5630,Unknown
-5632,Unknown
-5633,Unknown
-5634,Unknown
-5635,Unknown
-5636,Unknown
-5638,Unknown
-5639,Unknown
-5640,Unknown
-5641,Unknown
-5643,Unknown
-5644,Unknown
-5645,Unknown
-5677,Unknown
-5680,Unknown
-5681,Unknown
-5685,Unknown
-5687,Unknown
-5695,Unknown
-5697,Unknown
-5698,Unknown
-5699,Unknown
-5701,Unknown
-5702,Unknown
-5703,Unknown
-5704,Unknown
-5705,Unknown
-5706,Unknown
-5707,Unknown
-5714,Unknown
-5715,Unknown
-5716,Unknown
-5717,Unknown
-5718,Unknown
-5719,Unknown
-5720,Unknown
-5721,Unknown
-5722,Unknown
-5723,Unknown
-5724,Unknown
-5725,Unknown
-5731,Unknown
-5732,Unknown
-5733,Unknown
-5741,Unknown
-5742,Unknown
-5743,Unknown
-5744,Unknown
-5745,Unknown
-5747,Unknown
-5748,Unknown
-5749,Unknown
-5750,Unknown
-5751,Unknown
-5752,Unknown
-5754,Unknown
-5755,Unknown
-5756,Unknown
-5757,Unknown
-5758,Unknown
-5759,Unknown
-5761,Unknown
-5763,Unknown
-5764,Unknown
-5765,Unknown
-5767,Unknown
-5769,Unknown
-5770,Unknown
-5771,Unknown
-5773,Unknown
-5774,Unknown
-5775,Unknown
-5776,Unknown
-5777,Unknown
-5778,Unknown
-5779,Unknown
-5798,Unknown
-5802,Unknown
-5809,Unknown
-5815,Unknown
-5816,Unknown
-5821,Unknown
-5828,Unknown
-5835,Unknown
-5853,Unknown
-5863,Unknown
-5864,Unknown
-5870,Unknown
-5871,Unknown
-5883,Unknown
-5884,Unknown
-5887,Unknown
-5890,Unknown
-5891,Unknown
-5894,Unknown
-5930,Unknown
-5931,Unknown
-5932,Unknown
-5933,Unknown
-5934,Unknown
-5935,Unknown
-5936,Unknown
-5937,Unknown
-5938,Unknown
-5939,Unknown
-5940,Unknown
-5941,Unknown
-5945,Unknown
-5946,Unknown
-5947,Unknown
-5948,Unknown
-5950,Unknown
-5951,Unknown
-5952,Unknown
-5953,Unknown
-5954,Unknown
-5955,Unknown
-5956,Unknown
-5957,Unknown
-5958,Unknown
-6007,Unknown
-6023,Unknown
-6026,Unknown
-6039,Unknown
-6041,Unknown
-6043,Unknown
-6045,Unknown
-6047,Unknown
-6048,Unknown
-6049,Unknown
-6051,Unknown
-6053,Unknown
-6263,Unknown
-6497,Unknown
-6519,Unknown
-6527,Unknown
-6550,Unknown
-6555,Unknown
-6575,Unknown
-6576,Unknown
-6577,Unknown
-6593,Unknown
-6597,Unknown
-6599,Unknown
-6601,Unknown
-6603,Unknown
-6606,Unknown
-6608,Unknown
-6610,Unknown
-6611,Unknown
-6614,Unknown
-6615,Unknown
-6622,Unknown
-6624,Unknown
-6625,Unknown
-6626,Unknown
-6627,Unknown
-6629,Unknown
-6643,Unknown
-6644,Unknown
-6647,Unknown
-6651,Unknown
-6666,Unknown
-6669,Unknown
-6679,Unknown
-6690,Unknown
-6691,Unknown
-6692,Unknown
-6693,Unknown
-6694,Unknown
-6695,Unknown
-6698,Unknown
-6699,Unknown
-6700,Unknown
-6701,Unknown
-6763,Unknown
-6764,Unknown
-6768,Unknown
-6770,Unknown
-6771,Unknown
-6781,Unknown
-6820,Unknown
-6821,Unknown
-6832,Unknown
-6833,Unknown
-6876,Unknown
-6877,Unknown
-6891,Unknown
-6892,Unknown
-6898,Unknown
-6899,Unknown
-6901,Unknown
-6902,Unknown
-6904,Unknown
-6907,Unknown
-6912,Unknown
-6914,Unknown
-6916,Unknown
-6917,Unknown
-6918,Unknown
-6920,Unknown
-6923,Unknown
-6927,Unknown
-6930,Unknown
-6931,Unknown
-6941,Unknown
-6946,Unknown
-6947,Unknown
-6952,Unknown
-6953,Unknown
-6954,Unknown
-6962,Unknown
-6963,Unknown
-6964,Unknown
-6968,Unknown
-6970,Unknown
-7000,Unknown
-7008,Unknown
-7011,Unknown
-7012,Unknown
-7013,Unknown
-7015,Unknown
-7016,Unknown
-7017,Unknown
-7019,Unknown
-7021,Unknown
-7022,Unknown
-7023,Unknown
-7024,Unknown
-7025,Unknown
-7029,Unknown
-7030,Unknown
-7032,Unknown
-7034,Unknown
-7035,Unknown
-7036,Unknown
-7037,Unknown
-7041,Unknown
-7043,Unknown
-7044,Unknown
-7045,Unknown
-7048,Unknown
-7061,Unknown
-7062,Unknown
-7070,Unknown
-7072,Unknown
-7073,Unknown
-7074,Unknown
-7076,Unknown
-7077,Unknown
-7078,Unknown
-7079,Unknown
-7081,Unknown
-7084,Unknown
-7085,Unknown
-7094,Unknown
-7095,Unknown
-7101,Unknown
-7102,Unknown
-7104,Unknown
-7109,Unknown
-7111,Unknown
-7113,Unknown
-7120,Unknown
-7123,Unknown
-7128,Unknown
-7133,Unknown
-7137,Unknown
-7144,Unknown
-7149,Unknown
-7150,Unknown
-7151,Unknown
-7154,Unknown
-7155,Unknown
-7156,Unknown
-7157,Unknown
-7158,Unknown
-7159,Unknown
-7160,Unknown
-7162,Unknown
-7167,Unknown
-7168,Unknown
-7169,Unknown
-7170,Unknown
-7171,Unknown
-7172,Unknown
-7174,Unknown
-7175,Unknown
-7177,Unknown
-7179,Unknown
-7185,Unknown
-7186,Unknown
-7188,Unknown
-7193,Unknown
-7194,Unknown
-7196,Unknown
-7197,Unknown
-7199,Unknown
-7210,Unknown
-7213,Unknown
-7221,Unknown
-7225,Unknown
-7226,Unknown
-7228,Unknown
-7229,Unknown
-7230,Unknown
-7231,Unknown
-7232,Unknown
-7233,Unknown
-7234,Unknown
-7235,Unknown
-7237,Unknown
-7238,Unknown
-7239,Unknown
-7240,Unknown
-7241,Unknown
-7242,Unknown
-7243,Unknown
-7246,Unknown
-7247,Unknown
-7248,Unknown
-7249,Unknown
-7265,Unknown
-7306,Unknown
-7330,Unknown
-7331,Unknown
-7332,Unknown
-7333,Unknown
-7335,Unknown
-7340,Unknown
-7341,Unknown
-7342,Unknown
-7346,Unknown
-7373,Unknown
-7375,Unknown
-7381,Unknown
-7400,Unknown
-7401,Unknown
-7402,Unknown
-7403,Unknown
-7411,Unknown
-7423,Unknown
-7424,Unknown
-7426,Unknown
-7427,Unknown
-7431,Unknown
-7432,Unknown
-7433,Unknown
-7434,Unknown
-7435,Unknown
-7437,Unknown
-7462,Unknown
-7463,Unknown
-7466,Unknown
-7471,Unknown
-7472,Unknown
-7474,Unknown
-7477,Unknown
-7482,Unknown
-7484,Unknown
-7485,Unknown
-7487,Unknown
-7489,Unknown
-7490,Unknown
-7496,Unknown
-7499,Unknown
-7500,Unknown
-7501,Unknown
-7502,Unknown
-7504,Unknown
-7505,Unknown
-7506,Unknown
-7508,Unknown
-7524,Unknown
-7525,Unknown
-7530,Unknown
-7532,Unknown
-7536,Unknown
-7539,Unknown
-7540,Unknown
-7541,Unknown
-7542,Unknown
-7545,Unknown
-7546,Unknown
-7547,Unknown
-7561,Unknown
-7562,Unknown
-7563,Unknown
-7564,Unknown
-7565,Unknown
-7567,Unknown
-7572,Unknown
-7576,Unknown
-7577,Unknown
-7578,Unknown
-7581,Unknown
-7582,Unknown
-7583,Unknown
-7587,Unknown
-7588,Unknown
-7589,Unknown
-7590,Unknown
-7591,Unknown
-7592,Unknown
-7593,Unknown
-7595,Unknown
-7596,Unknown
-7599,Unknown
-7608,Unknown
-7613,Unknown
-7617,Unknown
-7621,Unknown
-7622,Unknown
-7623,Unknown
-7626,Unknown
-7627,Unknown
-7628,Unknown
-7629,Unknown
-7633,Unknown
-7635,Unknown
-7674,Unknown
-7675,Unknown
-7676,Unknown
-7677,Unknown
-7678,Unknown
-7679,Unknown
-7680,Unknown
-7681,Unknown
-7682,Unknown
-7683,Unknown
-7684,Unknown
-7685,Unknown
-7690,Unknown
-7691,Unknown
-7693,Unknown
-7694,Unknown
-7695,Unknown
-7696,Unknown
-7697,Unknown
-7698,Unknown
-7702,Unknown
-7703,Unknown
-7705,Unknown
-7706,Unknown
-7707,Unknown
-7708,Unknown
-7709,Unknown
-7710,Unknown
-7711,Unknown
-7712,Unknown
-7713,Unknown
-7714,Unknown
-7715,Unknown
-7720,Unknown
-7722,Unknown
-7723,Unknown
-7724,Unknown
-7725,Unknown
-7727,Unknown
-7733,Unknown
-7736,Unknown
-7738,Unknown
-7739,Unknown
-7740,Unknown
-7746,Unknown
-7747,Unknown
-7748,Unknown
-7753,Unknown
-7755,Unknown
-7764,Unknown
-7765,Unknown
-7766,Unknown
-7767,Unknown
-7768,Unknown
-7769,Unknown
-7773,Unknown
-7774,Unknown
-7775,Unknown
-7776,Unknown
-7777,Unknown
-7780,Unknown
-7781,Unknown
-7782,Unknown
-7783,Unknown
-7784,Unknown
-7785,Unknown
-7788,Unknown
-7789,Unknown
-7792,Unknown
-7793,Unknown
-7794,Unknown
-7795,Unknown
-7796,Unknown
-7797,Unknown
-7798,Unknown
-7799,Unknown
-7800,Unknown
-7801,Unknown
-7802,Unknown
-7804,Unknown
-7805,Unknown
-7806,Unknown
-7807,Unknown
-7808,Unknown
-7810,Unknown
-7813,Unknown
-7815,Unknown
-7816,Unknown
-7817,Unknown
-7820,Unknown
-7821,Unknown
-7822,Unknown
-7823,Unknown
-7824,Unknown
-7825,Unknown
-7826,Unknown
-7827,Unknown
-7828,Unknown
-7829,Unknown
-7830,Unknown
-7832,Unknown
-7833,Unknown
-7834,Unknown
-7835,Unknown
-7836,Unknown
-7837,Unknown
-7838,Unknown
-7839,Unknown
-7840,Unknown
-7841,Unknown
-7842,Unknown
-7843,Unknown
-7844,Unknown
-7845,Unknown
-7846,Unknown
-7847,Unknown
-7848,Unknown
-7849,Unknown
-7850,Unknown
-7851,Unknown
-7853,Unknown
-7854,Unknown
-7865,Unknown
-7866,Unknown
-7868,Unknown
-7869,Unknown
-7870,Unknown
-7871,Unknown
-7872,Unknown
-7873,Unknown
-7874,Unknown
-7875,Unknown
-7876,Unknown
-7877,Unknown
-7878,Unknown
-7879,Unknown
-7880,Unknown
-7881,Unknown
-7882,Unknown
-7883,Unknown
-7884,Unknown
-7886,Unknown
-7888,Unknown
-7890,Unknown
-7892,Unknown
-7894,Unknown
-7897,Unknown
-7899,Unknown
-7900,Unknown
-7910,Unknown
-7911,Unknown
-7912,Unknown
-7913,Unknown
-7914,Unknown
-7922,Unknown
-7923,Unknown
-7924,Unknown
-7929,Unknown
-7930,Unknown
-7931,Unknown
-7932,Unknown
-7947,Unknown
-7948,Unknown
-7949,Unknown
-7954,Unknown
-7956,Unknown
-7957,Unknown
-7958,Unknown
-7960,Unknown
-7977,Unknown
-7980,Unknown
-7981,Unknown
-7982,Unknown
-7983,Unknown
-7984,Unknown
-7985,Unknown
-7986,Unknown
-7989,Unknown
-7990,Unknown
-7991,Unknown
-7992,Unknown
-7993,Unknown
-7995,Unknown
-7996,Unknown
-7997,Unknown
-7998,Unknown
-7999,Unknown
-8000,Unknown
-8005,Unknown
-8006,Unknown
-8007,Unknown
-8008,Unknown
-8009,Unknown
-8010,Unknown
-8011,Unknown
-8012,Unknown
-8013,Unknown
-8015,Unknown
-8016,Unknown
-8017,Unknown
-8018,Unknown
-8019,Unknown
-8020,Unknown
-8021,Unknown
-8022,Unknown
-8023,Unknown
-8024,Unknown
-8025,Unknown
-8026,Unknown
-8027,Unknown
-8028,Unknown
-8029,Unknown
-8044,Unknown
-8045,Unknown
-8046,Unknown
-8047,Unknown
-8048,Unknown
-8053,Unknown
-8054,Unknown
-8057,Unknown
-8058,Unknown
-8059,Unknown
-8060,Unknown
-8067,Unknown
-8068,Unknown
-8070,Unknown
-8077,Unknown
-8078,Unknown
-8079,Unknown
-8080,Unknown
-8081,Unknown
-8082,Unknown
-8083,Unknown
-8084,Unknown
-8085,Unknown
-8086,Unknown
-8087,Unknown
-8088,Unknown
-8089,Unknown
-8090,Unknown
-8091,Unknown
-8092,Unknown
-8093,Unknown
-8096,Unknown
-8097,Unknown
-8098,Unknown
-8099,Unknown
-8100,Unknown
-8102,Unknown
-8103,Unknown
-8104,Unknown
-8105,Unknown
-8106,Unknown
-8107,Unknown
-8108,Unknown
-8109,Unknown
-8110,Unknown
-8111,Unknown
-8112,Unknown
-8113,Unknown
-8114,Unknown
-8115,Unknown
-8116,Unknown
-8117,Unknown
-8118,Unknown
-8119,Unknown
-8124,Unknown
-8125,Unknown
-8126,Unknown
-8127,Unknown
-8129,Unknown
-8130,Unknown
-8131,Unknown
-8133,Unknown
-8134,Unknown
-8135,Unknown
-8136,Unknown
-8137,Unknown
-8138,Unknown
-8139,Unknown
-8140,Unknown
-8141,Unknown
-8142,Unknown
-8143,Unknown
-8144,Unknown
-8145,Unknown
-8146,Unknown
+stop_id,shading,heat_vulnerability_index,heat_vulnerability_label
+86,Unknown,6.071134,Moderate Vulnerability
+403,Unknown,5.960978,Moderate Vulnerability
+404,Unknown,5.960978,Moderate Vulnerability
+407,Unknown,8.725452,Elevated Vulnerability
+424,Unknown,5.866803,Low Vulnerability
+439,Unknown,4.461370,Low Vulnerability
+447,Unknown,4.388527,Low Vulnerability
+453,Unknown,6.888769,Moderate Vulnerability
+462,Unknown,7.225032,Moderate Vulnerability
+469,Unknown,,Least Vulnerable
+478,Unknown,,Least Vulnerable
+484,Unknown,7.863879,Elevated Vulnerability
+487,Unknown,7.225032,Moderate Vulnerability
+495,Unknown,6.888769,Moderate Vulnerability
+499,Unknown,6.888769,Moderate Vulnerability
+501,Unknown,4.388527,Low Vulnerability
+509,Unknown,4.461370,Low Vulnerability
+522,Unknown,6.097635,Low Vulnerability
+524,Unknown,5.866803,Low Vulnerability
+526,Unknown,6.204121,Low Vulnerability
+538,Unknown,8.060888,Elevated Vulnerability
+546,Unknown,5.960978,Moderate Vulnerability
+551,Unknown,8.060888,Elevated Vulnerability
+553,Unknown,6.136434,Moderate Vulnerability
+554,Unknown,6.136434,Moderate Vulnerability
+556,Unknown,5.160704,Low Vulnerability
+558,Unknown,5.976342,Moderate Vulnerability
+559,Unknown,9.100336,Elevated Vulnerability
+562,Unknown,9.100336,Elevated Vulnerability
+563,Unknown,9.100336,Elevated Vulnerability
+564,Unknown,6.225241,Low Vulnerability
+566,Unknown,6.097635,Low Vulnerability
+569,Unknown,6.097635,Low Vulnerability
+572,Unknown,5.242293,Low Vulnerability
+574,Unknown,5.242293,Low Vulnerability
+575,Unknown,5.994506,Moderate Vulnerability
+580,Unknown,5.378267,Low Vulnerability
+582,Unknown,6.047873,Moderate Vulnerability
+583,Unknown,6.047873,Moderate Vulnerability
+585,Unknown,6.787153,Moderate Vulnerability
+587,Unknown,6.787153,Moderate Vulnerability
+588,Unknown,8.387570,Elevated Vulnerability
+590,Unknown,6.888769,Moderate Vulnerability
+591,Unknown,6.265869,Moderate Vulnerability
+592,Unknown,7.993709,Moderate Vulnerability
+593,Unknown,7.993709,Moderate Vulnerability
+595,Unknown,5.374166,Low Vulnerability
+596,Unknown,5.374166,Low Vulnerability
+597,Unknown,,Least Vulnerable
+598,Unknown,,Least Vulnerable
+599,Unknown,,Least Vulnerable
+600,Unknown,,Least Vulnerable
+601,Unknown,,Least Vulnerable
+619,Unknown,,Least Vulnerable
+624,Unknown,,Least Vulnerable
+626,Unknown,,Least Vulnerable
+629,Unknown,,Least Vulnerable
+632,Unknown,5.374166,Low Vulnerability
+633,Unknown,5.374166,Low Vulnerability
+634,Unknown,7.993709,Moderate Vulnerability
+640,Unknown,6.787153,Moderate Vulnerability
+643,Unknown,6.787153,Moderate Vulnerability
+644,Unknown,6.047873,Moderate Vulnerability
+646,Unknown,6.047873,Moderate Vulnerability
+647,Unknown,5.378267,Low Vulnerability
+649,Unknown,5.378267,Low Vulnerability
+652,Unknown,5.994506,Moderate Vulnerability
+653,Unknown,5.242293,Low Vulnerability
+656,Unknown,6.097635,Low Vulnerability
+657,Unknown,6.097635,Low Vulnerability
+661,Unknown,6.667147,Moderate Vulnerability
+662,Unknown,6.667147,Moderate Vulnerability
+663,Unknown,6.667147,Moderate Vulnerability
+664,Unknown,8.665332,Elevated Vulnerability
+665,Unknown,9.906494,Most Vulnerable
+667,Unknown,7.403541,Moderate Vulnerability
+668,Unknown,7.403541,Moderate Vulnerability
+670,Unknown,5.066517,Low Vulnerability
+671,Unknown,5.066517,Low Vulnerability
+672,Unknown,5.066517,Low Vulnerability
+674,Unknown,6.181950,Moderate Vulnerability
+675,Unknown,6.181950,Moderate Vulnerability
+677,Unknown,8.663226,Elevated Vulnerability
+680,Unknown,4.870942,Low Vulnerability
+682,Unknown,4.870942,Low Vulnerability
+683,Unknown,4.870942,Low Vulnerability
+685,Unknown,5.389677,Low Vulnerability
+687,Unknown,5.389677,Low Vulnerability
+688,Unknown,5.762027,Low Vulnerability
+690,Unknown,5.762027,Low Vulnerability
+691,Unknown,7.530963,Elevated Vulnerability
+692,Unknown,9.158626,Most Vulnerable
+695,Unknown,9.999784,Most Vulnerable
+698,Unknown,9.999784,Most Vulnerable
+703,Unknown,9.999784,Most Vulnerable
+706,Unknown,9.999784,Most Vulnerable
+710,Unknown,9.999784,Most Vulnerable
+717,Unknown,9.999784,Most Vulnerable
+720,Unknown,9.999784,Most Vulnerable
+722,Unknown,7.530963,Elevated Vulnerability
+723,Unknown,7.530963,Elevated Vulnerability
+725,Unknown,5.762027,Low Vulnerability
+727,Unknown,4.870942,Low Vulnerability
+731,Unknown,8.663226,Elevated Vulnerability
+732,Unknown,6.181950,Moderate Vulnerability
+733,Unknown,6.181950,Moderate Vulnerability
+734,Unknown,6.181950,Moderate Vulnerability
+737,Unknown,6.267712,Moderate Vulnerability
+738,Unknown,5.066517,Low Vulnerability
+743,Unknown,7.403541,Moderate Vulnerability
+744,Unknown,7.403541,Moderate Vulnerability
+765,Unknown,8.047136,Elevated Vulnerability
+767,Unknown,7.793520,Elevated Vulnerability
+769,Unknown,7.793520,Elevated Vulnerability
+771,Unknown,5.689995,Low Vulnerability
+775,Unknown,5.866803,Low Vulnerability
+777,Unknown,6.267712,Moderate Vulnerability
+779,Unknown,3.578476,Least Vulnerable
+781,Unknown,6.181950,Moderate Vulnerability
+782,Unknown,6.181950,Moderate Vulnerability
+791,Unknown,5.015823,Low Vulnerability
+792,Unknown,7.225032,Moderate Vulnerability
+793,Unknown,7.225032,Moderate Vulnerability
+794,Unknown,7.530963,Elevated Vulnerability
+797,Unknown,,Least Vulnerable
+799,Unknown,,Least Vulnerable
+801,Unknown,,Least Vulnerable
+806,Unknown,,Least Vulnerable
+807,Unknown,,Least Vulnerable
+808,Unknown,,Least Vulnerable
+809,Unknown,,Least Vulnerable
+810,Unknown,,Least Vulnerable
+813,Unknown,7.479586,Moderate Vulnerability
+815,Unknown,6.008780,Low Vulnerability
+816,Unknown,7.225032,Moderate Vulnerability
+817,Unknown,7.225032,Moderate Vulnerability
+818,Unknown,7.530963,Elevated Vulnerability
+828,Unknown,6.181950,Moderate Vulnerability
+830,Unknown,3.578476,Least Vulnerable
+832,Unknown,3.578476,Least Vulnerable
+834,Unknown,5.866803,Low Vulnerability
+836,Unknown,5.866803,Low Vulnerability
+837,Unknown,5.689995,Low Vulnerability
+838,Unknown,9.516670,Most Vulnerable
+839,Unknown,6.428424,Moderate Vulnerability
+840,Unknown,6.428424,Moderate Vulnerability
+841,Unknown,6.572753,Moderate Vulnerability
+842,Unknown,6.572753,Moderate Vulnerability
+847,Unknown,5.389677,Low Vulnerability
+849,Unknown,5.389677,Low Vulnerability
+851,Unknown,6.849266,Moderate Vulnerability
+852,Unknown,6.849266,Moderate Vulnerability
+855,Unknown,8.669335,Elevated Vulnerability
+857,Unknown,6.265869,Moderate Vulnerability
+858,Unknown,6.265869,Moderate Vulnerability
+859,Unknown,6.265869,Moderate Vulnerability
+862,Unknown,8.669335,Elevated Vulnerability
+867,Unknown,5.389677,Low Vulnerability
+869,Unknown,5.389677,Low Vulnerability
+874,Unknown,6.572753,Moderate Vulnerability
+878,Unknown,6.572753,Moderate Vulnerability
+879,Unknown,6.428424,Moderate Vulnerability
+881,Unknown,9.999784,Most Vulnerable
+886,Unknown,9.999784,Most Vulnerable
+887,Unknown,9.999784,Most Vulnerable
+889,Unknown,,Least Vulnerable
+890,Unknown,,Least Vulnerable
+893,Unknown,,Least Vulnerable
+894,Unknown,,Least Vulnerable
+898,Unknown,,Least Vulnerable
+899,Unknown,,Least Vulnerable
+900,Unknown,,Least Vulnerable
+910,Unknown,,Least Vulnerable
+913,Unknown,,Least Vulnerable
+917,Unknown,,Least Vulnerable
+920,Unknown,,Least Vulnerable
+921,Unknown,3.927601,Low Vulnerability
+923,Unknown,,Least Vulnerable
+924,Unknown,,Least Vulnerable
+928,Unknown,,Least Vulnerable
+933,Unknown,,Least Vulnerable
+935,Unknown,9.999784,Most Vulnerable
+938,Unknown,9.999784,Most Vulnerable
+951,Unknown,5.426995,Low Vulnerability
+953,Unknown,8.387570,Elevated Vulnerability
+954,Unknown,8.387570,Elevated Vulnerability
+956,Unknown,5.089086,Low Vulnerability
+958,Unknown,5.089086,Low Vulnerability
+959,Unknown,5.089086,Low Vulnerability
+1013,Unknown,5.089086,Low Vulnerability
+1014,Unknown,8.387570,Elevated Vulnerability
+1015,Unknown,8.387570,Elevated Vulnerability
+1029,Unknown,9.615051,Most Vulnerable
+1035,Unknown,7.919117,Elevated Vulnerability
+1037,Unknown,7.421590,Moderate Vulnerability
+1038,Unknown,7.421590,Moderate Vulnerability
+1046,Unknown,7.990267,Elevated Vulnerability
+1047,Unknown,7.990267,Elevated Vulnerability
+1048,Unknown,,Least Vulnerable
+1049,Unknown,,Least Vulnerable
+1051,Unknown,,Least Vulnerable
+1053,Unknown,7.417570,Moderate Vulnerability
+1055,Unknown,7.417570,Moderate Vulnerability
+1056,Unknown,,Least Vulnerable
+1058,Unknown,,Least Vulnerable
+1061,Unknown,,Least Vulnerable
+1064,Unknown,,Least Vulnerable
+1065,Unknown,,Least Vulnerable
+1068,Unknown,,Least Vulnerable
+1071,Unknown,7.417570,Moderate Vulnerability
+1075,Unknown,,Least Vulnerable
+1077,Unknown,,Least Vulnerable
+1078,Unknown,7.990267,Elevated Vulnerability
+1081,Unknown,7.990267,Elevated Vulnerability
+1082,Unknown,7.990267,Elevated Vulnerability
+1085,Unknown,7.163068,Moderate Vulnerability
+1086,Unknown,7.163068,Moderate Vulnerability
+1088,Unknown,7.163068,Moderate Vulnerability
+1097,Unknown,6.884210,Moderate Vulnerability
+1104,Unknown,5.822485,Moderate Vulnerability
+1107,Unknown,7.627577,Moderate Vulnerability
+1108,Unknown,7.627577,Moderate Vulnerability
+1109,Unknown,7.581297,Elevated Vulnerability
+1110,Unknown,7.581297,Elevated Vulnerability
+1111,Unknown,5.990742,Low Vulnerability
+1113,Unknown,5.990742,Low Vulnerability
+1114,Unknown,7.403541,Moderate Vulnerability
+1116,Unknown,5.066517,Low Vulnerability
+1119,Unknown,5.689995,Low Vulnerability
+1120,Unknown,5.866803,Low Vulnerability
+1121,Unknown,5.866803,Low Vulnerability
+1122,Unknown,5.866803,Low Vulnerability
+1124,Unknown,9.100336,Elevated Vulnerability
+1125,Unknown,9.100336,Elevated Vulnerability
+1129,Unknown,4.662805,Low Vulnerability
+1130,Unknown,4.662805,Low Vulnerability
+1131,Unknown,4.662805,Low Vulnerability
+1133,Unknown,4.662805,Low Vulnerability
+1134,Unknown,4.246028,Low Vulnerability
+1135,Unknown,4.246028,Low Vulnerability
+1136,Unknown,6.183169,Moderate Vulnerability
+1140,Unknown,7.499257,Moderate Vulnerability
+1143,Unknown,6.719151,Moderate Vulnerability
+1149,Unknown,8.666753,Elevated Vulnerability
+1150,Unknown,7.499257,Moderate Vulnerability
+1152,Unknown,7.499257,Moderate Vulnerability
+1153,Unknown,7.499257,Moderate Vulnerability
+1154,Unknown,6.183169,Moderate Vulnerability
+1156,Unknown,6.183169,Moderate Vulnerability
+1157,Unknown,4.246028,Low Vulnerability
+1158,Unknown,4.662805,Low Vulnerability
+1160,Unknown,4.662805,Low Vulnerability
+1161,Unknown,4.662805,Low Vulnerability
+1163,Unknown,9.100336,Elevated Vulnerability
+1165,Unknown,9.100336,Elevated Vulnerability
+1166,Unknown,6.204121,Low Vulnerability
+1167,Unknown,6.204121,Low Vulnerability
+1168,Unknown,5.866803,Low Vulnerability
+1169,Unknown,5.866803,Low Vulnerability
+1170,Unknown,5.689995,Low Vulnerability
+1171,Unknown,7.311105,Moderate Vulnerability
+1178,Unknown,5.990742,Low Vulnerability
+1179,Unknown,7.581297,Elevated Vulnerability
+1180,Unknown,7.581297,Elevated Vulnerability
+1181,Unknown,7.627577,Moderate Vulnerability
+1185,Unknown,5.822485,Moderate Vulnerability
+1186,Unknown,7.884733,Elevated Vulnerability
+1188,Unknown,7.884733,Elevated Vulnerability
+1190,Unknown,7.884733,Elevated Vulnerability
+1199,Unknown,,Least Vulnerable
+1200,Unknown,6.764162,Moderate Vulnerability
+1202,Unknown,7.935985,Elevated Vulnerability
+1203,Unknown,7.935985,Elevated Vulnerability
+1204,Unknown,5.956543,Low Vulnerability
+1207,Unknown,5.866855,Low Vulnerability
+1209,Unknown,5.866855,Low Vulnerability
+1212,Unknown,6.181950,Moderate Vulnerability
+1214,Unknown,6.181950,Moderate Vulnerability
+1215,Unknown,6.181950,Moderate Vulnerability
+1217,Unknown,5.097880,Low Vulnerability
+1219,Unknown,5.242293,Low Vulnerability
+1220,Unknown,4.404019,Low Vulnerability
+1225,Unknown,7.921735,Moderate Vulnerability
+1227,Unknown,7.990267,Elevated Vulnerability
+1228,Unknown,7.990267,Elevated Vulnerability
+1233,Unknown,7.072981,Moderate Vulnerability
+1234,Unknown,,Least Vulnerable
+1238,Unknown,,Least Vulnerable
+1240,Unknown,,Least Vulnerable
+1241,Unknown,,Least Vulnerable
+1242,Unknown,,Least Vulnerable
+1244,Unknown,,Least Vulnerable
+1245,Unknown,4.953920,Low Vulnerability
+1246,Unknown,4.953920,Low Vulnerability
+1248,Unknown,4.953920,Low Vulnerability
+1249,Unknown,4.953920,Low Vulnerability
+1251,Unknown,5.824293,Moderate Vulnerability
+1254,Unknown,5.824293,Moderate Vulnerability
+1257,Unknown,5.824293,Moderate Vulnerability
+1259,Unknown,5.824293,Moderate Vulnerability
+1261,Unknown,4.953920,Low Vulnerability
+1269,Unknown,,Least Vulnerable
+1274,Unknown,7.072981,Moderate Vulnerability
+1277,Unknown,7.990267,Elevated Vulnerability
+1278,Unknown,7.990267,Elevated Vulnerability
+1280,Unknown,7.990267,Elevated Vulnerability
+1282,Unknown,7.921735,Moderate Vulnerability
+1283,Unknown,7.921735,Moderate Vulnerability
+1284,Unknown,6.356834,Moderate Vulnerability
+1285,Unknown,6.356834,Moderate Vulnerability
+1287,Unknown,6.154778,Moderate Vulnerability
+1289,Unknown,4.404019,Low Vulnerability
+1290,Unknown,5.242293,Low Vulnerability
+1291,Unknown,5.097880,Low Vulnerability
+1294,Unknown,5.097880,Low Vulnerability
+1295,Unknown,6.181950,Moderate Vulnerability
+1297,Unknown,6.181950,Moderate Vulnerability
+1298,Unknown,7.232134,Moderate Vulnerability
+1301,Unknown,5.866855,Low Vulnerability
+1302,Unknown,5.866855,Low Vulnerability
+1304,Unknown,5.956543,Low Vulnerability
+1305,Unknown,7.935985,Elevated Vulnerability
+1306,Unknown,7.935985,Elevated Vulnerability
+1307,Unknown,7.935985,Elevated Vulnerability
+1310,Unknown,6.764162,Moderate Vulnerability
+1314,Unknown,,Least Vulnerable
+1316,Unknown,,Least Vulnerable
+1317,Unknown,,Least Vulnerable
+1360,Unknown,7.011290,Moderate Vulnerability
+1370,Unknown,7.011290,Moderate Vulnerability
+1412,Unknown,3.817485,Least Vulnerable
+1414,Unknown,3.817485,Least Vulnerable
+1417,Unknown,5.422869,Low Vulnerability
+1419,Unknown,6.249971,Moderate Vulnerability
+1421,Unknown,6.249971,Moderate Vulnerability
+1422,Unknown,8.387570,Elevated Vulnerability
+1423,Unknown,8.387570,Elevated Vulnerability
+1424,Unknown,5.071506,Low Vulnerability
+1425,Unknown,5.071506,Low Vulnerability
+1426,Unknown,5.071506,Low Vulnerability
+1427,Unknown,5.591428,Low Vulnerability
+1429,Unknown,,Least Vulnerable
+1430,Unknown,,Least Vulnerable
+1431,Unknown,,Least Vulnerable
+1433,Unknown,,Least Vulnerable
+1435,Unknown,,Least Vulnerable
+1437,Unknown,,Least Vulnerable
+1438,Unknown,,Least Vulnerable
+1439,Unknown,,Least Vulnerable
+1440,Unknown,,Least Vulnerable
+1441,Unknown,,Least Vulnerable
+1442,Unknown,,Least Vulnerable
+1447,Unknown,,Least Vulnerable
+1448,Unknown,,Least Vulnerable
+1450,Unknown,,Least Vulnerable
+1451,Unknown,,Least Vulnerable
+1453,Unknown,,Least Vulnerable
+1454,Unknown,,Least Vulnerable
+1457,Unknown,,Least Vulnerable
+1460,Unknown,,Least Vulnerable
+1467,Unknown,,Least Vulnerable
+1468,Unknown,,Least Vulnerable
+1472,Unknown,,Least Vulnerable
+1473,Unknown,,Least Vulnerable
+1475,Unknown,,Least Vulnerable
+1476,Unknown,,Least Vulnerable
+1480,Unknown,,Least Vulnerable
+1481,Unknown,,Least Vulnerable
+1482,Unknown,,Least Vulnerable
+1484,Unknown,7.072981,Moderate Vulnerability
+1485,Unknown,,Least Vulnerable
+1486,Unknown,,Least Vulnerable
+1487,Unknown,,Least Vulnerable
+1489,Unknown,,Least Vulnerable
+1490,Unknown,,Least Vulnerable
+1491,Unknown,,Least Vulnerable
+1492,Unknown,,Least Vulnerable
+1493,Unknown,,Least Vulnerable
+1494,Unknown,,Least Vulnerable
+1495,Unknown,,Least Vulnerable
+1496,Unknown,5.591428,Low Vulnerability
+1497,Unknown,5.591428,Low Vulnerability
+1499,Unknown,5.071506,Low Vulnerability
+1500,Unknown,5.071506,Low Vulnerability
+1502,Unknown,8.387570,Elevated Vulnerability
+1504,Unknown,6.249971,Moderate Vulnerability
+1520,Unknown,5.791592,Moderate Vulnerability
+1537,Unknown,5.528758,Low Vulnerability
+1576,Unknown,5.791592,Moderate Vulnerability
+1583,Unknown,5.487713,Low Vulnerability
+1591,Unknown,7.184775,Moderate Vulnerability
+1592,Unknown,7.184775,Moderate Vulnerability
+1594,Unknown,5.956543,Low Vulnerability
+1597,Unknown,5.473459,Low Vulnerability
+1598,Unknown,5.473459,Low Vulnerability
+1601,Unknown,5.487713,Low Vulnerability
+1607,Unknown,4.940424,Low Vulnerability
+1610,Unknown,4.940424,Low Vulnerability
+1611,Unknown,4.940424,Low Vulnerability
+1612,Unknown,6.572753,Moderate Vulnerability
+1615,Unknown,6.572753,Moderate Vulnerability
+1616,Unknown,5.822191,Moderate Vulnerability
+1617,Unknown,5.822191,Moderate Vulnerability
+1618,Unknown,6.649482,Moderate Vulnerability
+1622,Unknown,6.649482,Moderate Vulnerability
+1630,Unknown,6.572753,Moderate Vulnerability
+1631,Unknown,4.940424,Low Vulnerability
+1634,Unknown,,Least Vulnerable
+1638,Unknown,5.487713,Low Vulnerability
+1639,Unknown,5.487713,Low Vulnerability
+1640,Unknown,5.487713,Low Vulnerability
+1644,Unknown,5.473459,Low Vulnerability
+1645,Unknown,5.956543,Low Vulnerability
+1648,Unknown,7.184775,Moderate Vulnerability
+1649,Unknown,7.184775,Moderate Vulnerability
+1656,Unknown,5.866855,Low Vulnerability
+1658,Unknown,5.866855,Low Vulnerability
+1659,Unknown,5.866855,Low Vulnerability
+1661,Unknown,8.663226,Elevated Vulnerability
+1664,Unknown,5.374346,Low Vulnerability
+1665,Unknown,5.374346,Low Vulnerability
+1666,Unknown,5.791592,Moderate Vulnerability
+1668,Unknown,5.389677,Low Vulnerability
+1669,Unknown,5.389677,Low Vulnerability
+1670,Unknown,6.451888,Moderate Vulnerability
+1680,Unknown,9.158626,Most Vulnerable
+1681,Unknown,6.649482,Moderate Vulnerability
+1682,Unknown,6.451888,Moderate Vulnerability
+1685,Unknown,5.762027,Low Vulnerability
+1688,Unknown,5.389677,Low Vulnerability
+1689,Unknown,5.389677,Low Vulnerability
+1692,Unknown,5.374346,Low Vulnerability
+1695,Unknown,8.663226,Elevated Vulnerability
+1697,Unknown,5.866855,Low Vulnerability
+1700,Unknown,5.866855,Low Vulnerability
+1708,Unknown,5.820812,Moderate Vulnerability
+1713,Unknown,6.284052,Moderate Vulnerability
+1715,Unknown,6.284052,Moderate Vulnerability
+1716,Unknown,6.284052,Moderate Vulnerability
+1718,Unknown,5.659075,Low Vulnerability
+1720,Unknown,5.659075,Low Vulnerability
+1722,Unknown,6.294089,Moderate Vulnerability
+1726,Unknown,5.305594,Low Vulnerability
+1728,Unknown,5.305594,Low Vulnerability
+1729,Unknown,3.809833,Low Vulnerability
+1731,Unknown,4.073776,Low Vulnerability
+1732,Unknown,4.073776,Low Vulnerability
+1733,Unknown,4.073776,Low Vulnerability
+1736,Unknown,5.270659,Low Vulnerability
+1738,Unknown,4.845773,Low Vulnerability
+1739,Unknown,4.845773,Low Vulnerability
+1740,Unknown,5.960416,Low Vulnerability
+1741,Unknown,5.960416,Low Vulnerability
+1742,Unknown,5.896932,Low Vulnerability
+1743,Unknown,5.896932,Low Vulnerability
+1744,Unknown,5.896932,Low Vulnerability
+1745,Unknown,6.581797,Moderate Vulnerability
+1746,Unknown,6.581797,Moderate Vulnerability
+1748,Unknown,7.290058,Moderate Vulnerability
+1749,Unknown,6.215726,Low Vulnerability
+1751,Unknown,6.215726,Low Vulnerability
+1754,Unknown,,Least Vulnerable
+1755,Unknown,,Least Vulnerable
+1756,Unknown,,Least Vulnerable
+1757,Unknown,,Least Vulnerable
+1762,Unknown,,Least Vulnerable
+1763,Unknown,,Least Vulnerable
+1764,Unknown,,Least Vulnerable
+1766,Unknown,,Least Vulnerable
+1767,Unknown,,Least Vulnerable
+1771,Unknown,,Least Vulnerable
+1774,Unknown,,Least Vulnerable
+1775,Unknown,,Least Vulnerable
+1777,Unknown,,Least Vulnerable
+1778,Unknown,,Least Vulnerable
+1779,Unknown,,Least Vulnerable
+1796,Unknown,6.215726,Low Vulnerability
+1797,Unknown,6.215726,Low Vulnerability
+1798,Unknown,6.215726,Low Vulnerability
+1799,Unknown,7.290058,Moderate Vulnerability
+1800,Unknown,7.290058,Moderate Vulnerability
+1803,Unknown,6.581797,Moderate Vulnerability
+1804,Unknown,6.581797,Moderate Vulnerability
+1805,Unknown,5.896932,Low Vulnerability
+1806,Unknown,5.896932,Low Vulnerability
+1807,Unknown,5.896932,Low Vulnerability
+1808,Unknown,5.896932,Low Vulnerability
+1809,Unknown,5.960416,Low Vulnerability
+1810,Unknown,5.960416,Low Vulnerability
+1812,Unknown,5.270659,Low Vulnerability
+1813,Unknown,5.270659,Low Vulnerability
+1815,Unknown,3.396650,Least Vulnerable
+1816,Unknown,4.073776,Low Vulnerability
+1817,Unknown,4.073776,Low Vulnerability
+1818,Unknown,4.073776,Low Vulnerability
+1820,Unknown,3.809833,Low Vulnerability
+1821,Unknown,5.305594,Low Vulnerability
+1822,Unknown,5.305594,Low Vulnerability
+1823,Unknown,6.943495,Moderate Vulnerability
+1824,Unknown,5.269450,Low Vulnerability
+1825,Unknown,6.294089,Moderate Vulnerability
+1828,Unknown,5.659075,Low Vulnerability
+1829,Unknown,6.284052,Moderate Vulnerability
+1830,Unknown,6.284052,Moderate Vulnerability
+1831,Unknown,6.284052,Moderate Vulnerability
+1833,Unknown,6.284052,Moderate Vulnerability
+1835,Unknown,5.820812,Moderate Vulnerability
+1836,Unknown,5.820812,Moderate Vulnerability
+1839,Unknown,6.843570,Moderate Vulnerability
+1841,Unknown,6.843570,Moderate Vulnerability
+1842,Unknown,6.843570,Moderate Vulnerability
+1843,Unknown,6.843570,Moderate Vulnerability
+1844,Unknown,5.843155,Low Vulnerability
+1845,Unknown,5.843155,Low Vulnerability
+1846,Unknown,5.843155,Low Vulnerability
+1847,Unknown,6.202891,Low Vulnerability
+1848,Unknown,6.202891,Low Vulnerability
+1849,Unknown,5.316300,Low Vulnerability
+1851,Unknown,5.155698,Low Vulnerability
+1853,Unknown,5.155698,Low Vulnerability
+1855,Unknown,7.664625,Moderate Vulnerability
+1857,Unknown,6.889865,Moderate Vulnerability
+1858,Unknown,6.889865,Moderate Vulnerability
+1859,Unknown,5.960416,Low Vulnerability
+1860,Unknown,5.960416,Low Vulnerability
+1861,Manmade Shade,5.896932,Low Vulnerability
+1863,Unknown,6.581797,Moderate Vulnerability
+1864,Unknown,6.581797,Moderate Vulnerability
+1865,Unknown,5.973496,Low Vulnerability
+1866,Unknown,5.973496,Low Vulnerability
+1867,Unknown,5.973496,Low Vulnerability
+1868,Unknown,4.935914,Low Vulnerability
+1869,Unknown,4.935914,Low Vulnerability
+1870,No Shade,4.935914,Low Vulnerability
+1871,No Shade,4.935914,Low Vulnerability
+1872,Unknown,5.973496,Low Vulnerability
+1873,No Shade,5.973496,Low Vulnerability
+1874,Manmade Shade,5.973496,Low Vulnerability
+1875,Unknown,5.973496,Low Vulnerability
+1876,Unknown,6.581797,Moderate Vulnerability
+1878,No Shade,5.896932,Low Vulnerability
+1879,Unknown,5.896932,Low Vulnerability
+1880,Unknown,5.960416,Low Vulnerability
+1883,Unknown,6.889865,Moderate Vulnerability
+1884,Unknown,7.664625,Moderate Vulnerability
+1885,Unknown,5.155698,Low Vulnerability
+1888,Unknown,5.155698,Low Vulnerability
+1890,Unknown,5.316300,Low Vulnerability
+1891,Unknown,6.202891,Low Vulnerability
+1892,Unknown,5.843155,Low Vulnerability
+1893,Unknown,5.843155,Low Vulnerability
+1894,Unknown,5.843155,Low Vulnerability
+1895,Unknown,5.843155,Low Vulnerability
+1896,Unknown,6.843570,Moderate Vulnerability
+1897,Unknown,6.843570,Moderate Vulnerability
+1898,Unknown,6.843570,Moderate Vulnerability
+1899,Unknown,6.843570,Moderate Vulnerability
+1908,Unknown,3.808668,Low Vulnerability
+1910,Unknown,8.546644,Elevated Vulnerability
+1911,Unknown,8.546644,Elevated Vulnerability
+1912,Unknown,4.845773,Low Vulnerability
+1913,Unknown,4.845773,Low Vulnerability
+1915,Unknown,4.845773,Low Vulnerability
+1916,Unknown,4.845773,Low Vulnerability
+1917,Unknown,4.845773,Low Vulnerability
+1919,Unknown,8.546644,Elevated Vulnerability
+1922,Unknown,3.808668,Low Vulnerability
+1923,Unknown,3.808668,Low Vulnerability
+1951,Unknown,3.678985,Low Vulnerability
+1955,Unknown,5.362836,Low Vulnerability
+1956,Unknown,5.362836,Low Vulnerability
+1957,Unknown,5.362836,Low Vulnerability
+1959,Unknown,3.992763,Low Vulnerability
+1972,Unknown,5.362836,Low Vulnerability
+1974,Unknown,5.362836,Low Vulnerability
+1976,Unknown,5.305594,Low Vulnerability
+1978,Unknown,6.476350,Moderate Vulnerability
+1987,Unknown,,Least Vulnerable
+1991,Unknown,,Least Vulnerable
+1992,Unknown,,Least Vulnerable
+1993,Unknown,,Least Vulnerable
+1994,Unknown,,Least Vulnerable
+2000,Unknown,,Least Vulnerable
+2001,Unknown,,Least Vulnerable
+2003,Unknown,,Least Vulnerable
+2005,Unknown,,Least Vulnerable
+2006,Unknown,6.921783,Moderate Vulnerability
+2008,Unknown,,Least Vulnerable
+2012,Unknown,,Least Vulnerable
+2019,Unknown,,Least Vulnerable
+2021,Unknown,,Least Vulnerable
+2022,Unknown,6.433737,Moderate Vulnerability
+2025,Unknown,,Least Vulnerable
+2026,Unknown,,Least Vulnerable
+2028,Unknown,,Least Vulnerable
+2029,Unknown,,Least Vulnerable
+2031,Unknown,,Least Vulnerable
+2032,Unknown,,Least Vulnerable
+2037,Unknown,6.436959,Moderate Vulnerability
+2039,Unknown,6.436959,Moderate Vulnerability
+2045,Unknown,6.331413,Moderate Vulnerability
+2046,Unknown,6.331413,Moderate Vulnerability
+2050,Unknown,7.290058,Moderate Vulnerability
+2051,Unknown,7.290058,Moderate Vulnerability
+2052,Unknown,6.543161,Moderate Vulnerability
+2055,Unknown,6.543161,Moderate Vulnerability
+2056,Unknown,6.543161,Moderate Vulnerability
+2057,Unknown,6.543161,Moderate Vulnerability
+2058,Unknown,7.011290,Moderate Vulnerability
+2060,Unknown,7.011290,Moderate Vulnerability
+2061,Unknown,7.011290,Moderate Vulnerability
+2062,Unknown,7.011290,Moderate Vulnerability
+2063,Unknown,7.011290,Moderate Vulnerability
+2067,Unknown,7.011290,Moderate Vulnerability
+2068,Unknown,7.011290,Moderate Vulnerability
+2069,Unknown,7.011290,Moderate Vulnerability
+2071,Unknown,7.011290,Moderate Vulnerability
+2073,Unknown,6.543161,Moderate Vulnerability
+2074,Unknown,6.543161,Moderate Vulnerability
+2075,Unknown,6.543161,Moderate Vulnerability
+2078,Unknown,6.543161,Moderate Vulnerability
+2079,Unknown,7.290058,Moderate Vulnerability
+2080,Unknown,7.290058,Moderate Vulnerability
+2086,Unknown,6.331413,Moderate Vulnerability
+2087,Unknown,6.331413,Moderate Vulnerability
+2095,Unknown,9.615051,Most Vulnerable
+2096,Unknown,6.436959,Moderate Vulnerability
+2097,Unknown,3.817485,Least Vulnerable
+2100,Unknown,6.219748,Moderate Vulnerability
+2101,Unknown,5.101728,Low Vulnerability
+2102,Unknown,5.101728,Low Vulnerability
+2103,Unknown,4.737921,Low Vulnerability
+2105,Unknown,4.737921,Low Vulnerability
+2107,Unknown,5.510675,Moderate Vulnerability
+2112,Unknown,7.082135,Moderate Vulnerability
+2113,Unknown,7.082135,Moderate Vulnerability
+2115,Unknown,7.731900,Elevated Vulnerability
+2118,Unknown,7.007723,Moderate Vulnerability
+2119,Unknown,7.007723,Moderate Vulnerability
+2147,Unknown,7.007723,Moderate Vulnerability
+2149,Unknown,7.082135,Moderate Vulnerability
+2156,Unknown,5.510675,Moderate Vulnerability
+2158,Unknown,5.510675,Moderate Vulnerability
+2160,Unknown,4.737921,Low Vulnerability
+2162,Unknown,4.737921,Low Vulnerability
+2165,Unknown,6.219748,Moderate Vulnerability
+2166,Unknown,6.219748,Moderate Vulnerability
+2168,Unknown,3.817485,Least Vulnerable
+2201,Unknown,5.466687,Low Vulnerability
+2236,Unknown,3.678985,Low Vulnerability
+2237,Unknown,3.678985,Low Vulnerability
+2265,Unknown,3.817485,Least Vulnerable
+2267,Unknown,3.817485,Least Vulnerable
+2268,Unknown,3.817485,Least Vulnerable
+2270,Unknown,3.817485,Least Vulnerable
+2272,Unknown,3.817485,Least Vulnerable
+2276,Unknown,3.817485,Least Vulnerable
+2279,Unknown,4.845773,Low Vulnerability
+2281,Unknown,4.845773,Low Vulnerability
+2283,Unknown,8.725452,Elevated Vulnerability
+2297,Unknown,5.316300,Low Vulnerability
+2301,Unknown,5.843155,Low Vulnerability
+2303,Unknown,5.544335,Low Vulnerability
+2306,Unknown,7.406875,Moderate Vulnerability
+2307,Unknown,4.507820,Low Vulnerability
+2308,Unknown,4.507820,Low Vulnerability
+2316,Unknown,7.134386,Moderate Vulnerability
+2318,Unknown,7.134386,Moderate Vulnerability
+2321,Unknown,6.902013,Moderate Vulnerability
+2326,Unknown,6.902013,Moderate Vulnerability
+2327,Unknown,6.902013,Moderate Vulnerability
+2330,Unknown,6.902013,Moderate Vulnerability
+2332,Unknown,7.834108,Moderate Vulnerability
+2333,Unknown,7.834108,Moderate Vulnerability
+2336,Unknown,6.902013,Moderate Vulnerability
+2341,Unknown,6.902013,Moderate Vulnerability
+2343,Unknown,6.902013,Moderate Vulnerability
+2345,Unknown,6.902013,Moderate Vulnerability
+2347,Unknown,7.134386,Moderate Vulnerability
+2349,Unknown,7.442794,Elevated Vulnerability
+2355,Unknown,,Least Vulnerable
+2356,Unknown,,Least Vulnerable
+2357,Unknown,,Least Vulnerable
+2361,Unknown,,Least Vulnerable
+2363,Unknown,,Least Vulnerable
+2368,Unknown,6.559399,Moderate Vulnerability
+2369,Unknown,8.665332,Elevated Vulnerability
+2371,Unknown,6.114634,Moderate Vulnerability
+2372,Unknown,6.114634,Moderate Vulnerability
+2382,Unknown,7.134386,Moderate Vulnerability
+2384,Unknown,7.134386,Moderate Vulnerability
+2386,Unknown,6.649552,Moderate Vulnerability
+2387,Unknown,6.649552,Moderate Vulnerability
+2388,Unknown,6.649552,Moderate Vulnerability
+2391,Unknown,6.559399,Moderate Vulnerability
+2392,Unknown,6.713400,Moderate Vulnerability
+2394,Unknown,8.665332,Elevated Vulnerability
+2397,Unknown,8.665332,Elevated Vulnerability
+2398,Unknown,7.793520,Elevated Vulnerability
+2400,Unknown,7.793520,Elevated Vulnerability
+2406,Unknown,7.184348,Moderate Vulnerability
+2408,Unknown,7.184348,Moderate Vulnerability
+2409,Unknown,7.793520,Elevated Vulnerability
+2411,Unknown,7.793520,Elevated Vulnerability
+2412,Unknown,8.665332,Elevated Vulnerability
+2414,Unknown,6.667147,Moderate Vulnerability
+2416,Unknown,6.713400,Moderate Vulnerability
+2418,Unknown,6.649552,Moderate Vulnerability
+2420,Unknown,6.649552,Moderate Vulnerability
+2422,Unknown,7.134386,Moderate Vulnerability
+2432,Unknown,,Least Vulnerable
+2433,Unknown,,Least Vulnerable
+2435,Unknown,,Least Vulnerable
+2436,Unknown,,Least Vulnerable
+2437,Unknown,,Least Vulnerable
+2438,Unknown,,Least Vulnerable
+2439,Unknown,,Least Vulnerable
+2440,Unknown,,Least Vulnerable
+2441,Unknown,,Least Vulnerable
+2443,Unknown,,Least Vulnerable
+2444,Unknown,,Least Vulnerable
+2445,Unknown,,Least Vulnerable
+2446,Unknown,,Least Vulnerable
+2448,Unknown,,Least Vulnerable
+2451,Unknown,,Least Vulnerable
+2453,Unknown,,Least Vulnerable
+2455,Unknown,,Least Vulnerable
+2457,Unknown,,Least Vulnerable
+2461,Unknown,,Least Vulnerable
+2502,Unknown,6.543161,Moderate Vulnerability
+2504,Unknown,5.867764,Low Vulnerability
+2506,Unknown,5.867764,Low Vulnerability
+2519,Unknown,6.719151,Moderate Vulnerability
+2520,Unknown,6.719151,Moderate Vulnerability
+2522,Unknown,5.867764,Low Vulnerability
+2524,Unknown,5.867764,Low Vulnerability
+2526,Unknown,6.543161,Moderate Vulnerability
+2607,Unknown,,Least Vulnerable
+2611,Unknown,,Least Vulnerable
+2619,Unknown,7.442794,Elevated Vulnerability
+2621,Unknown,7.442794,Elevated Vulnerability
+2634,Unknown,,Least Vulnerable
+2635,Unknown,,Least Vulnerable
+2636,Unknown,7.544650,Elevated Vulnerability
+2637,Unknown,5.487713,Low Vulnerability
+2640,Unknown,7.442794,Elevated Vulnerability
+2642,Unknown,6.071134,Moderate Vulnerability
+2647,Unknown,,Least Vulnerable
+2648,Unknown,,Least Vulnerable
+2650,Unknown,,Least Vulnerable
+2655,Unknown,,Least Vulnerable
+2656,Unknown,,Least Vulnerable
+2657,Unknown,,Least Vulnerable
+2658,Unknown,,Least Vulnerable
+2660,Unknown,,Least Vulnerable
+2667,Unknown,,Least Vulnerable
+2668,Unknown,,Least Vulnerable
+2682,Unknown,,Least Vulnerable
+2683,Unknown,,Least Vulnerable
+2688,Unknown,7.884733,Elevated Vulnerability
+2689,Unknown,,Least Vulnerable
+2690,Unknown,,Least Vulnerable
+2706,Unknown,7.184775,Moderate Vulnerability
+2709,Unknown,7.184775,Moderate Vulnerability
+2711,Unknown,7.184775,Moderate Vulnerability
+2713,Unknown,,Least Vulnerable
+2718,Unknown,,Least Vulnerable
+2724,Unknown,,Least Vulnerable
+2730,Unknown,,Least Vulnerable
+2732,Unknown,,Least Vulnerable
+2733,Unknown,,Least Vulnerable
+2734,Unknown,6.114634,Moderate Vulnerability
+2736,Unknown,7.349577,Moderate Vulnerability
+2737,Unknown,7.349577,Moderate Vulnerability
+2738,Unknown,7.349577,Moderate Vulnerability
+2740,Unknown,8.060888,Elevated Vulnerability
+2742,Unknown,6.136434,Moderate Vulnerability
+2744,Unknown,8.060888,Elevated Vulnerability
+2745,Unknown,8.060888,Elevated Vulnerability
+2747,Unknown,7.349577,Moderate Vulnerability
+2748,Unknown,7.349577,Moderate Vulnerability
+2750,Unknown,6.693801,Moderate Vulnerability
+2753,Unknown,,Least Vulnerable
+2757,Unknown,,Least Vulnerable
+2759,Unknown,,Least Vulnerable
+2760,Unknown,,Least Vulnerable
+2775,Unknown,,Least Vulnerable
+2778,Unknown,,Least Vulnerable
+2779,Unknown,,Least Vulnerable
+2781,Unknown,,Least Vulnerable
+2782,Unknown,,Least Vulnerable
+2785,Unknown,,Least Vulnerable
+2790,Unknown,,Least Vulnerable
+2791,Unknown,,Least Vulnerable
+2811,Unknown,,Least Vulnerable
+2813,Unknown,,Least Vulnerable
+2817,Unknown,,Least Vulnerable
+2832,Unknown,,Least Vulnerable
+2833,Unknown,,Least Vulnerable
+2835,Unknown,,Least Vulnerable
+2836,Unknown,,Least Vulnerable
+2837,Unknown,,Least Vulnerable
+2839,Unknown,,Least Vulnerable
+2863,Unknown,,Least Vulnerable
+2864,Unknown,,Least Vulnerable
+2890,Unknown,,Least Vulnerable
+2893,Unknown,,Least Vulnerable
+2894,Unknown,,Least Vulnerable
+2896,Unknown,,Least Vulnerable
+2904,Unknown,,Least Vulnerable
+2905,Unknown,,Least Vulnerable
+2907,Unknown,,Least Vulnerable
+2908,Unknown,,Least Vulnerable
+2910,Unknown,,Least Vulnerable
+2914,Unknown,,Least Vulnerable
+2916,Unknown,,Least Vulnerable
+2917,Unknown,,Least Vulnerable
+2918,Unknown,,Least Vulnerable
+2920,Unknown,,Least Vulnerable
+2921,Unknown,,Least Vulnerable
+2923,Unknown,,Least Vulnerable
+2924,Unknown,,Least Vulnerable
+2926,Unknown,,Least Vulnerable
+2927,Unknown,,Least Vulnerable
+2929,Unknown,,Least Vulnerable
+2930,Unknown,,Least Vulnerable
+2931,Unknown,,Least Vulnerable
+2935,Unknown,,Least Vulnerable
+2939,Unknown,,Least Vulnerable
+2940,Unknown,7.834108,Moderate Vulnerability
+2941,Unknown,7.349577,Moderate Vulnerability
+2943,Unknown,7.834108,Moderate Vulnerability
+2944,Unknown,7.834108,Moderate Vulnerability
+2956,Unknown,5.982347,Moderate Vulnerability
+2958,Unknown,5.982347,Moderate Vulnerability
+2959,Unknown,5.982347,Moderate Vulnerability
+2961,Unknown,5.982347,Moderate Vulnerability
+2972,Unknown,6.649552,Moderate Vulnerability
+2973,Unknown,6.649552,Moderate Vulnerability
+2974,Unknown,6.649552,Moderate Vulnerability
+2976,Unknown,7.118674,Moderate Vulnerability
+2977,Unknown,7.118674,Moderate Vulnerability
+2978,Unknown,7.581297,Elevated Vulnerability
+2980,Unknown,7.581297,Elevated Vulnerability
+2982,Unknown,7.627577,Moderate Vulnerability
+2987,Unknown,7.627577,Moderate Vulnerability
+2989,Unknown,7.581297,Elevated Vulnerability
+2990,Unknown,7.581297,Elevated Vulnerability
+2991,Unknown,7.581297,Elevated Vulnerability
+2992,Unknown,7.118674,Moderate Vulnerability
+2993,Unknown,7.118674,Moderate Vulnerability
+2995,Unknown,6.649552,Moderate Vulnerability
+2996,Unknown,6.649552,Moderate Vulnerability
+2997,Unknown,8.047136,Elevated Vulnerability
+2999,Unknown,7.116714,Moderate Vulnerability
+3001,Unknown,7.116714,Moderate Vulnerability
+3003,Unknown,6.136434,Moderate Vulnerability
+3005,Unknown,6.136434,Moderate Vulnerability
+3006,Unknown,7.193392,Moderate Vulnerability
+3008,Unknown,7.193392,Moderate Vulnerability
+3010,Unknown,7.193392,Moderate Vulnerability
+3011,Unknown,4.468677,Low Vulnerability
+3013,Unknown,4.468677,Low Vulnerability
+3014,Unknown,7.509013,Moderate Vulnerability
+3015,Unknown,7.509013,Moderate Vulnerability
+3017,Unknown,8.085081,Elevated Vulnerability
+3018,Unknown,8.085081,Elevated Vulnerability
+3019,Unknown,7.843105,Moderate Vulnerability
+3020,Unknown,7.843105,Moderate Vulnerability
+3022,Unknown,7.652022,Moderate Vulnerability
+3024,Unknown,7.919117,Elevated Vulnerability
+3026,Unknown,7.919117,Elevated Vulnerability
+3028,Unknown,7.919117,Elevated Vulnerability
+3030,Unknown,7.652022,Moderate Vulnerability
+3032,Unknown,7.843105,Moderate Vulnerability
+3033,Unknown,7.843105,Moderate Vulnerability
+3034,Unknown,7.843105,Moderate Vulnerability
+3035,Unknown,8.085081,Elevated Vulnerability
+3037,Unknown,7.509013,Moderate Vulnerability
+3038,Unknown,7.509013,Moderate Vulnerability
+3039,Unknown,4.468677,Low Vulnerability
+3041,Unknown,4.468677,Low Vulnerability
+3042,Unknown,7.193392,Moderate Vulnerability
+3045,Unknown,7.193392,Moderate Vulnerability
+3046,Unknown,6.136434,Moderate Vulnerability
+3047,Unknown,6.136434,Moderate Vulnerability
+3048,Unknown,7.116714,Moderate Vulnerability
+3050,Unknown,7.116714,Moderate Vulnerability
+3052,Unknown,8.047136,Elevated Vulnerability
+3054,Unknown,8.047136,Elevated Vulnerability
+3056,Unknown,6.114634,Moderate Vulnerability
+3057,Unknown,6.114634,Moderate Vulnerability
+3061,Unknown,6.713400,Moderate Vulnerability
+3063,Unknown,6.559399,Moderate Vulnerability
+3064,Unknown,6.559399,Moderate Vulnerability
+3067,Unknown,6.649552,Moderate Vulnerability
+3068,Unknown,7.134386,Moderate Vulnerability
+3075,Unknown,9.999784,Most Vulnerable
+3077,Unknown,9.999784,Most Vulnerable
+3080,Unknown,9.999784,Most Vulnerable
+3081,Unknown,,Least Vulnerable
+3082,Unknown,,Least Vulnerable
+3086,Unknown,9.999784,Most Vulnerable
+3104,Unknown,6.649482,Moderate Vulnerability
+3110,Unknown,9.999784,Most Vulnerable
+3113,Unknown,9.999784,Most Vulnerable
+3114,Unknown,9.999784,Most Vulnerable
+3116,Unknown,9.999784,Most Vulnerable
+3169,Unknown,4.953920,Low Vulnerability
+3172,Unknown,4.953920,Low Vulnerability
+3173,Unknown,,Least Vulnerable
+3175,Unknown,,Least Vulnerable
+3176,Unknown,,Least Vulnerable
+3177,Unknown,,Least Vulnerable
+3182,Unknown,,Least Vulnerable
+3183,Unknown,,Least Vulnerable
+3185,Unknown,,Least Vulnerable
+3186,Unknown,,Least Vulnerable
+3188,Unknown,,Least Vulnerable
+3189,Unknown,,Least Vulnerable
+3191,Unknown,4.953920,Low Vulnerability
+3192,Unknown,4.953920,Low Vulnerability
+3196,Unknown,5.824293,Moderate Vulnerability
+3198,Unknown,4.953920,Low Vulnerability
+3200,Unknown,4.953920,Low Vulnerability
+3201,Unknown,4.953920,Low Vulnerability
+3203,Unknown,4.953920,Low Vulnerability
+3214,Unknown,,Least Vulnerable
+3215,Unknown,,Least Vulnerable
+3216,Unknown,,Least Vulnerable
+3218,Unknown,,Least Vulnerable
+3220,Unknown,,Least Vulnerable
+3222,Unknown,,Least Vulnerable
+3224,Unknown,,Least Vulnerable
+3229,Unknown,,Least Vulnerable
+3231,Unknown,,Least Vulnerable
+3234,Unknown,,Least Vulnerable
+3238,Unknown,,Least Vulnerable
+3245,Unknown,5.466687,Low Vulnerability
+3248,Unknown,3.396650,Least Vulnerable
+3250,Unknown,3.396650,Least Vulnerable
+3252,Unknown,3.396650,Least Vulnerable
+3255,Unknown,5.466687,Low Vulnerability
+3267,Unknown,,Least Vulnerable
+3270,Unknown,6.843570,Moderate Vulnerability
+3272,Unknown,6.843570,Moderate Vulnerability
+3274,Unknown,5.544335,Low Vulnerability
+3275,Unknown,5.843155,Low Vulnerability
+3276,Unknown,5.843155,Low Vulnerability
+3282,Unknown,5.316300,Low Vulnerability
+3284,Unknown,6.183169,Moderate Vulnerability
+3285,Unknown,6.183169,Moderate Vulnerability
+3294,Unknown,3.869941,Least Vulnerable
+3297,Unknown,2.746310,Least Vulnerable
+3298,Unknown,3.808668,Low Vulnerability
+3301,Unknown,3.808668,Low Vulnerability
+3303,Unknown,5.316300,Low Vulnerability
+3305,Unknown,5.316300,Low Vulnerability
+3307,Unknown,8.396594,Elevated Vulnerability
+3309,Unknown,8.085081,Elevated Vulnerability
+3316,Unknown,3.808668,Low Vulnerability
+3319,Unknown,2.746310,Least Vulnerable
+3320,Unknown,2.746310,Least Vulnerable
+3322,Unknown,3.869941,Least Vulnerable
+3325,Unknown,4.659452,Low Vulnerability
+3328,Unknown,7.406875,Moderate Vulnerability
+3329,Unknown,7.406875,Moderate Vulnerability
+3332,Unknown,6.215726,Low Vulnerability
+3334,Unknown,6.215726,Low Vulnerability
+3340,Unknown,5.867764,Low Vulnerability
+3341,Unknown,6.215726,Low Vulnerability
+3342,Unknown,6.215726,Low Vulnerability
+3343,Unknown,6.215726,Low Vulnerability
+3348,Unknown,,Least Vulnerable
+3350,Unknown,,Least Vulnerable
+3359,Unknown,8.099117,Elevated Vulnerability
+3361,Unknown,8.099117,Elevated Vulnerability
+3366,Unknown,8.396594,Elevated Vulnerability
+3367,Unknown,8.396594,Elevated Vulnerability
+3372,Unknown,8.099117,Elevated Vulnerability
+3374,Unknown,8.099117,Elevated Vulnerability
+3376,Unknown,4.507820,Low Vulnerability
+3388,Unknown,,Least Vulnerable
+3401,Unknown,6.483344,Moderate Vulnerability
+3406,Unknown,6.154778,Moderate Vulnerability
+3407,Unknown,6.154778,Moderate Vulnerability
+3408,Unknown,6.356834,Moderate Vulnerability
+3409,Unknown,6.356834,Moderate Vulnerability
+3411,Unknown,5.780525,Low Vulnerability
+3412,Unknown,5.528758,Low Vulnerability
+3414,Unknown,5.528758,Low Vulnerability
+3418,Unknown,5.528758,Low Vulnerability
+3419,Unknown,5.780525,Low Vulnerability
+3420,Unknown,6.356834,Moderate Vulnerability
+3422,Unknown,6.356834,Moderate Vulnerability
+3423,Unknown,6.154778,Moderate Vulnerability
+3424,Unknown,6.154778,Moderate Vulnerability
+3426,Unknown,6.462054,Moderate Vulnerability
+3427,Unknown,6.462054,Moderate Vulnerability
+3429,Unknown,6.183169,Moderate Vulnerability
+3431,Unknown,6.183169,Moderate Vulnerability
+3432,Unknown,5.791592,Moderate Vulnerability
+3435,Unknown,5.982347,Moderate Vulnerability
+3436,Unknown,5.982347,Moderate Vulnerability
+3437,Unknown,5.982347,Moderate Vulnerability
+3438,Unknown,5.982347,Moderate Vulnerability
+3439,Unknown,5.791592,Moderate Vulnerability
+3445,Unknown,6.849266,Moderate Vulnerability
+3446,Unknown,5.982347,Moderate Vulnerability
+3457,Unknown,6.225241,Low Vulnerability
+3466,Unknown,5.466687,Low Vulnerability
+3468,Unknown,5.982347,Moderate Vulnerability
+3470,Unknown,5.982347,Moderate Vulnerability
+3471,Unknown,6.888769,Moderate Vulnerability
+3473,Unknown,6.888769,Moderate Vulnerability
+3479,Unknown,5.982347,Moderate Vulnerability
+3513,Unknown,6.667147,Moderate Vulnerability
+3515,Unknown,6.667147,Moderate Vulnerability
+3516,Unknown,6.114634,Moderate Vulnerability
+3517,Unknown,6.114634,Moderate Vulnerability
+3518,Unknown,6.114634,Moderate Vulnerability
+3519,Unknown,7.134386,Moderate Vulnerability
+3520,Unknown,6.649552,Moderate Vulnerability
+3578,Unknown,4.507820,Low Vulnerability
+3580,Unknown,6.843570,Moderate Vulnerability
+3593,Unknown,,Least Vulnerable
+3595,Unknown,,Least Vulnerable
+3600,Unknown,,Least Vulnerable
+3602,Unknown,,Least Vulnerable
+3607,Unknown,,Least Vulnerable
+3610,Unknown,,Least Vulnerable
+3634,Unknown,3.817485,Least Vulnerable
+3655,Unknown,4.953920,Low Vulnerability
+3658,Unknown,4.953920,Low Vulnerability
+3659,Unknown,5.824293,Moderate Vulnerability
+3661,Unknown,4.953920,Low Vulnerability
+3662,Unknown,4.953920,Low Vulnerability
+3664,Unknown,4.953920,Low Vulnerability
+3730,Unknown,7.499257,Moderate Vulnerability
+3731,Unknown,6.183169,Moderate Vulnerability
+3732,Unknown,7.687929,Moderate Vulnerability
+3734,Unknown,7.687929,Moderate Vulnerability
+3736,Unknown,7.921735,Moderate Vulnerability
+3739,Unknown,6.356834,Moderate Vulnerability
+3740,Unknown,6.333444,Moderate Vulnerability
+3743,Unknown,6.333444,Moderate Vulnerability
+3745,Unknown,6.333444,Moderate Vulnerability
+3748,Unknown,7.417570,Moderate Vulnerability
+3751,Unknown,,Least Vulnerable
+3753,Unknown,,Least Vulnerable
+3754,Unknown,,Least Vulnerable
+3758,Unknown,6.957533,Moderate Vulnerability
+3759,Unknown,,Least Vulnerable
+3761,Unknown,,Least Vulnerable
+3772,Unknown,7.417570,Moderate Vulnerability
+3774,Unknown,7.417570,Moderate Vulnerability
+3775,Unknown,7.420706,Moderate Vulnerability
+3777,Unknown,6.333444,Moderate Vulnerability
+3782,Unknown,6.333444,Moderate Vulnerability
+3783,Unknown,6.333444,Moderate Vulnerability
+3784,Unknown,7.921735,Moderate Vulnerability
+3785,Unknown,7.921735,Moderate Vulnerability
+3788,Unknown,7.687929,Moderate Vulnerability
+3789,Unknown,7.687929,Moderate Vulnerability
+3791,Unknown,7.687929,Moderate Vulnerability
+3792,Unknown,7.499257,Moderate Vulnerability
+3797,Unknown,6.677978,Moderate Vulnerability
+3800,Unknown,6.677978,Moderate Vulnerability
+3802,Unknown,8.085081,Elevated Vulnerability
+3804,Unknown,8.085081,Elevated Vulnerability
+3806,Unknown,7.286330,Moderate Vulnerability
+3808,Unknown,4.057111,Low Vulnerability
+3810,Unknown,4.057111,Low Vulnerability
+3867,Unknown,,Least Vulnerable
+3869,Unknown,,Least Vulnerable
+3917,Unknown,5.028071,Low Vulnerability
+3942,Unknown,,Least Vulnerable
+3943,Unknown,4.953920,Low Vulnerability
+3955,Unknown,7.993709,Moderate Vulnerability
+3956,Unknown,6.265869,Moderate Vulnerability
+3957,Unknown,6.265869,Moderate Vulnerability
+3958,Unknown,6.265869,Moderate Vulnerability
+3960,Unknown,3.814418,Least Vulnerable
+3961,Unknown,3.814418,Least Vulnerable
+3966,Unknown,6.290887,Moderate Vulnerability
+3967,Unknown,3.814418,Least Vulnerable
+3970,Unknown,6.265869,Moderate Vulnerability
+3971,Unknown,6.265869,Moderate Vulnerability
+3972,Unknown,6.265869,Moderate Vulnerability
+3973,Unknown,7.993709,Moderate Vulnerability
+3987,Unknown,,Least Vulnerable
+3996,Unknown,6.225241,Low Vulnerability
+3998,Unknown,6.225241,Low Vulnerability
+4006,Unknown,5.976342,Moderate Vulnerability
+4009,Unknown,7.193392,Moderate Vulnerability
+4013,Unknown,6.136434,Moderate Vulnerability
+4015,Unknown,6.217153,Moderate Vulnerability
+4016,Unknown,7.372457,Moderate Vulnerability
+4020,Unknown,,Least Vulnerable
+4021,Unknown,8.060888,Elevated Vulnerability
+4044,Unknown,7.442794,Elevated Vulnerability
+4047,Unknown,5.389677,Low Vulnerability
+4048,Unknown,7.193392,Moderate Vulnerability
+4052,Unknown,6.114634,Moderate Vulnerability
+4055,Unknown,,Least Vulnerable
+4059,Unknown,,Least Vulnerable
+4063,Unknown,,Least Vulnerable
+4065,Unknown,7.990267,Elevated Vulnerability
+4069,Unknown,6.290887,Moderate Vulnerability
+4074,Unknown,6.719151,Moderate Vulnerability
+4078,Unknown,7.082135,Moderate Vulnerability
+4085,Unknown,7.349577,Moderate Vulnerability
+4090,Unknown,,Least Vulnerable
+4091,Unknown,,Least Vulnerable
+4095,Unknown,5.528758,Low Vulnerability
+4102,Unknown,6.290887,Moderate Vulnerability
+4112,Unknown,6.267712,Moderate Vulnerability
+4126,Unknown,9.999784,Most Vulnerable
+4129,Unknown,5.762027,Low Vulnerability
+4130,Unknown,5.389677,Low Vulnerability
+4132,Unknown,5.389677,Low Vulnerability
+4133,Unknown,5.389677,Low Vulnerability
+4135,Unknown,5.066517,Low Vulnerability
+4142,Unknown,6.071134,Moderate Vulnerability
+4177,Unknown,,Least Vulnerable
+4184,Unknown,7.372457,Moderate Vulnerability
+4190,Unknown,,Least Vulnerable
+4196,Unknown,,Least Vulnerable
+4213,Unknown,5.235708,Low Vulnerability
+4217,Unknown,5.235708,Low Vulnerability
+4219,Unknown,5.235708,Low Vulnerability
+4222,Unknown,,Least Vulnerable
+4228,Unknown,4.404019,Low Vulnerability
+4229,Unknown,4.404019,Low Vulnerability
+4231,Unknown,6.154778,Moderate Vulnerability
+4233,Unknown,5.028071,Low Vulnerability
+4234,Unknown,7.372457,Moderate Vulnerability
+4235,Unknown,7.372457,Moderate Vulnerability
+4241,Unknown,7.372457,Moderate Vulnerability
+4244,Unknown,7.372457,Moderate Vulnerability
+4247,Unknown,6.888769,Moderate Vulnerability
+4254,Unknown,6.943495,Moderate Vulnerability
+4255,Unknown,6.576239,Moderate Vulnerability
+4261,Unknown,9.999784,Most Vulnerable
+4264,Unknown,7.134386,Moderate Vulnerability
+4271,Unknown,5.426995,Low Vulnerability
+4273,Unknown,9.999784,Most Vulnerable
+4284,Unknown,,Least Vulnerable
+4285,Unknown,6.071134,Moderate Vulnerability
+4289,Unknown,8.047136,Elevated Vulnerability
+4296,Unknown,6.667147,Moderate Vulnerability
+4298,Unknown,4.870942,Low Vulnerability
+4301,Unknown,6.888769,Moderate Vulnerability
+4304,Unknown,4.662805,Low Vulnerability
+4317,Unknown,5.426995,Low Vulnerability
+4319,Unknown,,Least Vulnerable
+4329,Unknown,,Least Vulnerable
+4330,Unknown,,Least Vulnerable
+4333,Unknown,,Least Vulnerable
+4340,Unknown,6.461519,Moderate Vulnerability
+4341,Unknown,7.011290,Moderate Vulnerability
+4345,Unknown,7.627577,Moderate Vulnerability
+4346,Unknown,7.627577,Moderate Vulnerability
+4347,Unknown,5.066517,Low Vulnerability
+4348,Unknown,7.311105,Moderate Vulnerability
+4350,Unknown,9.100336,Elevated Vulnerability
+4352,Unknown,7.499257,Moderate Vulnerability
+4356,Unknown,6.719151,Moderate Vulnerability
+4357,Unknown,6.719151,Moderate Vulnerability
+4360,Unknown,4.953920,Low Vulnerability
+4361,Unknown,,Least Vulnerable
+4363,Unknown,,Least Vulnerable
+4364,Unknown,,Least Vulnerable
+4365,Unknown,,Least Vulnerable
+4368,Unknown,5.791592,Moderate Vulnerability
+4404,Unknown,,Least Vulnerable
+4406,Unknown,,Least Vulnerable
+4409,Unknown,5.028071,Low Vulnerability
+4414,Unknown,4.507820,Low Vulnerability
+4429,Unknown,,Least Vulnerable
+4441,Unknown,4.662805,Low Vulnerability
+4445,Unknown,7.403541,Moderate Vulnerability
+4446,Unknown,7.403541,Moderate Vulnerability
+4451,Unknown,6.888769,Moderate Vulnerability
+4452,Unknown,5.378267,Low Vulnerability
+4456,Unknown,7.993709,Moderate Vulnerability
+4458,Unknown,,Least Vulnerable
+4467,Unknown,,Least Vulnerable
+4471,Unknown,,Least Vulnerable
+4472,Unknown,7.993709,Moderate Vulnerability
+4478,Unknown,6.136434,Moderate Vulnerability
+4480,Unknown,8.060888,Elevated Vulnerability
+4486,Unknown,,Least Vulnerable
+4487,Unknown,,Least Vulnerable
+4488,Unknown,,Least Vulnerable
+4491,Unknown,9.999784,Most Vulnerable
+4516,Unknown,5.659075,Low Vulnerability
+4521,Unknown,5.820812,Moderate Vulnerability
+4530,Unknown,8.725452,Elevated Vulnerability
+4531,Unknown,6.114634,Moderate Vulnerability
+4532,Unknown,6.649552,Moderate Vulnerability
+4534,Unknown,7.627577,Moderate Vulnerability
+4539,Unknown,7.544650,Elevated Vulnerability
+4540,Unknown,6.572753,Moderate Vulnerability
+4541,Unknown,6.572753,Moderate Vulnerability
+4543,Unknown,6.649482,Moderate Vulnerability
+4551,Unknown,6.649482,Moderate Vulnerability
+4552,Unknown,6.649482,Moderate Vulnerability
+4553,Unknown,6.649482,Moderate Vulnerability
+4555,Unknown,5.822191,Moderate Vulnerability
+4559,Unknown,7.544650,Elevated Vulnerability
+4560,Unknown,5.473459,Low Vulnerability
+4561,Unknown,5.473459,Low Vulnerability
+4563,Unknown,7.935985,Elevated Vulnerability
+4566,Unknown,7.184775,Moderate Vulnerability
+4571,Unknown,6.649552,Moderate Vulnerability
+4579,Unknown,5.822485,Moderate Vulnerability
+4580,Unknown,7.884733,Elevated Vulnerability
+4581,Unknown,,Least Vulnerable
+4584,Unknown,,Least Vulnerable
+4585,Unknown,,Least Vulnerable
+4586,Unknown,,Least Vulnerable
+4587,Unknown,,Least Vulnerable
+4592,Unknown,,Least Vulnerable
+4597,Unknown,,Least Vulnerable
+4598,Unknown,,Least Vulnerable
+4600,Unknown,,Least Vulnerable
+4601,Unknown,5.235708,Low Vulnerability
+4603,Unknown,5.235708,Low Vulnerability
+4607,Unknown,9.999784,Most Vulnerable
+4610,Unknown,4.350164,Low Vulnerability
+4613,Unknown,5.235708,Low Vulnerability
+4614,Unknown,5.235708,Low Vulnerability
+4616,Unknown,5.235708,Low Vulnerability
+4617,Unknown,,Least Vulnerable
+4619,Unknown,,Least Vulnerable
+4621,Unknown,,Least Vulnerable
+4625,Unknown,6.921783,Moderate Vulnerability
+4634,Unknown,,Least Vulnerable
+4636,Unknown,,Least Vulnerable
+4638,Unknown,,Least Vulnerable
+4641,Unknown,5.822485,Moderate Vulnerability
+4644,Unknown,6.649552,Moderate Vulnerability
+4645,Unknown,7.184348,Moderate Vulnerability
+4646,Unknown,7.184348,Moderate Vulnerability
+4651,Unknown,8.060888,Elevated Vulnerability
+4653,Unknown,4.350164,Low Vulnerability
+4656,Unknown,4.350164,Low Vulnerability
+4657,Unknown,9.999784,Most Vulnerable
+4659,Unknown,6.677978,Moderate Vulnerability
+4661,Unknown,7.499257,Moderate Vulnerability
+4662,Unknown,7.499257,Moderate Vulnerability
+4663,Unknown,8.666753,Elevated Vulnerability
+4666,Unknown,6.183169,Moderate Vulnerability
+4667,Unknown,6.483344,Moderate Vulnerability
+4668,Unknown,6.462054,Moderate Vulnerability
+4670,Unknown,5.528758,Low Vulnerability
+4671,Unknown,5.426995,Low Vulnerability
+4682,Unknown,,Least Vulnerable
+4683,Unknown,9.999784,Most Vulnerable
+4684,Unknown,9.999784,Most Vulnerable
+4688,Unknown,9.999784,Most Vulnerable
+4689,Unknown,9.999784,Most Vulnerable
+4701,Unknown,,Least Vulnerable
+4703,Unknown,9.999784,Most Vulnerable
+4706,Unknown,9.999784,Most Vulnerable
+4707,Unknown,9.999784,Most Vulnerable
+4708,Unknown,,Least Vulnerable
+4719,Unknown,5.426995,Low Vulnerability
+4720,Unknown,5.426995,Low Vulnerability
+4722,Unknown,5.528758,Low Vulnerability
+4723,Unknown,5.528758,Low Vulnerability
+4724,Unknown,6.483344,Moderate Vulnerability
+4727,Unknown,7.499257,Moderate Vulnerability
+4729,Unknown,7.499257,Moderate Vulnerability
+4733,Unknown,6.902013,Moderate Vulnerability
+4735,Unknown,7.134386,Moderate Vulnerability
+4736,Unknown,7.134386,Moderate Vulnerability
+4740,Unknown,7.442794,Elevated Vulnerability
+4747,Unknown,,Least Vulnerable
+4748,Unknown,,Least Vulnerable
+4749,Unknown,,Least Vulnerable
+4751,Unknown,,Least Vulnerable
+4760,Unknown,,Least Vulnerable
+4761,Unknown,,Least Vulnerable
+4763,Unknown,,Least Vulnerable
+4775,Unknown,,Least Vulnerable
+4776,Unknown,,Least Vulnerable
+4778,Unknown,,Least Vulnerable
+4781,Unknown,,Least Vulnerable
+4782,Unknown,,Least Vulnerable
+4784,Unknown,,Least Vulnerable
+4789,Unknown,,Least Vulnerable
+4794,Unknown,7.134386,Moderate Vulnerability
+4795,Unknown,6.902013,Moderate Vulnerability
+4798,Unknown,5.960978,Moderate Vulnerability
+4813,Unknown,5.689995,Low Vulnerability
+4816,Unknown,6.849266,Moderate Vulnerability
+4819,Unknown,,Least Vulnerable
+4828,Unknown,,Least Vulnerable
+4830,Unknown,,Least Vulnerable
+4831,Unknown,,Least Vulnerable
+4849,Unknown,,Least Vulnerable
+4850,Unknown,,Least Vulnerable
+4858,Unknown,5.689995,Low Vulnerability
+4860,Unknown,7.184348,Moderate Vulnerability
+4863,Unknown,8.047136,Elevated Vulnerability
+4869,Unknown,9.615051,Most Vulnerable
+4870,Unknown,9.615051,Most Vulnerable
+4879,Unknown,9.615051,Most Vulnerable
+4880,Unknown,4.935914,Low Vulnerability
+4882,Unknown,6.181950,Moderate Vulnerability
+4884,Unknown,5.791592,Moderate Vulnerability
+4886,Unknown,9.999784,Most Vulnerable
+4888,Unknown,5.791592,Moderate Vulnerability
+4892,Unknown,4.870942,Low Vulnerability
+4894,Unknown,5.066517,Low Vulnerability
+4895,Unknown,9.906494,Most Vulnerable
+4906,Unknown,6.265869,Moderate Vulnerability
+4908,Unknown,5.591428,Low Vulnerability
+4909,Unknown,,Least Vulnerable
+4910,Unknown,,Least Vulnerable
+4911,Unknown,,Least Vulnerable
+4912,Unknown,,Least Vulnerable
+4913,Unknown,,Least Vulnerable
+4914,Unknown,,Least Vulnerable
+4915,Unknown,,Least Vulnerable
+4916,Unknown,,Least Vulnerable
+4917,Unknown,,Least Vulnerable
+4919,Unknown,,Least Vulnerable
+4920,Unknown,,Least Vulnerable
+4921,Unknown,,Least Vulnerable
+4923,Unknown,,Least Vulnerable
+4924,Unknown,,Least Vulnerable
+4925,Unknown,6.265869,Moderate Vulnerability
+4929,Unknown,8.378517,Elevated Vulnerability
+4951,Unknown,3.678985,Low Vulnerability
+4953,Unknown,3.678985,Low Vulnerability
+4959,Unknown,5.028071,Low Vulnerability
+4963,Unknown,5.982347,Moderate Vulnerability
+4964,Unknown,5.982347,Moderate Vulnerability
+4965,Unknown,5.982347,Moderate Vulnerability
+4966,Unknown,5.389677,Low Vulnerability
+4968,Unknown,5.762027,Low Vulnerability
+4969,Unknown,6.451888,Moderate Vulnerability
+4970,Unknown,6.451888,Moderate Vulnerability
+4971,Unknown,6.649482,Moderate Vulnerability
+4973,Unknown,9.158626,Most Vulnerable
+4974,Unknown,9.158626,Most Vulnerable
+4975,Unknown,9.999784,Most Vulnerable
+4977,Unknown,9.999784,Most Vulnerable
+4978,Unknown,9.999784,Most Vulnerable
+4979,Unknown,9.999784,Most Vulnerable
+4980,Unknown,9.158626,Most Vulnerable
+4981,Unknown,6.451888,Moderate Vulnerability
+4984,Unknown,5.982347,Moderate Vulnerability
+4985,Unknown,5.982347,Moderate Vulnerability
+4986,Unknown,5.982347,Moderate Vulnerability
+4987,Unknown,5.374346,Low Vulnerability
+4989,Unknown,5.866855,Low Vulnerability
+4993,Unknown,6.581797,Moderate Vulnerability
+4994,Unknown,7.011290,Moderate Vulnerability
+4996,Unknown,5.867764,Low Vulnerability
+4997,Unknown,5.867764,Low Vulnerability
+4998,Unknown,6.461519,Moderate Vulnerability
+4999,Unknown,4.953920,Low Vulnerability
+5002,Unknown,4.953920,Low Vulnerability
+5003,Unknown,,Least Vulnerable
+5004,Unknown,,Least Vulnerable
+5005,Unknown,,Least Vulnerable
+5011,Unknown,6.461519,Moderate Vulnerability
+5013,Unknown,7.011290,Moderate Vulnerability
+5014,Unknown,7.011290,Moderate Vulnerability
+5018,Unknown,3.927601,Low Vulnerability
+5019,Unknown,3.927601,Low Vulnerability
+5020,Unknown,,Least Vulnerable
+5021,Unknown,,Least Vulnerable
+5022,Unknown,,Least Vulnerable
+5025,Unknown,,Least Vulnerable
+5027,Unknown,,Least Vulnerable
+5028,Unknown,3.927601,Low Vulnerability
+5029,Unknown,,Least Vulnerable
+5030,Unknown,,Least Vulnerable
+5043,Unknown,5.990742,Low Vulnerability
+5044,Unknown,7.311105,Moderate Vulnerability
+5045,Unknown,9.100336,Elevated Vulnerability
+5046,Unknown,6.183169,Moderate Vulnerability
+5047,Unknown,4.845773,Low Vulnerability
+5049,Unknown,5.270659,Low Vulnerability
+5050,Unknown,6.982948,Moderate Vulnerability
+5051,Unknown,7.403541,Moderate Vulnerability
+5052,Unknown,5.990742,Low Vulnerability
+5053,Unknown,5.990742,Low Vulnerability
+5055,Unknown,,Least Vulnerable
+5058,Unknown,,Least Vulnerable
+5097,Unknown,,Least Vulnerable
+5099,Unknown,,Least Vulnerable
+5100,Unknown,,Least Vulnerable
+5101,Unknown,,Least Vulnerable
+5102,Unknown,,Least Vulnerable
+5103,Unknown,,Least Vulnerable
+5104,Unknown,,Least Vulnerable
+5105,Unknown,,Least Vulnerable
+5106,Unknown,,Least Vulnerable
+5108,Unknown,,Least Vulnerable
+5110,Unknown,,Least Vulnerable
+5111,Unknown,,Least Vulnerable
+5112,Unknown,,Least Vulnerable
+5113,Unknown,,Least Vulnerable
+5114,Unknown,,Least Vulnerable
+5117,Unknown,,Least Vulnerable
+5118,Unknown,,Least Vulnerable
+5119,Unknown,,Least Vulnerable
+5120,Unknown,,Least Vulnerable
+5121,Unknown,,Least Vulnerable
+5122,Unknown,,Least Vulnerable
+5123,Unknown,,Least Vulnerable
+5124,Unknown,,Least Vulnerable
+5125,Unknown,,Least Vulnerable
+5126,Unknown,,Least Vulnerable
+5130,Unknown,,Least Vulnerable
+5131,Unknown,,Least Vulnerable
+5156,Unknown,,Least Vulnerable
+5164,Unknown,,Least Vulnerable
+5166,Unknown,,Least Vulnerable
+5167,Unknown,,Least Vulnerable
+5168,Unknown,,Least Vulnerable
+5175,Unknown,,Least Vulnerable
+5176,Unknown,,Least Vulnerable
+5177,Unknown,,Least Vulnerable
+5178,Unknown,,Least Vulnerable
+5180,Unknown,,Least Vulnerable
+5181,Unknown,,Least Vulnerable
+5184,Unknown,4.507820,Low Vulnerability
+5220,Unknown,7.421590,Moderate Vulnerability
+5221,Unknown,7.421590,Moderate Vulnerability
+5222,Unknown,6.719151,Moderate Vulnerability
+5223,Unknown,6.719151,Moderate Vulnerability
+5225,Unknown,,Least Vulnerable
+5226,Unknown,,Least Vulnerable
+5238,Unknown,9.615051,Most Vulnerable
+5246,Unknown,7.921735,Moderate Vulnerability
+5248,Unknown,,Least Vulnerable
+5249,Unknown,,Least Vulnerable
+5250,Unknown,,Least Vulnerable
+5251,Unknown,,Least Vulnerable
+5252,Unknown,,Least Vulnerable
+5253,Unknown,,Least Vulnerable
+5254,Unknown,7.420706,Moderate Vulnerability
+5264,Unknown,6.649552,Moderate Vulnerability
+5265,Unknown,8.047136,Elevated Vulnerability
+5267,Unknown,7.421590,Moderate Vulnerability
+5268,Unknown,7.652022,Moderate Vulnerability
+5276,Unknown,,Least Vulnerable
+5277,Unknown,7.884733,Elevated Vulnerability
+5280,Unknown,,Least Vulnerable
+5281,Unknown,,Least Vulnerable
+5282,Unknown,5.956543,Low Vulnerability
+5283,Unknown,7.232134,Moderate Vulnerability
+5284,Unknown,7.232134,Moderate Vulnerability
+5285,Unknown,5.097880,Low Vulnerability
+5290,Unknown,6.356834,Moderate Vulnerability
+5292,Unknown,6.356834,Moderate Vulnerability
+5295,Unknown,7.072981,Moderate Vulnerability
+5296,Unknown,7.072981,Moderate Vulnerability
+5299,Unknown,4.953920,Low Vulnerability
+5312,Unknown,5.824293,Moderate Vulnerability
+5313,Unknown,5.824293,Moderate Vulnerability
+5314,Unknown,5.824293,Moderate Vulnerability
+5316,Unknown,5.824293,Moderate Vulnerability
+5317,Unknown,5.824293,Moderate Vulnerability
+5318,Unknown,5.824293,Moderate Vulnerability
+5319,Unknown,5.824293,Moderate Vulnerability
+5321,Unknown,5.824293,Moderate Vulnerability
+5323,Unknown,5.824293,Moderate Vulnerability
+5324,Unknown,,Least Vulnerable
+5325,Unknown,,Least Vulnerable
+5327,Unknown,,Least Vulnerable
+5331,Unknown,,Least Vulnerable
+5334,Unknown,,Least Vulnerable
+5335,Unknown,,Least Vulnerable
+5336,Unknown,,Least Vulnerable
+5337,Unknown,5.824293,Moderate Vulnerability
+5338,Unknown,5.824293,Moderate Vulnerability
+5341,Unknown,5.824293,Moderate Vulnerability
+5342,Unknown,5.824293,Moderate Vulnerability
+5343,Unknown,5.824293,Moderate Vulnerability
+5344,Unknown,5.824293,Moderate Vulnerability
+5346,Unknown,5.824293,Moderate Vulnerability
+5347,Unknown,5.824293,Moderate Vulnerability
+5348,Unknown,5.824293,Moderate Vulnerability
+5349,Unknown,5.824293,Moderate Vulnerability
+5362,Unknown,4.953920,Low Vulnerability
+5363,Unknown,4.953920,Low Vulnerability
+5364,Unknown,,Least Vulnerable
+5365,Unknown,,Least Vulnerable
+5366,Unknown,,Least Vulnerable
+5368,Unknown,,Least Vulnerable
+5369,Unknown,7.072981,Moderate Vulnerability
+5371,Unknown,7.072981,Moderate Vulnerability
+5372,Unknown,7.072981,Moderate Vulnerability
+5379,Unknown,4.404019,Low Vulnerability
+5380,Unknown,5.097880,Low Vulnerability
+5382,Unknown,7.232134,Moderate Vulnerability
+5383,Unknown,7.232134,Moderate Vulnerability
+5385,Unknown,5.028071,Low Vulnerability
+5414,Unknown,,Least Vulnerable
+5415,Unknown,,Least Vulnerable
+5423,Unknown,,Least Vulnerable
+5443,Unknown,6.884210,Moderate Vulnerability
+5446,Unknown,6.419145,Moderate Vulnerability
+5447,Unknown,6.419145,Moderate Vulnerability
+5448,Unknown,7.990267,Elevated Vulnerability
+5451,Unknown,,Least Vulnerable
+5452,Unknown,,Least Vulnerable
+5453,Unknown,,Least Vulnerable
+5454,Unknown,,Least Vulnerable
+5455,Unknown,,Least Vulnerable
+5457,Unknown,,Least Vulnerable
+5458,Unknown,,Least Vulnerable
+5461,Unknown,,Least Vulnerable
+5462,Unknown,,Least Vulnerable
+5465,Unknown,,Least Vulnerable
+5470,Unknown,,Least Vulnerable
+5473,Unknown,,Least Vulnerable
+5476,Unknown,,Least Vulnerable
+5477,Unknown,,Least Vulnerable
+5478,Unknown,7.990267,Elevated Vulnerability
+5479,Unknown,6.419145,Moderate Vulnerability
+5480,Unknown,6.419145,Moderate Vulnerability
+5484,Unknown,6.215726,Low Vulnerability
+5509,Unknown,5.389677,Low Vulnerability
+5510,Unknown,3.814418,Least Vulnerable
+5512,Unknown,6.957533,Moderate Vulnerability
+5514,Unknown,,Least Vulnerable
+5515,Unknown,,Least Vulnerable
+5516,Unknown,,Least Vulnerable
+5517,Unknown,,Least Vulnerable
+5518,Unknown,,Least Vulnerable
+5519,Unknown,,Least Vulnerable
+5520,Unknown,,Least Vulnerable
+5521,Unknown,,Least Vulnerable
+5523,Unknown,,Least Vulnerable
+5524,Unknown,,Least Vulnerable
+5525,Unknown,,Least Vulnerable
+5526,Unknown,,Least Vulnerable
+5527,Unknown,,Least Vulnerable
+5529,Unknown,,Least Vulnerable
+5531,Unknown,,Least Vulnerable
+5532,Unknown,,Least Vulnerable
+5533,Unknown,,Least Vulnerable
+5534,Unknown,,Least Vulnerable
+5535,Unknown,,Least Vulnerable
+5536,Unknown,,Least Vulnerable
+5537,Unknown,,Least Vulnerable
+5538,Unknown,,Least Vulnerable
+5539,Unknown,,Least Vulnerable
+5540,Unknown,,Least Vulnerable
+5541,Unknown,,Least Vulnerable
+5542,Unknown,,Least Vulnerable
+5545,Unknown,6.957533,Moderate Vulnerability
+5547,Unknown,3.814418,Least Vulnerable
+5550,Unknown,6.849266,Moderate Vulnerability
+5551,Unknown,6.849266,Moderate Vulnerability
+5552,Unknown,5.389677,Low Vulnerability
+5554,Unknown,5.389677,Low Vulnerability
+5556,Unknown,6.572753,Moderate Vulnerability
+5557,Unknown,6.572753,Moderate Vulnerability
+5559,Unknown,6.428424,Moderate Vulnerability
+5562,Unknown,,Least Vulnerable
+5563,Unknown,7.884733,Elevated Vulnerability
+5565,Unknown,,Least Vulnerable
+5566,Unknown,,Least Vulnerable
+5568,Unknown,,Least Vulnerable
+5569,Unknown,,Least Vulnerable
+5570,Unknown,,Least Vulnerable
+5571,Unknown,,Least Vulnerable
+5572,Unknown,,Least Vulnerable
+5573,Unknown,,Least Vulnerable
+5574,Unknown,,Least Vulnerable
+5575,Unknown,,Least Vulnerable
+5576,Unknown,,Least Vulnerable
+5577,Unknown,,Least Vulnerable
+5578,Unknown,,Least Vulnerable
+5579,Unknown,,Least Vulnerable
+5580,Unknown,,Least Vulnerable
+5581,Unknown,,Least Vulnerable
+5595,Unknown,,Least Vulnerable
+5596,Unknown,,Least Vulnerable
+5597,Unknown,,Least Vulnerable
+5598,Unknown,,Least Vulnerable
+5599,Unknown,,Least Vulnerable
+5600,Unknown,,Least Vulnerable
+5604,Unknown,,Least Vulnerable
+5605,Unknown,,Least Vulnerable
+5616,Unknown,,Least Vulnerable
+5617,Unknown,,Least Vulnerable
+5618,Unknown,,Least Vulnerable
+5619,Unknown,,Least Vulnerable
+5621,Unknown,,Least Vulnerable
+5622,Unknown,,Least Vulnerable
+5623,Unknown,,Least Vulnerable
+5624,Unknown,,Least Vulnerable
+5625,Unknown,,Least Vulnerable
+5626,Unknown,,Least Vulnerable
+5627,Unknown,,Least Vulnerable
+5628,Unknown,,Least Vulnerable
+5629,Unknown,,Least Vulnerable
+5630,Unknown,,Least Vulnerable
+5632,Unknown,,Least Vulnerable
+5633,Unknown,,Least Vulnerable
+5634,Unknown,7.884733,Elevated Vulnerability
+5635,Unknown,7.884733,Elevated Vulnerability
+5636,Unknown,7.884733,Elevated Vulnerability
+5638,Unknown,7.884733,Elevated Vulnerability
+5639,Unknown,5.843155,Low Vulnerability
+5640,Unknown,7.007723,Moderate Vulnerability
+5641,Unknown,7.731900,Elevated Vulnerability
+5643,Unknown,7.082135,Moderate Vulnerability
+5644,Unknown,5.101728,Low Vulnerability
+5645,Unknown,5.101728,Low Vulnerability
+5677,Unknown,6.219748,Moderate Vulnerability
+5680,Unknown,5.510675,Moderate Vulnerability
+5681,Unknown,3.992763,Low Vulnerability
+5685,Unknown,8.546644,Elevated Vulnerability
+5687,Unknown,4.621397,Low Vulnerability
+5695,Unknown,,Least Vulnerable
+5697,Unknown,,Least Vulnerable
+5698,Unknown,,Least Vulnerable
+5699,Unknown,,Least Vulnerable
+5701,Unknown,,Least Vulnerable
+5702,Unknown,,Least Vulnerable
+5703,Unknown,,Least Vulnerable
+5704,Unknown,,Least Vulnerable
+5705,Unknown,,Least Vulnerable
+5706,Unknown,,Least Vulnerable
+5707,Unknown,,Least Vulnerable
+5714,Unknown,,Least Vulnerable
+5715,Unknown,,Least Vulnerable
+5716,Unknown,,Least Vulnerable
+5717,Unknown,,Least Vulnerable
+5718,Unknown,,Least Vulnerable
+5719,Unknown,,Least Vulnerable
+5720,Unknown,,Least Vulnerable
+5721,Unknown,,Least Vulnerable
+5722,Unknown,,Least Vulnerable
+5723,Unknown,,Least Vulnerable
+5724,Unknown,,Least Vulnerable
+5725,Unknown,,Least Vulnerable
+5731,Unknown,,Least Vulnerable
+5732,Unknown,,Least Vulnerable
+5733,Unknown,,Least Vulnerable
+5741,Unknown,,Least Vulnerable
+5742,Unknown,,Least Vulnerable
+5743,Unknown,,Least Vulnerable
+5744,Unknown,,Least Vulnerable
+5745,Unknown,,Least Vulnerable
+5747,Unknown,,Least Vulnerable
+5748,Unknown,,Least Vulnerable
+5749,Unknown,,Least Vulnerable
+5750,Unknown,,Least Vulnerable
+5751,Unknown,,Least Vulnerable
+5752,Unknown,,Least Vulnerable
+5754,Unknown,,Least Vulnerable
+5755,Unknown,,Least Vulnerable
+5756,Unknown,,Least Vulnerable
+5757,Unknown,,Least Vulnerable
+5758,Unknown,,Least Vulnerable
+5759,Unknown,,Least Vulnerable
+5761,Unknown,,Least Vulnerable
+5763,Unknown,,Least Vulnerable
+5764,Unknown,,Least Vulnerable
+5765,Unknown,,Least Vulnerable
+5767,Unknown,,Least Vulnerable
+5769,Unknown,,Least Vulnerable
+5770,Unknown,,Least Vulnerable
+5771,Unknown,,Least Vulnerable
+5773,Unknown,,Least Vulnerable
+5774,Unknown,,Least Vulnerable
+5775,Unknown,,Least Vulnerable
+5776,Unknown,,Least Vulnerable
+5777,Unknown,,Least Vulnerable
+5778,Unknown,8.725452,Elevated Vulnerability
+5779,Unknown,8.725452,Elevated Vulnerability
+5798,Unknown,5.028071,Low Vulnerability
+5802,Unknown,,Least Vulnerable
+5809,Unknown,,Least Vulnerable
+5815,Unknown,0.999679,Least Vulnerable
+5816,Unknown,,Least Vulnerable
+5821,Unknown,,Least Vulnerable
+5828,Unknown,,Least Vulnerable
+5835,Unknown,,Least Vulnerable
+5853,Unknown,,Least Vulnerable
+5863,Unknown,6.693801,Moderate Vulnerability
+5864,Unknown,6.693801,Moderate Vulnerability
+5870,Unknown,7.372457,Moderate Vulnerability
+5871,Unknown,7.372457,Moderate Vulnerability
+5883,Unknown,5.028071,Low Vulnerability
+5884,Unknown,5.028071,Low Vulnerability
+5887,Unknown,9.999784,Most Vulnerable
+5890,Unknown,5.235708,Low Vulnerability
+5891,Unknown,5.235708,Low Vulnerability
+5894,Unknown,5.235708,Low Vulnerability
+5930,Unknown,,Least Vulnerable
+5931,Unknown,,Least Vulnerable
+5932,Unknown,,Least Vulnerable
+5933,Unknown,,Least Vulnerable
+5934,Unknown,,Least Vulnerable
+5935,Unknown,,Least Vulnerable
+5936,Unknown,,Least Vulnerable
+5937,Unknown,,Least Vulnerable
+5938,Unknown,,Least Vulnerable
+5939,Unknown,,Least Vulnerable
+5940,Unknown,,Least Vulnerable
+5941,Unknown,,Least Vulnerable
+5945,Unknown,,Least Vulnerable
+5946,Unknown,,Least Vulnerable
+5947,Unknown,,Least Vulnerable
+5948,Unknown,,Least Vulnerable
+5950,Unknown,,Least Vulnerable
+5951,Unknown,,Least Vulnerable
+5952,Unknown,,Least Vulnerable
+5953,Unknown,,Least Vulnerable
+5954,Unknown,,Least Vulnerable
+5955,Unknown,,Least Vulnerable
+5956,Unknown,,Least Vulnerable
+5957,Unknown,,Least Vulnerable
+5958,Unknown,,Least Vulnerable
+6007,Unknown,6.693801,Moderate Vulnerability
+6023,Unknown,,Least Vulnerable
+6026,Unknown,,Least Vulnerable
+6039,Unknown,,Least Vulnerable
+6041,Unknown,,Least Vulnerable
+6043,Unknown,,Least Vulnerable
+6045,Unknown,,Least Vulnerable
+6047,Unknown,,Least Vulnerable
+6048,Unknown,,Least Vulnerable
+6049,Unknown,,Least Vulnerable
+6051,Unknown,5.822485,Moderate Vulnerability
+6053,Unknown,,Least Vulnerable
+6263,Unknown,,Least Vulnerable
+6497,Unknown,9.999784,Most Vulnerable
+6519,Unknown,,Least Vulnerable
+6527,Unknown,5.235708,Low Vulnerability
+6550,Unknown,5.235708,Low Vulnerability
+6555,Unknown,9.516670,Most Vulnerable
+6575,Unknown,,Least Vulnerable
+6576,Unknown,,Least Vulnerable
+6577,Unknown,,Least Vulnerable
+6593,Unknown,6.888769,Moderate Vulnerability
+6597,Unknown,7.993709,Moderate Vulnerability
+6599,Unknown,6.756816,Moderate Vulnerability
+6601,Unknown,6.008780,Low Vulnerability
+6603,Unknown,6.008780,Low Vulnerability
+6606,Unknown,6.008780,Low Vulnerability
+6608,Unknown,6.756816,Moderate Vulnerability
+6610,Unknown,7.993709,Moderate Vulnerability
+6611,Unknown,7.993709,Moderate Vulnerability
+6614,Unknown,6.888769,Moderate Vulnerability
+6615,Unknown,5.422869,Low Vulnerability
+6622,Unknown,8.387570,Elevated Vulnerability
+6624,Unknown,8.387570,Elevated Vulnerability
+6625,Unknown,8.387570,Elevated Vulnerability
+6626,Unknown,8.387570,Elevated Vulnerability
+6627,Unknown,8.387570,Elevated Vulnerability
+6629,Unknown,6.888769,Moderate Vulnerability
+6643,Unknown,,Least Vulnerable
+6644,Unknown,9.999784,Most Vulnerable
+6647,Unknown,9.999784,Most Vulnerable
+6651,Unknown,,Least Vulnerable
+6666,Unknown,,Least Vulnerable
+6669,Unknown,4.350164,Low Vulnerability
+6679,Unknown,,Least Vulnerable
+6690,Unknown,5.028071,Low Vulnerability
+6691,Unknown,5.152701,Low Vulnerability
+6692,Unknown,5.139631,Low Vulnerability
+6693,Unknown,5.139631,Low Vulnerability
+6694,Unknown,5.139631,Low Vulnerability
+6695,Unknown,5.521858,Low Vulnerability
+6698,Unknown,7.349577,Moderate Vulnerability
+6699,Unknown,7.349577,Moderate Vulnerability
+6700,Unknown,6.693801,Moderate Vulnerability
+6701,Unknown,6.693801,Moderate Vulnerability
+6763,Unknown,,Least Vulnerable
+6764,Unknown,,Least Vulnerable
+6768,Unknown,6.154778,Moderate Vulnerability
+6770,Unknown,6.154778,Moderate Vulnerability
+6771,Unknown,4.404019,Low Vulnerability
+6781,Unknown,,Least Vulnerable
+6820,Unknown,,Least Vulnerable
+6821,Unknown,,Least Vulnerable
+6832,Unknown,,Least Vulnerable
+6833,Unknown,,Least Vulnerable
+6876,Unknown,,Least Vulnerable
+6877,Unknown,,Least Vulnerable
+6891,Unknown,,Least Vulnerable
+6892,Unknown,,Least Vulnerable
+6898,Unknown,5.442108,Low Vulnerability
+6899,Unknown,5.442108,Low Vulnerability
+6901,Unknown,9.999784,Most Vulnerable
+6902,Unknown,9.999784,Most Vulnerable
+6904,Unknown,9.999784,Most Vulnerable
+6907,Unknown,,Least Vulnerable
+6912,Unknown,,Least Vulnerable
+6914,Unknown,,Least Vulnerable
+6916,Unknown,5.442108,Low Vulnerability
+6917,Unknown,5.442108,Low Vulnerability
+6918,Unknown,5.242293,Low Vulnerability
+6920,Unknown,5.374166,Low Vulnerability
+6923,Unknown,,Least Vulnerable
+6927,Unknown,8.725452,Elevated Vulnerability
+6930,Unknown,,Least Vulnerable
+6931,Unknown,,Least Vulnerable
+6941,Unknown,6.889865,Moderate Vulnerability
+6946,Unknown,,Least Vulnerable
+6947,Unknown,,Least Vulnerable
+6952,Unknown,7.919117,Elevated Vulnerability
+6953,Unknown,7.919117,Elevated Vulnerability
+6954,Unknown,7.919117,Elevated Vulnerability
+6962,Unknown,9.999784,Most Vulnerable
+6963,Unknown,,Least Vulnerable
+6964,Unknown,9.999784,Most Vulnerable
+6968,Unknown,7.372457,Moderate Vulnerability
+6970,Unknown,5.867764,Low Vulnerability
+7000,Unknown,,Least Vulnerable
+7008,Unknown,,Least Vulnerable
+7011,Unknown,5.096536,Low Vulnerability
+7012,Unknown,5.096536,Low Vulnerability
+7013,Unknown,6.943495,Moderate Vulnerability
+7015,Unknown,,Least Vulnerable
+7016,Unknown,7.184775,Moderate Vulnerability
+7017,Unknown,5.487713,Low Vulnerability
+7019,Unknown,,Least Vulnerable
+7021,Unknown,6.649552,Moderate Vulnerability
+7022,Unknown,6.559399,Moderate Vulnerability
+7023,Unknown,6.114634,Moderate Vulnerability
+7024,Unknown,7.349577,Moderate Vulnerability
+7025,Unknown,7.349577,Moderate Vulnerability
+7029,Unknown,,Least Vulnerable
+7030,Unknown,7.627577,Moderate Vulnerability
+7032,Unknown,6.888769,Moderate Vulnerability
+7034,Unknown,,Least Vulnerable
+7035,Unknown,6.888769,Moderate Vulnerability
+7036,Unknown,7.349577,Moderate Vulnerability
+7037,Unknown,6.183169,Moderate Vulnerability
+7041,Unknown,6.943495,Moderate Vulnerability
+7043,Unknown,7.349577,Moderate Vulnerability
+7044,Unknown,,Least Vulnerable
+7045,Unknown,7.420706,Moderate Vulnerability
+7048,Unknown,6.333444,Moderate Vulnerability
+7061,Unknown,,Least Vulnerable
+7062,Unknown,5.071506,Low Vulnerability
+7070,Unknown,6.215726,Low Vulnerability
+7072,Unknown,7.311105,Moderate Vulnerability
+7073,Unknown,7.627577,Moderate Vulnerability
+7074,Unknown,,Least Vulnerable
+7076,Unknown,,Least Vulnerable
+7077,Unknown,,Least Vulnerable
+7078,Unknown,,Least Vulnerable
+7079,Unknown,,Least Vulnerable
+7081,Unknown,,Least Vulnerable
+7084,Unknown,,Least Vulnerable
+7085,Unknown,,Least Vulnerable
+7094,Unknown,3.992763,Low Vulnerability
+7095,Unknown,3.817485,Least Vulnerable
+7101,Unknown,,Least Vulnerable
+7102,Unknown,,Least Vulnerable
+7104,Unknown,,Least Vulnerable
+7109,Unknown,,Least Vulnerable
+7111,Unknown,,Least Vulnerable
+7113,Unknown,5.481044,Low Vulnerability
+7120,Unknown,,Least Vulnerable
+7123,Unknown,,Least Vulnerable
+7128,Unknown,,Least Vulnerable
+7133,Unknown,5.824293,Moderate Vulnerability
+7137,Unknown,5.867764,Low Vulnerability
+7144,Unknown,8.665332,Elevated Vulnerability
+7149,Unknown,3.717334,Low Vulnerability
+7150,Unknown,3.717334,Low Vulnerability
+7151,Unknown,,Least Vulnerable
+7154,Unknown,,Least Vulnerable
+7155,Unknown,,Least Vulnerable
+7156,Unknown,3.717334,Low Vulnerability
+7157,Unknown,3.717334,Low Vulnerability
+7158,Unknown,3.717334,Low Vulnerability
+7159,Unknown,3.717334,Low Vulnerability
+7160,Unknown,3.717334,Low Vulnerability
+7162,Unknown,,Least Vulnerable
+7167,Unknown,3.717334,Low Vulnerability
+7168,Unknown,3.717334,Low Vulnerability
+7169,Unknown,3.717334,Low Vulnerability
+7170,Unknown,3.717334,Low Vulnerability
+7171,Unknown,3.717334,Low Vulnerability
+7172,Unknown,3.717334,Low Vulnerability
+7174,Unknown,,Least Vulnerable
+7175,Unknown,,Least Vulnerable
+7177,Unknown,,Least Vulnerable
+7179,Unknown,6.693801,Moderate Vulnerability
+7185,Unknown,,Least Vulnerable
+7186,Unknown,7.993709,Moderate Vulnerability
+7188,Unknown,4.662805,Low Vulnerability
+7193,Unknown,,Least Vulnerable
+7194,Unknown,6.889865,Moderate Vulnerability
+7196,Unknown,7.372457,Moderate Vulnerability
+7197,Unknown,7.990267,Elevated Vulnerability
+7199,Unknown,,Least Vulnerable
+7210,Unknown,,Least Vulnerable
+7213,Unknown,,Least Vulnerable
+7221,Unknown,7.919117,Elevated Vulnerability
+7225,Unknown,6.249971,Moderate Vulnerability
+7226,Unknown,6.249971,Moderate Vulnerability
+7228,Unknown,6.249971,Moderate Vulnerability
+7229,Unknown,,Least Vulnerable
+7230,Unknown,,Least Vulnerable
+7231,Unknown,,Least Vulnerable
+7232,Unknown,,Least Vulnerable
+7233,Unknown,,Least Vulnerable
+7234,Unknown,,Least Vulnerable
+7235,Unknown,,Least Vulnerable
+7237,Unknown,,Least Vulnerable
+7238,Unknown,,Least Vulnerable
+7239,Unknown,,Least Vulnerable
+7240,Unknown,,Least Vulnerable
+7241,Unknown,,Least Vulnerable
+7242,Unknown,,Least Vulnerable
+7243,Unknown,,Least Vulnerable
+7246,Unknown,,Least Vulnerable
+7247,Unknown,,Least Vulnerable
+7248,Unknown,,Least Vulnerable
+7249,Unknown,,Least Vulnerable
+7265,Unknown,7.011290,Moderate Vulnerability
+7306,Unknown,,Least Vulnerable
+7330,Unknown,,Least Vulnerable
+7331,Unknown,,Least Vulnerable
+7332,Unknown,,Least Vulnerable
+7333,Unknown,,Least Vulnerable
+7335,Unknown,7.011290,Moderate Vulnerability
+7340,Unknown,,Least Vulnerable
+7341,Unknown,,Least Vulnerable
+7342,Unknown,,Least Vulnerable
+7346,Unknown,7.163068,Moderate Vulnerability
+7373,Unknown,,Least Vulnerable
+7375,Unknown,9.615051,Most Vulnerable
+7381,Unknown,9.615051,Most Vulnerable
+7400,Unknown,,Least Vulnerable
+7401,Unknown,,Least Vulnerable
+7402,Unknown,,Least Vulnerable
+7403,Unknown,,Least Vulnerable
+7411,Unknown,,Least Vulnerable
+7423,Unknown,4.350164,Low Vulnerability
+7424,Unknown,4.350164,Low Vulnerability
+7426,Unknown,4.350164,Low Vulnerability
+7427,Unknown,4.350164,Low Vulnerability
+7431,Unknown,4.350164,Low Vulnerability
+7432,Unknown,,Least Vulnerable
+7433,Unknown,9.999784,Most Vulnerable
+7434,Unknown,4.350164,Low Vulnerability
+7435,Unknown,,Least Vulnerable
+7437,Unknown,5.235708,Low Vulnerability
+7462,Unknown,,Least Vulnerable
+7463,Unknown,,Least Vulnerable
+7466,Unknown,4.630313,Low Vulnerability
+7471,Unknown,,Least Vulnerable
+7472,Unknown,,Least Vulnerable
+7474,Unknown,6.461519,Moderate Vulnerability
+7477,Unknown,,Least Vulnerable
+7482,Unknown,6.204121,Low Vulnerability
+7484,Unknown,,Least Vulnerable
+7485,Unknown,8.085081,Elevated Vulnerability
+7487,Unknown,,Least Vulnerable
+7489,Unknown,,Least Vulnerable
+7490,Unknown,9.999784,Most Vulnerable
+7496,Unknown,,Least Vulnerable
+7499,Unknown,,Least Vulnerable
+7500,Unknown,,Least Vulnerable
+7501,Unknown,,Least Vulnerable
+7502,Unknown,,Least Vulnerable
+7504,Unknown,,Least Vulnerable
+7505,Unknown,,Least Vulnerable
+7506,Unknown,,Least Vulnerable
+7508,Unknown,6.902013,Moderate Vulnerability
+7524,Unknown,,Least Vulnerable
+7525,Unknown,,Least Vulnerable
+7530,Unknown,,Least Vulnerable
+7532,Unknown,7.990267,Elevated Vulnerability
+7536,Unknown,,Least Vulnerable
+7539,Unknown,8.396594,Elevated Vulnerability
+7540,Unknown,8.396594,Elevated Vulnerability
+7541,Unknown,,Least Vulnerable
+7542,Unknown,,Least Vulnerable
+7545,Unknown,7.011290,Moderate Vulnerability
+7546,Unknown,7.011290,Moderate Vulnerability
+7547,Unknown,7.921735,Moderate Vulnerability
+7561,Unknown,7.116714,Moderate Vulnerability
+7562,Unknown,5.160704,Low Vulnerability
+7563,Unknown,5.160704,Low Vulnerability
+7564,Unknown,5.160704,Low Vulnerability
+7565,Unknown,7.116714,Moderate Vulnerability
+7567,Unknown,6.461519,Moderate Vulnerability
+7572,Unknown,,Least Vulnerable
+7576,Unknown,,Least Vulnerable
+7577,Unknown,7.007723,Moderate Vulnerability
+7578,Unknown,7.082135,Moderate Vulnerability
+7581,Unknown,4.350164,Low Vulnerability
+7582,Unknown,,Least Vulnerable
+7583,Unknown,6.982939,Moderate Vulnerability
+7587,Unknown,7.884733,Elevated Vulnerability
+7588,Unknown,5.820812,Moderate Vulnerability
+7589,Unknown,5.820812,Moderate Vulnerability
+7590,Unknown,,Least Vulnerable
+7591,Unknown,,Least Vulnerable
+7592,Unknown,7.007723,Moderate Vulnerability
+7593,Unknown,7.731900,Elevated Vulnerability
+7595,Unknown,7.421590,Moderate Vulnerability
+7596,Unknown,7.421590,Moderate Vulnerability
+7599,Unknown,7.417570,Moderate Vulnerability
+7608,Unknown,,Least Vulnerable
+7613,Unknown,3.717334,Low Vulnerability
+7617,Unknown,6.097635,Low Vulnerability
+7621,Unknown,,Least Vulnerable
+7622,Unknown,,Least Vulnerable
+7623,Unknown,,Least Vulnerable
+7626,Unknown,,Least Vulnerable
+7627,Unknown,,Least Vulnerable
+7628,Unknown,7.134386,Moderate Vulnerability
+7629,Unknown,7.134386,Moderate Vulnerability
+7633,Unknown,9.999784,Most Vulnerable
+7635,Unknown,,Least Vulnerable
+7674,Unknown,5.867764,Low Vulnerability
+7675,Unknown,5.867764,Low Vulnerability
+7676,Unknown,5.867764,Low Vulnerability
+7677,Unknown,5.867764,Low Vulnerability
+7678,Unknown,6.428424,Moderate Vulnerability
+7679,Unknown,5.822191,Moderate Vulnerability
+7680,Unknown,,Least Vulnerable
+7681,Unknown,,Least Vulnerable
+7682,Unknown,,Least Vulnerable
+7683,Unknown,,Least Vulnerable
+7684,Unknown,6.843570,Moderate Vulnerability
+7685,Unknown,,Least Vulnerable
+7690,Unknown,5.867764,Low Vulnerability
+7691,Unknown,6.576239,Moderate Vulnerability
+7693,Unknown,7.134386,Moderate Vulnerability
+7694,Unknown,7.782748,Elevated Vulnerability
+7695,Unknown,7.782748,Elevated Vulnerability
+7696,Unknown,7.782748,Elevated Vulnerability
+7697,Unknown,7.782748,Elevated Vulnerability
+7698,Unknown,7.782748,Elevated Vulnerability
+7702,Unknown,7.163068,Moderate Vulnerability
+7703,Unknown,,Least Vulnerable
+7705,Unknown,6.572753,Moderate Vulnerability
+7706,Unknown,4.940424,Low Vulnerability
+7707,Unknown,4.940424,Low Vulnerability
+7708,Unknown,7.652022,Moderate Vulnerability
+7709,Unknown,6.436959,Moderate Vulnerability
+7710,Unknown,5.824293,Moderate Vulnerability
+7711,Unknown,6.576239,Moderate Vulnerability
+7712,Unknown,6.576239,Moderate Vulnerability
+7713,Unknown,5.028071,Low Vulnerability
+7714,Unknown,7.935985,Elevated Vulnerability
+7715,Unknown,5.473459,Low Vulnerability
+7720,Unknown,5.810642,Low Vulnerability
+7722,Unknown,5.355435,Low Vulnerability
+7723,Unknown,6.008780,Low Vulnerability
+7724,Unknown,5.355435,Low Vulnerability
+7725,Unknown,5.810642,Low Vulnerability
+7727,Unknown,3.678985,Low Vulnerability
+7733,Unknown,5.473459,Low Vulnerability
+7736,Unknown,5.028071,Low Vulnerability
+7738,Unknown,5.487713,Low Vulnerability
+7739,Unknown,,Least Vulnerable
+7740,Unknown,3.396650,Least Vulnerable
+7746,Unknown,,Least Vulnerable
+7747,Unknown,6.433737,Moderate Vulnerability
+7748,Unknown,,Least Vulnerable
+7753,Unknown,7.311105,Moderate Vulnerability
+7755,Unknown,,Least Vulnerable
+7764,Unknown,,Least Vulnerable
+7765,Unknown,,Least Vulnerable
+7766,Unknown,,Least Vulnerable
+7767,Unknown,,Least Vulnerable
+7768,Unknown,,Least Vulnerable
+7769,Unknown,,Least Vulnerable
+7773,Unknown,,Least Vulnerable
+7774,Unknown,6.713400,Moderate Vulnerability
+7775,Unknown,7.442794,Elevated Vulnerability
+7776,Unknown,7.442794,Elevated Vulnerability
+7777,Unknown,5.305594,Low Vulnerability
+7780,Unknown,,Least Vulnerable
+7781,Unknown,,Least Vulnerable
+7782,Unknown,,Least Vulnerable
+7783,Unknown,,Least Vulnerable
+7784,Unknown,,Least Vulnerable
+7785,Unknown,,Least Vulnerable
+7788,Unknown,,Least Vulnerable
+7789,Unknown,,Least Vulnerable
+7792,Unknown,7.184348,Moderate Vulnerability
+7793,Unknown,6.204121,Low Vulnerability
+7794,Unknown,5.378267,Low Vulnerability
+7795,Unknown,4.388527,Low Vulnerability
+7796,Unknown,8.669335,Elevated Vulnerability
+7797,Unknown,6.756816,Moderate Vulnerability
+7798,Unknown,7.863879,Elevated Vulnerability
+7799,Unknown,,Least Vulnerable
+7800,Unknown,4.350164,Low Vulnerability
+7801,Unknown,5.235708,Low Vulnerability
+7802,Unknown,5.235708,Low Vulnerability
+7804,Unknown,,Least Vulnerable
+7805,Unknown,8.669335,Elevated Vulnerability
+7806,Unknown,4.388527,Low Vulnerability
+7807,Unknown,6.204121,Low Vulnerability
+7808,Unknown,5.960978,Moderate Vulnerability
+7810,Unknown,0.999679,Least Vulnerable
+7813,Unknown,5.982347,Moderate Vulnerability
+7815,Unknown,,Least Vulnerable
+7816,Unknown,,Least Vulnerable
+7817,Unknown,,Least Vulnerable
+7820,Unknown,,Least Vulnerable
+7821,Unknown,,Least Vulnerable
+7822,Unknown,,Least Vulnerable
+7823,Unknown,,Least Vulnerable
+7824,Unknown,7.116714,Moderate Vulnerability
+7825,Unknown,7.116714,Moderate Vulnerability
+7826,Unknown,0.999679,Least Vulnerable
+7827,Unknown,5.028071,Low Vulnerability
+7828,Unknown,5.028071,Low Vulnerability
+7829,Unknown,7.184348,Moderate Vulnerability
+7830,Unknown,,Least Vulnerable
+7832,Unknown,6.204121,Low Vulnerability
+7833,Unknown,4.982756,Low Vulnerability
+7834,Unknown,4.982756,Low Vulnerability
+7835,Unknown,4.461370,Low Vulnerability
+7836,Unknown,5.242293,Low Vulnerability
+7837,Unknown,5.378267,Low Vulnerability
+7838,Unknown,6.888769,Moderate Vulnerability
+7839,Unknown,6.756816,Moderate Vulnerability
+7840,Unknown,,Least Vulnerable
+7841,Unknown,,Least Vulnerable
+7842,Unknown,,Least Vulnerable
+7843,Unknown,,Least Vulnerable
+7844,Unknown,,Least Vulnerable
+7845,Unknown,9.999784,Most Vulnerable
+7846,Unknown,3.717334,Low Vulnerability
+7847,Unknown,3.717334,Low Vulnerability
+7848,Unknown,3.717334,Low Vulnerability
+7849,Unknown,3.717334,Low Vulnerability
+7850,Unknown,3.717334,Low Vulnerability
+7851,Unknown,3.717334,Low Vulnerability
+7853,Unknown,7.884733,Elevated Vulnerability
+7854,Unknown,7.884733,Elevated Vulnerability
+7865,Unknown,,Least Vulnerable
+7866,Unknown,,Least Vulnerable
+7868,Unknown,,Least Vulnerable
+7869,Unknown,,Least Vulnerable
+7870,Unknown,,Least Vulnerable
+7871,Unknown,,Least Vulnerable
+7872,Unknown,,Least Vulnerable
+7873,Unknown,,Least Vulnerable
+7874,Unknown,,Least Vulnerable
+7875,Unknown,,Least Vulnerable
+7876,Unknown,,Least Vulnerable
+7877,Unknown,,Least Vulnerable
+7878,Unknown,,Least Vulnerable
+7879,Unknown,,Least Vulnerable
+7880,Unknown,,Least Vulnerable
+7881,Unknown,,Least Vulnerable
+7882,Unknown,,Least Vulnerable
+7883,Unknown,,Least Vulnerable
+7884,Unknown,,Least Vulnerable
+7886,Unknown,,Least Vulnerable
+7888,Unknown,,Least Vulnerable
+7890,Unknown,,Least Vulnerable
+7892,Unknown,5.235708,Low Vulnerability
+7894,Unknown,,Least Vulnerable
+7897,Unknown,7.163068,Moderate Vulnerability
+7899,Unknown,6.677978,Moderate Vulnerability
+7900,Unknown,5.521858,Low Vulnerability
+7910,Unknown,,Least Vulnerable
+7911,Unknown,,Least Vulnerable
+7912,Unknown,,Least Vulnerable
+7913,Unknown,,Least Vulnerable
+7914,Unknown,,Least Vulnerable
+7922,Unknown,,Least Vulnerable
+7923,Unknown,,Least Vulnerable
+7924,Unknown,7.581297,Elevated Vulnerability
+7929,Unknown,7.406875,Moderate Vulnerability
+7930,Unknown,,Least Vulnerable
+7931,Unknown,,Least Vulnerable
+7932,Unknown,,Least Vulnerable
+7947,Unknown,,Least Vulnerable
+7948,Unknown,,Least Vulnerable
+7949,Unknown,6.097635,Low Vulnerability
+7954,Unknown,,Least Vulnerable
+7956,Unknown,,Least Vulnerable
+7957,Unknown,,Least Vulnerable
+7958,Unknown,,Least Vulnerable
+7960,Unknown,5.521858,Low Vulnerability
+7977,Unknown,,Least Vulnerable
+7980,Unknown,6.719151,Moderate Vulnerability
+7981,Unknown,6.525854,Moderate Vulnerability
+7982,Unknown,5.810642,Low Vulnerability
+7983,Unknown,5.155698,Low Vulnerability
+7984,Unknown,5.316300,Low Vulnerability
+7985,Unknown,5.810642,Low Vulnerability
+7986,Unknown,8.396594,Elevated Vulnerability
+7989,Unknown,,Least Vulnerable
+7990,Unknown,,Least Vulnerable
+7991,Unknown,,Least Vulnerable
+7992,Unknown,,Least Vulnerable
+7993,Unknown,7.372457,Moderate Vulnerability
+7995,Unknown,7.372457,Moderate Vulnerability
+7996,Unknown,5.089086,Low Vulnerability
+7997,Unknown,6.265869,Moderate Vulnerability
+7998,Unknown,8.669335,Elevated Vulnerability
+7999,Unknown,8.669335,Elevated Vulnerability
+8000,Unknown,5.089086,Low Vulnerability
+8005,Unknown,6.693801,Moderate Vulnerability
+8006,Unknown,7.163068,Moderate Vulnerability
+8007,Unknown,6.008780,Low Vulnerability
+8008,Unknown,6.008780,Low Vulnerability
+8009,Unknown,,Least Vulnerable
+8010,Unknown,,Least Vulnerable
+8011,Unknown,6.461519,Moderate Vulnerability
+8012,Unknown,6.461519,Moderate Vulnerability
+8013,Unknown,,Least Vulnerable
+8015,Unknown,,Least Vulnerable
+8016,Unknown,,Least Vulnerable
+8017,Unknown,3.834156,Low Vulnerability
+8018,Unknown,3.834156,Low Vulnerability
+8019,Unknown,4.630313,Low Vulnerability
+8020,Unknown,3.305985,Least Vulnerable
+8021,Unknown,,Least Vulnerable
+8022,Unknown,3.305985,Least Vulnerable
+8023,Unknown,2.250337,Least Vulnerable
+8024,Unknown,4.630313,Low Vulnerability
+8025,Unknown,3.834156,Low Vulnerability
+8026,Unknown,3.834156,Low Vulnerability
+8027,Unknown,,Least Vulnerable
+8028,Unknown,,Least Vulnerable
+8029,Unknown,,Least Vulnerable
+8044,Unknown,,Least Vulnerable
+8045,Unknown,,Least Vulnerable
+8046,Unknown,,Least Vulnerable
+8047,Unknown,,Least Vulnerable
+8048,Unknown,,Least Vulnerable
+8053,Unknown,4.630313,Low Vulnerability
+8054,Unknown,4.630313,Low Vulnerability
+8057,Unknown,,Least Vulnerable
+8058,Unknown,,Least Vulnerable
+8059,Unknown,,Least Vulnerable
+8060,Unknown,,Least Vulnerable
+8067,Unknown,,Least Vulnerable
+8068,Unknown,3.717334,Low Vulnerability
+8070,Unknown,,Least Vulnerable
+8077,Unknown,5.521858,Low Vulnerability
+8078,Unknown,1.473898,Least Vulnerable
+8079,Unknown,,Least Vulnerable
+8080,Unknown,,Least Vulnerable
+8081,Unknown,,Least Vulnerable
+8082,Unknown,,Least Vulnerable
+8083,Unknown,,Least Vulnerable
+8084,Unknown,,Least Vulnerable
+8085,Unknown,,Least Vulnerable
+8086,Unknown,,Least Vulnerable
+8087,Unknown,,Least Vulnerable
+8088,Unknown,,Least Vulnerable
+8089,Unknown,,Least Vulnerable
+8090,Unknown,,Least Vulnerable
+8091,Unknown,,Least Vulnerable
+8092,Unknown,,Least Vulnerable
+8093,Unknown,,Least Vulnerable
+8096,Unknown,5.810642,Low Vulnerability
+8097,Unknown,4.057111,Low Vulnerability
+8098,Unknown,5.316300,Low Vulnerability
+8099,Unknown,9.999784,Most Vulnerable
+8100,Unknown,9.999784,Most Vulnerable
+8102,Unknown,5.810642,Low Vulnerability
+8103,Unknown,,Least Vulnerable
+8104,Unknown,4.350164,Low Vulnerability
+8105,Unknown,,Least Vulnerable
+8106,Unknown,,Least Vulnerable
+8107,Unknown,,Least Vulnerable
+8108,Unknown,5.960978,Moderate Vulnerability
+8109,Unknown,5.960978,Moderate Vulnerability
+8110,Unknown,5.028071,Low Vulnerability
+8111,Unknown,5.028071,Low Vulnerability
+8112,Unknown,5.960978,Moderate Vulnerability
+8113,Unknown,5.960978,Moderate Vulnerability
+8114,Unknown,,Least Vulnerable
+8115,Unknown,4.630313,Low Vulnerability
+8116,Unknown,,Least Vulnerable
+8117,Unknown,,Least Vulnerable
+8118,Unknown,,Least Vulnerable
+8119,Unknown,8.725452,Elevated Vulnerability
+8124,Unknown,5.362836,Low Vulnerability
+8125,Unknown,,Least Vulnerable
+8126,Unknown,7.290058,Moderate Vulnerability
+8127,Unknown,7.290058,Moderate Vulnerability
+8129,Unknown,6.461519,Moderate Vulnerability
+8130,Unknown,,Least Vulnerable
+8131,Unknown,7.919117,Elevated Vulnerability
+8133,Unknown,,Least Vulnerable
+8134,Unknown,,Least Vulnerable
+8135,Unknown,9.158626,Most Vulnerable
+8136,Unknown,3.579030,Least Vulnerable
+8137,Unknown,,Least Vulnerable
+8138,Unknown,1.473898,Least Vulnerable
+8139,Unknown,,Least Vulnerable
+8140,Unknown,6.649482,Moderate Vulnerability
+8141,Unknown,,Least Vulnerable
+8142,Unknown,,Least Vulnerable
+8143,Unknown,6.649482,Moderate Vulnerability
+8144,Unknown,9.999784,Most Vulnerable
+8145,Unknown,,Least Vulnerable
+8146,Unknown,7.290058,Moderate Vulnerability
