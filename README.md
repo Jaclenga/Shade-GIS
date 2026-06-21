@@ -51,6 +51,24 @@ streamlit run app.py
 
 The app reads `stops.txt` from this project directory. The committed `shading_data.csv` is used as seed shade data.
 
+## Verify heat data
+
+Run the dependency-free integrity checks against the local GTFS and heat CSV files:
+
+```bash
+python scripts/verify_heat_data.py
+```
+
+Before checking, the script fills missing heat values for stops with `Unknown`. It recognizes blank cells and common fillers (`N/A`, `null`, `none`, `nan`, `-`, `missing`, and `Not available`) but does not alter `stop_id` or `shading`. Use `--check-only` to report missing heat values without changing the CSV.
+
+For an accuracy check against the cited Hillsborough County ArcGIS layer, including an independent point-in-polygon match for every stop, run:
+
+```bash
+python scripts/verify_heat_data.py --live
+```
+
+The script exits with status `0` when all checks pass, `1` when data errors are found, and `2` when inputs or the live source cannot be read. Warnings, such as GTFS stops outside the county layer, do not by themselves fail verification.
+
 ## Deploy
 
 This repo is ready for a basic Streamlit deployment using:
