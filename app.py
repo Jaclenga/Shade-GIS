@@ -38,6 +38,11 @@ DATA_CITATION = (
     "Hillsborough Area Regional Transit. (2026). General Transit Feed Specification (GTFS) "
     "data feed [Data set]. Retrieved June 17, 2026, from the HART GTFS feed."
 )
+HEAT_VULNERABILITY_CITATION = (
+    "Hillsborough County. (n.d.). Heat Vulnerability Index [Feature layer]. ArcGIS Feature Server. "
+    "Retrieved June 20, 2026, from "
+    "https://services1.arcgis.com/IbNXlmt2RVVRCZ6M/arcgis/rest/services/HeatVulnerabilityIndex/FeatureServer"
+)
 NAV_PAGES = ["Voting", "About"]
 
 
@@ -267,6 +272,7 @@ def render_map_page() -> None:
         "vulnerability in the surrounding area, not the amount of shade at the stop; higher values "
         "indicate greater vulnerability."
     )
+    st.caption(f"Heat vulnerability source: {HEAT_VULNERABILITY_CITATION}")
 
     map_selection = st.pydeck_chart(
         build_deck_chart(stops),
@@ -482,7 +488,7 @@ def main():
     page = render_site_header()
 
     if page == "About":
-        render_about_page(STUDY_SUMMARY, DATA_CITATION)
+        render_about_page(STUDY_SUMMARY, DATA_CITATION, HEAT_VULNERABILITY_CITATION)
         return
 
     render_map_page()

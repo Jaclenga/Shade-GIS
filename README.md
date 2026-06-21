@@ -17,6 +17,9 @@ This study focuses on visualizing bus stop shading to provide better insights on
 
 Map tooltips also show the heat vulnerability index and category label for the area surrounding each stop. The index is separate from the observed shade status: higher values indicate greater relative heat vulnerability, while the label provides the corresponding vulnerability category.
 
+Heat vulnerability source:
+`Hillsborough County. (n.d.). Heat Vulnerability Index [Feature layer]. ArcGIS Feature Server. Retrieved June 20, 2026, from https://services1.arcgis.com/IbNXlmt2RVVRCZ6M/arcgis/rest/services/HeatVulnerabilityIndex/FeatureServer`
+
 Research on thermal comfort at bus stops has shown that the waiting environment plays an important role in how riders perceive public transportation. In subtropical climates, exposure to direct sunlight, limited shade, and high temperatures can reduce comfort and satisfaction while waiting for a bus. Together with evidence that tree canopy and shade infrastructure may help mitigate the impacts of extreme heat on transit users, these findings suggest that the quality of the waiting environment is an important component of an accessible, resilient, and rider-friendly transit system. The Tampa Shade Study seeks to make these conditions more visible by documenting shade availability across the region's bus network and providing data that can inform future improvements.
 
 Citation when referencing the GTFS source:

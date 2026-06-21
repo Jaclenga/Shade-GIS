@@ -1,7 +1,11 @@
 import streamlit as st
 
 
-def render_about_page(study_summary: str, data_citation: str) -> None:
+def render_about_page(
+    study_summary: str,
+    data_citation: str,
+    heat_vulnerability_citation: str,
+) -> None:
     st.title("Tampa Shade Study")
     st.markdown(f"### {study_summary}")
     st.markdown(
@@ -34,12 +38,17 @@ def render_about_page(study_summary: str, data_citation: str) -> None:
         ## Data Sources
 
         - Hillsborough Area Regional Transit (HART) General Transit Feed Specification (GTFS) Data Feed
+        - Hillsborough County Heat Vulnerability Index ArcGIS Feature Layer
         - Community-submitted shade observations and votes
 
         ## References
 
         Hillsborough Area Regional Transit. *General Transit Feed Specification (GTFS) Data Feed* [Data set].
         Retrieved June 17, 2026.
+
+        Hillsborough County. (n.d.). *Heat Vulnerability Index* [Feature layer]. ArcGIS Feature Server.
+        Retrieved June 20, 2026, from
+        https://services1.arcgis.com/IbNXlmt2RVVRCZ6M/arcgis/rest/services/HeatVulnerabilityIndex/FeatureServer
 
         Lanza, K., & Durand, C. P. (2021). *Heat-Moderating Effects of Bus Stop Shelters and Tree Shade on Public
         Transport Ridership*. International Journal of Environmental Research and Public Health, 18(2), 463.
@@ -52,3 +61,4 @@ def render_about_page(study_summary: str, data_citation: str) -> None:
         """
     )
     st.caption(data_citation)
+    st.caption(heat_vulnerability_citation)
