@@ -5,23 +5,27 @@ Streamlit app for visualizing bus stop shading to provide better insights on Tam
 ## What it does
 
 - Displays all Tampa-area bus stops in an interactive PyDeck map whose camera and dragging stay within the Tampa region.
-- Colors stops by current shade status: no shade, limited natural shade, significant natural shade, constructed shade, or unknown.
+- Colors stops by current shade status: no shade, limited natural shade, significant natural shade, constructed shade, manmade shade, or unknown.
 - Adds four heat-context fields for each stop: weighted HVI, vulnerability category, tree canopy percentage, and median land surface temperature.
 - Lets each browser session submit one anonymous vote per stop.
-- Applies a stop's shade status automatically once it reaches 5 valid votes.
-- Uses the majority vote as the status; if top statuses are tied, the tied status with the oldest vote wins.
-- Saves runtime votes to `shading_votes.csv` and saved shade status to `shading_data.csv`.
+- Applies a stop's shade status automatically once it reaches 5 valid coverage votes.
+- Uses the majority coverage vote as the status; if coverage values are tied, the tied coverage with the oldest vote wins. Source checkbox yes/no ties also go to the oldest tied vote.
+- Saves runtime votes to `shading_votes.csv` and saved shade status to `shading_data.csv`, including separate shade coverage and source fields.
 
 ## About the study
 
 This study focuses on visualizing bus stop shading to provide better insights on Tampa's transport. The app uses GTFS stop locations together with community shading votes to support exploratory analysis, fieldwork planning, and transit-focused discussion.
 
-Classifications were based on visible shade coverage of the waiting area in available imagery rather than the mere presence of nearby vegetation or structures.
+Classifications were based on visible shade coverage of the waiting area in available imagery rather than the mere presence of nearby vegetation or structures. This is especially important with Street View winter imagery: code what visibly shades the waiting area, not what might shade it at another time.
+
+Waiting area: The space where a passenger would reasonably stand or sit while waiting for transit, including benches when present.
 
 Map tooltips now focus on four heat-exposure variables that best support the project story: the county's weighted heat vulnerability index, the vulnerability category label, tree canopy percentage, and median land surface temperature. The app also summarizes these fields by shading category and highlights high-priority stops where low shade and high heat exposure overlap.
 
 Main dataset fields used in the app:
-- `shading`: observed or voted shade condition at the stop itself, using no shade, limited natural shade, significant natural shade, constructed shade, or unknown.
+- `shade_coverage`: observed or voted amount of shade reaching the waiting area, using no shade, limited, significant, or unknown.
+- `shade_sources`: observed or voted source labels for shade reaching the waiting area. This can hold multiple labels, such as `Natural; Constructed; Manmade`, when more than one source visibly shades riders.
+- `shading`: derived map label for the stop itself, using no shade, limited natural shade, significant natural shade, constructed shade, manmade shade, or unknown.
 - `heat_vulnerability_index`: the county's weighted heat-vulnerability score for the surrounding block group; higher values mean greater relative vulnerability.
 - `heat_vulnerability_label`: the category label paired with the weighted HVI score, making the map easier to read at a glance.
 - `tree_canopy_pct`: estimated tree canopy share in the surrounding block group; lower values can suggest less natural cooling and less nearby shade context.
@@ -38,24 +42,47 @@ Heat vulnerability key citation:
 
 Shade voting guide used in the app:
 
+Shade source:
+
+| Shade Source | Operational Definition |
+| --- | --- |
+| Natural | Trees, palms, hedges, or other vegetation visibly shade the waiting area |
+| Constructed | A designated, purpose-built bus shelter, awning, canopy, overhang, or similar passenger shelter visibly shades the waiting area |
+| Manmade | A nearby building or other non-shelter built feature visibly shades the waiting area |
+| Natural; Constructed; Manmade | More than one source type visibly shades the waiting area |
+
+Shade coverage:
+
+| Shade Coverage | Operational Definition |
+| --- | --- |
+| No Shade | No shade visibly reaches the waiting area |
+| Limited | Shade visibly reaches part of the waiting area, but does not cover most of it |
+| Significant | Shade visibly covers most of the waiting area or seating area |
+
+Trees, utility poles, signs, and nearby buildings are not classified as Constructed unless they are clearly intended to provide passenger shade or weather protection. Nearby buildings that visibly shade the waiting area should be coded as Manmade.
+
+Current app labels:
+
 | Category | Operational Definition |
 | --- | --- |
 | No Shade | No visible shelter and no vegetation visibly shading the waiting area |
 | Limited Natural Shade | Vegetation visibly shades part of the waiting area, but does not visibly cover most of it |
 | Significant Natural Shade | Vegetation visibly covers most of the waiting area or seating area |
-| Constructed Shade | Shelter, awning, overhang, or other built structure is the primary shade source |
+| Constructed Shade | A purpose-built shelter, awning, canopy, or overhang visibly shades the waiting area |
+| Manmade Shade | A nearby building or other non-shelter built feature visibly shades the waiting area |
 
 Classification examples used in the app:
 
-| Visible condition | Classification |
-| --- | --- |
-| Bus shelter and trees are both present, and the shelter is the primary place riders would wait | Constructed Shade |
-| Large building casts shade onto the stop | Constructed Shade |
-| Only a small sign or pole shadow reaches the stop | No Shade |
-| Trees are nearby but do not visibly shade the waiting area | No Shade |
-| Hedges or shrubs visibly shade the bench or waiting area | Limited or Significant Natural Shade, depending on coverage |
-| Palms provide partial coverage | Limited Natural Shade |
-| Large oak canopy covers the stop | Significant Natural Shade |
+| Visible condition | Shade Source | Shade Coverage |
+| --- | --- | --- |
+| Bus shelter and trees both visibly shade the waiting area | Natural; Constructed | Limited or Significant, depending on coverage |
+| Purpose-built bus shelter visibly shades where riders would wait | Constructed | Limited or Significant, depending on coverage |
+| Large building casts shade onto the stop but is not intended as passenger shelter | Manmade | Limited or Significant, depending on coverage |
+| Only a small sign or pole shadow reaches the stop | None | None unless it visibly shades the waiting area |
+| Trees are nearby but do not visibly shade the waiting area | None | None |
+| Hedges or shrubs visibly shade the bench or waiting area | Natural | Limited or Significant, depending on coverage |
+| Palms provide partial coverage | Natural | Limited |
+| Large oak canopy covers the stop | Natural | Significant |
 
 Research on thermal comfort at bus stops has shown that the waiting environment plays an important role in how riders perceive public transportation. In subtropical climates, exposure to direct sunlight, limited shade, and high temperatures can reduce comfort and satisfaction while waiting for a bus. Together with evidence that tree canopy and shade infrastructure may help mitigate the impacts of extreme heat on transit users, these findings suggest that the quality of the waiting environment is an important component of an accessible, resilient, and rider-friendly transit system. The Tampa Shade Study seeks to make these conditions more visible by documenting shade availability across the region's bus network and providing data that can inform future improvements.
 

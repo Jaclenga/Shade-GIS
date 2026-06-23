@@ -20,16 +20,24 @@ SHADING_STATUS = [
     "Limited Natural Shade",
     "Significant Natural Shade",
     "Constructed Shade",
+    "Manmade Shade",
     "Unknown",
 ]
 VALID_SHADING_VALUES = set(SHADING_STATUS)
 VOTE_OPTIONS = [
     "No Shade",
-    "Limited Natural Shade",
-    "Significant Natural Shade",
-    "Constructed Shade",
+    "Limited",
+    "Significant",
+]
+SHADE_COVERAGE_OPTIONS = VOTE_OPTIONS
+SHADE_SOURCE_OPTIONS = [
+    "Natural",
+    "Constructed",
+    "Manmade",
 ]
 VOTE_THRESHOLD = 5
+VALID_SHADE_COVERAGE_VALUES = {*SHADE_COVERAGE_OPTIONS, "Unknown"}
+VALID_SHADE_SOURCE_VALUES = set(SHADE_SOURCE_OPTIONS)
 LEGACY_SHADING_MAP = {
     "shaded": "Significant Natural Shade",
     "natural shade": "Significant Natural Shade",
@@ -40,6 +48,7 @@ LEGACY_SHADING_MAP = {
     "manmade shade": "Constructed Shade",
     "manmade shelter": "Constructed Shade",
     "constructed shade": "Constructed Shade",
+    "manmade shade source": "Manmade Shade",
     "no shade": "No Shade",
     "unknown": "Unknown",
 }
@@ -48,6 +57,7 @@ COLOR_MAP = {
     "Limited Natural Shade": [214, 158, 46],
     "Significant Natural Shade": [34, 139, 34],
     "Constructed Shade": [70, 130, 180],
+    "Manmade Shade": [128, 90, 170],
     "Unknown": [128, 128, 128],
 }
 LEGEND_LABELS = {
@@ -55,8 +65,45 @@ LEGEND_LABELS = {
     "Limited Natural Shade": "gold marker",
     "Significant Natural Shade": "green marker",
     "Constructed Shade": "steel blue marker",
+    "Manmade Shade": "purple marker",
     "Unknown": "gray marker",
 }
+WAITING_AREA_DEFINITION = (
+    "Waiting area: The space where a passenger would reasonably stand or sit while waiting for transit, "
+    "including benches when present."
+)
+SHADE_SOURCE_GUIDE = [
+    {
+        "Shade Source": "Natural",
+        "Operational Definition": "Trees, palms, hedges, or other vegetation visibly shade the waiting area",
+    },
+    {
+        "Shade Source": "Constructed",
+        "Operational Definition": "A designated, purpose-built bus shelter, awning, canopy, overhang, or similar passenger shelter visibly shades the waiting area",
+    },
+    {
+        "Shade Source": "Manmade",
+        "Operational Definition": "A nearby building or other non-shelter built feature visibly shades the waiting area",
+    },
+    {
+        "Shade Source": "Natural; Constructed; Manmade",
+        "Operational Definition": "More than one source type visibly shades the waiting area",
+    },
+]
+SHADE_COVERAGE_GUIDE = [
+    {
+        "Shade Coverage": "No Shade",
+        "Operational Definition": "No shade visibly reaches the waiting area",
+    },
+    {
+        "Shade Coverage": "Limited",
+        "Operational Definition": "Shade visibly reaches part of the waiting area, but does not cover most of it",
+    },
+    {
+        "Shade Coverage": "Significant",
+        "Operational Definition": "Shade visibly covers most of the waiting area or seating area",
+    },
+]
 SHADE_VOTING_GUIDE = [
     {
         "Category": "No Shade",
@@ -72,41 +119,64 @@ SHADE_VOTING_GUIDE = [
     },
     {
         "Category": "Constructed Shade",
-        "Operational Definition": "Shelter, awning, overhang, or other built structure is the primary shade source",
+        "Operational Definition": "A purpose-built shelter, awning, canopy, or overhang visibly shades the waiting area",
+    },
+    {
+        "Category": "Manmade Shade",
+        "Operational Definition": "A nearby building or other non-shelter built feature visibly shades the waiting area",
     },
 ]
 SHADE_METHODOLOGY_NOTE = (
     "Classifications were based on visible shade coverage of the waiting area in available imagery "
-    "rather than the mere presence of nearby vegetation or structures."
+    "rather than the mere presence of nearby vegetation or structures. This is especially important with "
+    "Street View winter imagery: code what visibly shades the waiting area, not what might shade it at "
+    "another time."
+)
+SHADE_SOURCE_NOTE = (
+    "Trees, utility poles, signs, and nearby buildings are not classified as Constructed unless they are "
+    "clearly intended to provide passenger shade or weather protection. Nearby buildings that visibly shade "
+    "the waiting area should be coded as Manmade."
 )
 SHADE_CLASSIFICATION_EXAMPLES = [
     {
-        "Visible condition": "Bus shelter and trees are both present, and the shelter is the primary place riders would wait",
-        "Classification": "Constructed Shade",
+        "Visible condition": "Bus shelter and trees both visibly shade the waiting area",
+        "Shade Source": "Natural; Constructed",
+        "Shade Coverage": "Limited or Significant, depending on coverage",
     },
     {
-        "Visible condition": "Large building casts shade onto the stop",
-        "Classification": "Constructed Shade",
+        "Visible condition": "Purpose-built bus shelter visibly shades where riders would wait",
+        "Shade Source": "Constructed",
+        "Shade Coverage": "Limited or Significant, depending on coverage",
+    },
+    {
+        "Visible condition": "Large building casts shade onto the stop but is not intended as passenger shelter",
+        "Shade Source": "Manmade",
+        "Shade Coverage": "Limited or Significant, depending on coverage",
     },
     {
         "Visible condition": "Only a small sign or pole shadow reaches the stop",
-        "Classification": "No Shade",
+        "Shade Source": "None",
+        "Shade Coverage": "None unless it visibly shades the waiting area",
     },
     {
         "Visible condition": "Trees are nearby but do not visibly shade the waiting area",
-        "Classification": "No Shade",
+        "Shade Source": "None",
+        "Shade Coverage": "None",
     },
     {
         "Visible condition": "Hedges or shrubs visibly shade the bench or waiting area",
-        "Classification": "Limited or Significant Natural Shade, depending on coverage",
+        "Shade Source": "Natural",
+        "Shade Coverage": "Limited or Significant, depending on coverage",
     },
     {
         "Visible condition": "Palms provide partial coverage",
-        "Classification": "Limited Natural Shade",
+        "Shade Source": "Natural",
+        "Shade Coverage": "Limited",
     },
     {
         "Visible condition": "Large oak canopy covers the stop",
-        "Classification": "Significant Natural Shade",
+        "Shade Source": "Natural",
+        "Shade Coverage": "Significant",
     },
 ]
 APP_TITLE = "Tampa Bus Stops Shade Map"
@@ -141,9 +211,21 @@ HEAT_VULNERABILITY_KEY = [
 DATASET_FIELD_GUIDE = [
     {
         "Field": "shading",
-        "What it measures": "Observed or voted shade condition at the stop itself.",
-        "How to read it": "No Shade, Limited Natural Shade, Significant Natural Shade, Constructed Shade, or Unknown.",
-        "What it implies": "This is the direct rider experience variable. No Shade suggests the least protection while waiting, while limited natural shade marks partial vegetation cover.",
+        "What it measures": "Derived map label for the observed or voted shade condition at the stop itself.",
+        "How to read it": "No Shade, Limited Natural Shade, Significant Natural Shade, Constructed Shade, Manmade Shade, or Unknown.",
+        "What it implies": "This keeps the map and summary tables compatible with the original single-label shade categories.",
+    },
+    {
+        "Field": "shade_coverage",
+        "What it measures": "Observed or voted amount of shade reaching the waiting area.",
+        "How to read it": "No Shade, Limited, Significant, or Unknown.",
+        "What it implies": "This captures how much shade reaches riders without mixing in the source of shade.",
+    },
+    {
+        "Field": "shade_sources",
+        "What it measures": "Observed or voted source labels for shade reaching the waiting area.",
+        "How to read it": "None, Natural, Constructed, Manmade, or multiple labels separated by semicolons.",
+        "What it implies": "This captures whether shade comes from vegetation, a purpose-built passenger shelter, nearby buildings, or multiple sources.",
     },
     {
         "Field": "heat_vulnerability_index",
@@ -197,12 +279,176 @@ def normalize_shading_value(value: str) -> str:
     value = str(value).strip()
     if not value:
         return "Unknown"
+    if value in VALID_SHADING_VALUES:
+        return value
     normalized = LEGACY_SHADING_MAP.get(value.lower())
     if normalized:
         return normalized
-    if value in VALID_SHADING_VALUES:
+    return "Unknown"
+
+
+def normalize_shade_coverage(value: str) -> str:
+    if pd.isna(value):
+        return "Unknown"
+    value = str(value).strip()
+    if not value:
+        return "Unknown"
+    normalized = {
+        "none": "No Shade",
+        "no": "No Shade",
+        "no shade": "No Shade",
+        "limited": "Limited",
+        "limited shade": "Limited",
+        "limited natural shade": "Limited",
+        "limited natural shading": "Limited",
+        "significant": "Significant",
+        "significant shade": "Significant",
+        "significant natural shade": "Significant",
+        "significant natural shading": "Significant",
+        "constructed shade": "Significant",
+        "manmade shade": "Significant",
+        "manmade shelter": "Significant",
+        "shaded": "Significant",
+        "natural shade": "Significant",
+        "unknown": "Unknown",
+    }.get(value.lower())
+    if normalized:
+        return normalized
+    if value in VALID_SHADE_COVERAGE_VALUES:
         return value
     return "Unknown"
+
+
+def normalize_shade_sources(value: object) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, (list, tuple, set)):
+        parts = [str(item).strip() for item in value]
+    else:
+        if pd.isna(value):
+            return []
+        text = str(value).replace(",", ";").strip()
+        if not text or text.lower() in {"none", "unknown", "not available"}:
+            return []
+        parts = [part.strip() for part in text.split(";")]
+
+    normalized = set()
+    for part in parts:
+        key = part.lower()
+        if key in {"natural", "tree", "trees", "vegetation", "canopy"}:
+            normalized.add("Natural")
+        elif key in {
+            "constructed",
+            "constructed/manmade",
+            "purpose-built shelter",
+            "purpose built shelter",
+            "shelter",
+            "built",
+            "built structure",
+            "manmade shelter",
+        }:
+            normalized.add("Constructed")
+        elif key in {
+            "manmade",
+            "man-made",
+            "manmade shade",
+            "building",
+            "buildings",
+            "tall building",
+            "tall buildings",
+            "nearby building",
+            "nearby buildings",
+            "incidental built shade",
+        }:
+            normalized.add("Manmade")
+
+    return [source for source in SHADE_SOURCE_OPTIONS if source in normalized]
+
+
+def serialize_shade_sources(value: object) -> str:
+    sources = normalize_shade_sources(value)
+    return "; ".join(sources) if sources else "None"
+
+
+def infer_shade_coverage_from_shading(value: str) -> str:
+    shading = normalize_shading_value(value)
+    if shading == "No Shade":
+        return "No Shade"
+    if shading == "Limited Natural Shade":
+        return "Limited"
+    if shading in {"Significant Natural Shade", "Constructed Shade", "Manmade Shade"}:
+        return "Significant"
+    return "Unknown"
+
+
+def infer_shade_sources_from_shading(value: str) -> str:
+    shading = normalize_shading_value(value)
+    if shading in {"Limited Natural Shade", "Significant Natural Shade"}:
+        return "Natural"
+    if shading == "Constructed Shade":
+        return "Constructed"
+    if shading == "Manmade Shade":
+        return "Manmade"
+    return "None"
+
+
+def derive_shading_value(shade_coverage: str, shade_sources: object) -> str:
+    coverage = normalize_shade_coverage(shade_coverage)
+    sources = normalize_shade_sources(shade_sources)
+    if coverage == "No Shade":
+        return "No Shade"
+    if coverage == "Limited":
+        if "Constructed" in sources:
+            return "Constructed Shade"
+        if "Manmade" in sources:
+            return "Manmade Shade"
+        if "Natural" in sources:
+            return "Limited Natural Shade"
+    if coverage == "Significant":
+        if "Constructed" in sources:
+            return "Constructed Shade"
+        if "Manmade" in sources:
+            return "Manmade Shade"
+        if "Natural" in sources:
+            return "Significant Natural Shade"
+    return "Unknown"
+
+
+def prepare_shade_columns(df: pd.DataFrame) -> pd.DataFrame:
+    prepared = df.copy()
+    if "shading" not in prepared.columns:
+        prepared["shading"] = "Unknown"
+    prepared["shading"] = prepared["shading"].apply(normalize_shading_value)
+
+    if "shade_coverage" not in prepared.columns:
+        prepared["shade_coverage"] = prepared["shading"].apply(infer_shade_coverage_from_shading)
+    prepared["shade_coverage"] = prepared["shade_coverage"].apply(normalize_shade_coverage)
+
+    if "shade_sources" not in prepared.columns:
+        prepared["shade_sources"] = prepared["shading"].apply(infer_shade_sources_from_shading)
+    prepared["shade_sources"] = prepared["shade_sources"].apply(serialize_shade_sources)
+    prepared["shading"] = prepared.apply(
+        lambda row: derive_shading_value(row["shade_coverage"], row["shade_sources"]),
+        axis=1,
+    )
+    return prepared
+
+
+def prepare_vote_columns(votes: pd.DataFrame) -> pd.DataFrame:
+    prepared = votes.copy()
+    if "vote" not in prepared.columns:
+        prepared["vote"] = "Unknown"
+    if "shade_coverage" not in prepared.columns:
+        prepared["shade_coverage"] = prepared["vote"].apply(infer_shade_coverage_from_shading)
+    if "shade_sources" not in prepared.columns:
+        prepared["shade_sources"] = prepared["vote"].apply(infer_shade_sources_from_shading)
+    prepared["shade_coverage"] = prepared["shade_coverage"].apply(normalize_shade_coverage)
+    prepared["shade_sources"] = prepared["shade_sources"].apply(serialize_shade_sources)
+    prepared["vote"] = prepared.apply(
+        lambda row: derive_shading_value(row["shade_coverage"], row["shade_sources"]),
+        axis=1,
+    )
+    return prepared
 
 
 def get_readable_shading_file() -> Path:
@@ -220,16 +466,21 @@ def load_stops() -> pd.DataFrame:
         return df
 
     df["shading"] = "Unknown"
+    df["shade_coverage"] = "Unknown"
+    df["shade_sources"] = "None"
     # apply manual saved shading first
     shading_file = get_readable_shading_file()
     if shading_file.exists():
         shading = pd.read_csv(shading_file, dtype={"stop_id": str})
-        if {"stop_id", "shading"}.issubset(shading.columns):
-            saved_shading = shading.loc[:, ["stop_id", "shading"]].drop_duplicates(subset=["stop_id"])
-            saved_shading["shading"] = saved_shading["shading"].apply(normalize_shading_value)
+        if "stop_id" in shading.columns:
+            shading = prepare_shade_columns(shading)
+            shade_cols = ["shading", "shade_coverage", "shade_sources"]
+            saved_shading = shading.loc[:, ["stop_id", *shade_cols]].drop_duplicates(subset=["stop_id"])
             df = df.merge(saved_shading, on="stop_id", how="left", suffixes=("", "_saved"))
-            if "shading_saved" in df.columns:
-                df["shading"] = df["shading_saved"].fillna(df["shading"])
+            for column in shade_cols:
+                saved_column = f"{column}_saved"
+                if saved_column in df.columns:
+                    df[column] = df[saved_column].fillna(df[column])
             df = df.drop(columns=[col for col in df.columns if col.endswith("_saved")])
 
         available_heat_cols = [col for col in HEAT_DATA_COLUMNS if col in shading.columns]
@@ -252,8 +503,10 @@ def load_stops() -> pd.DataFrame:
         for stop_id, stop_votes in votes.groupby("stop_id"):
             winner = get_vote_decision(stop_votes)
             if winner is not None:
-                df.loc[df["stop_id"] == stop_id, "shading"] = winner
+                for column, value in winner.items():
+                    df.loc[df["stop_id"] == stop_id, column] = value
 
+    df = prepare_shade_columns(df)
     df["fill_color"] = df["shading"].map(COLOR_MAP)
     return df
 
@@ -318,7 +571,8 @@ def build_priority_stop_table(df: pd.DataFrame, limit: int = 10) -> pd.DataFrame
         "Unknown": 1,
         "Limited Natural Shade": 2,
         "Constructed Shade": 3,
-        "Significant Natural Shade": 4,
+        "Manmade Shade": 4,
+        "Significant Natural Shade": 5,
     }
     sortable = df.copy()
     sortable["priority_group"] = sortable["shading"].map(priority_order).fillna(len(priority_order))
@@ -361,8 +615,7 @@ def build_priority_stop_table(df: pd.DataFrame, limit: int = 10) -> pd.DataFrame
 def save_shading_data(df: pd.DataFrame) -> None:
     SHADE_FILE.parent.mkdir(parents=True, exist_ok=True)
     saved = df.drop(columns=["fill_color"], errors="ignore").copy()
-    if "shading" in saved.columns:
-        saved["shading"] = saved["shading"].apply(normalize_shading_value)
+    saved = prepare_shade_columns(saved)
     saved.to_csv(SHADE_FILE, index=False)
 
 
@@ -378,19 +631,34 @@ def get_or_create_voter_id() -> str:
 
 def load_votes() -> pd.DataFrame:
     if VOTES_FILE.exists():
-        votes = pd.read_csv(VOTES_FILE, dtype={"stop_id": str, "user": str, "vote": str, "ts": float})
-        if "vote" in votes.columns:
-            votes["vote"] = votes["vote"].apply(normalize_shading_value)
-        return votes
-    return pd.DataFrame(columns=["stop_id", "user", "vote", "ts"])
+        votes = pd.read_csv(
+            VOTES_FILE,
+            dtype={
+                "stop_id": str,
+                "user": str,
+                "vote": str,
+                "shade_coverage": str,
+                "shade_sources": str,
+                "ts": float,
+            },
+        )
+        return prepare_vote_columns(votes)
+    return pd.DataFrame(columns=["stop_id", "user", "vote", "shade_coverage", "shade_sources", "ts"])
 
 
-def save_vote(stop_id: str, user: str, vote: str) -> None:
+def save_vote(stop_id: str, user: str, shade_coverage: str, shade_sources: object) -> None:
     VOTES_FILE.parent.mkdir(parents=True, exist_ok=True)
     votes = load_votes()
-    vote = normalize_shading_value(vote)
-    if vote not in VOTE_OPTIONS:
+    shade_coverage = normalize_shade_coverage(shade_coverage)
+    shade_sources = serialize_shade_sources(shade_sources)
+    if shade_coverage not in SHADE_COVERAGE_OPTIONS:
         raise ValueError("Invalid vote")
+    source_values = normalize_shade_sources(shade_sources)
+    if shade_coverage == "No Shade" and source_values:
+        raise ValueError("No Shade votes cannot include a shade source")
+    if shade_coverage != "No Shade" and not source_values:
+        raise ValueError("Limited and Significant votes require at least one shade source")
+    vote = derive_shading_value(shade_coverage, shade_sources)
     # allow one vote per user per stop; overwrite any existing
     votes = votes[~((votes["stop_id"] == stop_id) & (votes["user"] == user))]
     votes = pd.concat(
@@ -402,6 +670,8 @@ def save_vote(stop_id: str, user: str, vote: str) -> None:
                         "stop_id": stop_id,
                         "user": user,
                         "vote": vote,
+                        "shade_coverage": shade_coverage,
+                        "shade_sources": shade_sources,
                         "ts": time.time(),
                     }
                 ]
@@ -415,32 +685,76 @@ def save_vote(stop_id: str, user: str, vote: str) -> None:
 def get_vote_counts(stop_id: str):
     votes = load_votes()
     sel = votes[votes["stop_id"] == stop_id]
-    counts = {option: int((sel["vote"] == option).sum()) for option in VOTE_OPTIONS}
+    counts = {
+        option: sum(1 for value in sel["shade_coverage"] if value == option)
+        for option in SHADE_COVERAGE_OPTIONS
+    }
     counts["Total"] = sum(counts.values())
+    for source in SHADE_SOURCE_OPTIONS:
+        counts[source] = sum(
+            1
+            for value in sel["shade_sources"]
+            if source in normalize_shade_sources(value)
+        )
     return counts
 
 
-def get_vote_decision(votes: pd.DataFrame) -> str | None:
-    valid_votes = votes[votes["vote"].isin(VOTE_OPTIONS)].copy()
-    if len(valid_votes) < VOTE_THRESHOLD:
-        return None
-
-    counts = valid_votes["vote"].value_counts()
-    results = [(int(counts.get(label, 0)), label) for label in VOTE_OPTIONS]
+def choose_oldest_tie(valid_votes: pd.DataFrame, column: str, options: list[str]) -> str:
+    counts = valid_votes[column].value_counts()
+    results = [(int(counts.get(label, 0)), label) for label in options]
     winning_count = max(count for count, _ in results)
     winners = [label for count, label in results if count == winning_count]
     if len(winners) == 1:
         return winners[0]
 
-    tied_votes = valid_votes[valid_votes["vote"].isin(winners)].copy()
+    tied_votes = valid_votes[valid_votes[column].isin(winners)].copy()
     tied_votes["ts"] = pd.to_numeric(tied_votes["ts"], errors="coerce")
     tied_votes = tied_votes.dropna(subset=["ts"])
     if tied_votes.empty:
         return winners[0]
-    return str(tied_votes.sort_values("ts", kind="stable").iloc[0]["vote"])
+    return str(tied_votes.sort_values("ts", kind="stable").iloc[0][column])
 
 
-def get_vote_decision_for_stop(stop_id: str) -> str | None:
+def source_wins_tie(valid_votes: pd.DataFrame, source: str) -> bool:
+    tied_votes = valid_votes.copy()
+    tied_votes["source_selected"] = tied_votes["shade_sources"].apply(
+        lambda value: source in normalize_shade_sources(value)
+    )
+    tied_votes["ts"] = pd.to_numeric(tied_votes["ts"], errors="coerce")
+    tied_votes = tied_votes.dropna(subset=["ts"])
+    if tied_votes.empty:
+        return False
+    return bool(tied_votes.sort_values("ts", kind="stable").iloc[0]["source_selected"])
+
+
+def get_vote_decision(votes: pd.DataFrame) -> dict[str, str] | None:
+    votes = load_votes() if votes is None else prepare_vote_columns(votes)
+    valid_votes = votes[votes["shade_coverage"].isin(SHADE_COVERAGE_OPTIONS)].copy()
+    if len(valid_votes) < VOTE_THRESHOLD:
+        return None
+
+    shade_coverage = choose_oldest_tie(valid_votes, "shade_coverage", SHADE_COVERAGE_OPTIONS)
+    shade_sources = "None"
+    if shade_coverage != "No Shade":
+        source_votes = valid_votes[valid_votes["shade_coverage"] == shade_coverage].copy()
+        selected_sources = []
+        for source in SHADE_SOURCE_OPTIONS:
+            selected = source_votes["shade_sources"].apply(lambda value: source in normalize_shade_sources(value))
+            yes_count = int(selected.sum())
+            no_count = int(len(source_votes) - yes_count)
+            if yes_count > no_count or (yes_count == no_count and source_wins_tie(source_votes, source)):
+                selected_sources.append(source)
+        shade_sources = serialize_shade_sources(selected_sources)
+
+    shading = derive_shading_value(shade_coverage, shade_sources)
+    return {
+        "shading": shading,
+        "shade_coverage": shade_coverage,
+        "shade_sources": shade_sources,
+    }
+
+
+def get_vote_decision_for_stop(stop_id: str) -> dict[str, str] | None:
     votes = load_votes()
     return get_vote_decision(votes[votes["stop_id"] == stop_id])
 
@@ -477,6 +791,8 @@ def build_deck_chart(df: pd.DataFrame):
             "text": (
                 "{stop_name} ({stop_id})\n"
                 "Shading: {shading}\n"
+                "Shade coverage: {shade_coverage}\n"
+                "Shade sources: {shade_sources}\n"
                 "Weighted HVI: {heat_vulnerability_index_display}\n"
                 "Vulnerability label: {heat_vulnerability_label_display}\n"
                 "Tree canopy: {tree_canopy_pct_display}\n"
@@ -535,6 +851,13 @@ def render_map_page() -> None:
     st.dataframe(pd.DataFrame(DATASET_FIELD_GUIDE), use_container_width=True, hide_index=True)
     st.markdown("### Shade Voting Guide")
     st.caption(SHADE_METHODOLOGY_NOTE)
+    st.caption(WAITING_AREA_DEFINITION)
+    st.markdown("#### Shade Source")
+    st.dataframe(pd.DataFrame(SHADE_SOURCE_GUIDE), use_container_width=True, hide_index=True)
+    st.markdown("#### Shade Coverage")
+    st.dataframe(pd.DataFrame(SHADE_COVERAGE_GUIDE), use_container_width=True, hide_index=True)
+    st.caption(SHADE_SOURCE_NOTE)
+    st.markdown("#### Current App Labels")
     st.dataframe(pd.DataFrame(SHADE_VOTING_GUIDE), use_container_width=True, hide_index=True)
     st.markdown("### Classification Examples")
     st.dataframe(pd.DataFrame(SHADE_CLASSIFICATION_EXAMPLES), use_container_width=True, hide_index=True)
@@ -584,21 +907,38 @@ def render_map_page() -> None:
     vote_stop = st.sidebar.selectbox("Select stop to vote", stops["stop_name"] + " (" + stops["stop_id"] + ")", key="vote_stop")
     stop_id = vote_stop.split("(")[-1].replace(")", "")
 
-    vote_choice = st.sidebar.radio("Your vote", VOTE_OPTIONS, index=0, key="vote_choice")
+    vote_coverage = st.sidebar.radio("Shade coverage", SHADE_COVERAGE_OPTIONS, index=0, key="vote_coverage")
+    source_disabled = vote_coverage == "No Shade"
+    st.sidebar.write("Shade source")
+    vote_sources = [
+        source
+        for source in SHADE_SOURCE_OPTIONS
+        if st.sidebar.checkbox(source, key=f"vote_source_{source.lower()}", disabled=source_disabled)
+        and not source_disabled
+    ]
     if st.sidebar.button("Submit vote", key="vote_submit", type="primary"):
-        save_vote(stop_id, voter_id, vote_choice)
-        st.sidebar.success("Vote recorded.")
-        # check threshold and apply if necessary
-        winner = get_vote_decision_for_stop(stop_id)
-        if winner is not None:
-            stops.loc[stops["stop_id"] == stop_id, "shading"] = winner
-            save_shading_data(stops)
+        try:
+            save_vote(stop_id, voter_id, vote_coverage, vote_sources)
+            st.sidebar.success("Vote recorded.")
+            # check threshold and apply if necessary
+            winner = get_vote_decision_for_stop(stop_id)
+            if winner is not None:
+                for column, value in winner.items():
+                    stops.loc[stops["stop_id"] == stop_id, column] = value
+                save_shading_data(stops)
+        except ValueError as error:
+            st.sidebar.error(str(error))
     vc = get_vote_counts(stop_id)
-    vote_count_text = ", ".join(f"{option}: {vc[option]}" for option in VOTE_OPTIONS)
+    vote_count_text = ", ".join(f"{option}: {vc[option]}" for option in SHADE_COVERAGE_OPTIONS)
+    source_count_text = ", ".join(f"{source}: {vc[source]}" for source in SHADE_SOURCE_OPTIONS)
     st.sidebar.markdown(
         f"**Votes:** {vc['Total']} ({vote_count_text})"
     )
-    st.sidebar.caption(f"Decision after {VOTE_THRESHOLD} votes. Ties go to the tied status with the oldest vote.")
+    st.sidebar.caption(f"Source selections: {source_count_text}")
+    st.sidebar.caption(
+        f"Decision after {VOTE_THRESHOLD} valid coverage votes. Coverage ties, and source yes/no ties, "
+        "go to the oldest tied vote."
+    )
 
     st.markdown("### Legend")
     st.markdown("\n".join(f"- **{status}**: {LEGEND_LABELS[status]}" for status in SHADING_STATUS))
