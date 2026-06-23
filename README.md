@@ -5,7 +5,7 @@ Streamlit app for visualizing bus stop shading to provide better insights on Tam
 ## What it does
 
 - Displays all Tampa-area bus stops in an interactive PyDeck map whose camera and dragging stay within the Tampa region.
-- Colors stops by current shade status: no shade, limited natural shade, significant natural shade, manmade shade, or unknown.
+- Colors stops by current shade status: no shade, limited natural shade, significant natural shade, constructed shade, or unknown.
 - Adds four heat-context fields for each stop: weighted HVI, vulnerability category, tree canopy percentage, and median land surface temperature.
 - Lets each browser session submit one anonymous vote per stop.
 - Applies a stop's shade status automatically once it reaches 5 valid votes.
@@ -21,7 +21,7 @@ Classifications were based on visible shade coverage of the waiting area in avai
 Map tooltips now focus on four heat-exposure variables that best support the project story: the county's weighted heat vulnerability index, the vulnerability category label, tree canopy percentage, and median land surface temperature. The app also summarizes these fields by shading category and highlights high-priority stops where low shade and high heat exposure overlap.
 
 Main dataset fields used in the app:
-- `shading`: observed or voted shade condition at the stop itself, using no shade, limited natural shade, significant natural shade, manmade shade, or unknown.
+- `shading`: observed or voted shade condition at the stop itself, using no shade, limited natural shade, significant natural shade, constructed shade, or unknown.
 - `heat_vulnerability_index`: the county's weighted heat-vulnerability score for the surrounding block group; higher values mean greater relative vulnerability.
 - `heat_vulnerability_label`: the category label paired with the weighted HVI score, making the map easier to read at a glance.
 - `tree_canopy_pct`: estimated tree canopy share in the surrounding block group; lower values can suggest less natural cooling and less nearby shade context.
@@ -43,14 +43,14 @@ Shade voting guide used in the app:
 | No Shade | No visible shelter and no vegetation visibly shading the waiting area |
 | Limited Natural Shade | Vegetation visibly shades part of the waiting area, but does not visibly cover most of it |
 | Significant Natural Shade | Vegetation visibly covers most of the waiting area or seating area |
-| Manmade Shade | Shelter, awning, overhang, or other built structure is the primary shade source |
+| Constructed Shade | Shelter, awning, overhang, or other built structure is the primary shade source |
 
 Classification examples used in the app:
 
 | Visible condition | Classification |
 | --- | --- |
-| Bus shelter and trees are both present, and the shelter is the primary place riders would wait | Manmade Shade |
-| Large building casts shade onto the stop | Manmade Shade |
+| Bus shelter and trees are both present, and the shelter is the primary place riders would wait | Constructed Shade |
+| Large building casts shade onto the stop | Constructed Shade |
 | Only a small sign or pole shadow reaches the stop | No Shade |
 | Trees are nearby but do not visibly shade the waiting area | No Shade |
 | Hedges or shrubs visibly shade the bench or waiting area | Limited or Significant Natural Shade, depending on coverage |

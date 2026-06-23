@@ -454,7 +454,7 @@ stop_id,shading,heat_vulnerability_index,heat_vulnerability_label,tree_canopy_pc
 1741,Unknown,5.960416,Low Vulnerability,0.291769,103.000000
 1742,Unknown,5.960416,Low Vulnerability,0.291769,103.000000
 1743,Unknown,5.960416,Low Vulnerability,0.291769,103.000000
-1744,Unknown,5.960416,Low Vulnerability,0.291769,103.000000
+1744,Constructed Shade,5.960416,Low Vulnerability,0.291769,103.000000
 1745,Unknown,7.290058,Moderate Vulnerability,0.210831,102.000000
 1746,Unknown,7.290058,Moderate Vulnerability,0.210831,102.000000
 1748,Unknown,7.290058,Moderate Vulnerability,0.210831,102.000000
@@ -523,24 +523,24 @@ stop_id,shading,heat_vulnerability_index,heat_vulnerability_label,tree_canopy_pc
 1857,Unknown,6.889865,Moderate Vulnerability,0.303434,102.000000
 1858,Unknown,6.889865,Moderate Vulnerability,0.303434,102.000000
 1859,Unknown,6.889865,Moderate Vulnerability,0.303434,102.000000
-1860,Unknown,7.290058,Moderate Vulnerability,0.210831,102.000000
-1861,Manmade Shade,6.581797,Moderate Vulnerability,0.276428,103.000000
-1863,Unknown,6.581797,Moderate Vulnerability,0.276428,103.000000
-1864,Unknown,6.581797,Moderate Vulnerability,0.276428,103.000000
-1865,Unknown,6.581797,Moderate Vulnerability,0.276428,103.000000
+1860,No Shade,7.290058,Moderate Vulnerability,0.210831,102.000000
+1861,Constructed Shade,6.581797,Moderate Vulnerability,0.276428,103.000000
+1863,No Shade,6.581797,Moderate Vulnerability,0.276428,103.000000
+1864,No Shade,6.581797,Moderate Vulnerability,0.276428,103.000000
+1865,No Shade,6.581797,Moderate Vulnerability,0.276428,103.000000
 1866,Unknown,6.543161,Moderate Vulnerability,0.197273,102.000000
-1867,Unknown,6.543161,Moderate Vulnerability,0.197273,102.000000
-1868,Unknown,7.011290,Moderate Vulnerability,0.170934,103.000000
-1869,Unknown,7.011290,Moderate Vulnerability,0.170934,103.000000
-1870,Unknown,4.935914,Low Vulnerability,0.380099,99.000000
+1867,Constructed Shade,6.543161,Moderate Vulnerability,0.197273,102.000000
+1868,Limited Natural Shade,7.011290,Moderate Vulnerability,0.170934,103.000000
+1869,Significant Natural Shade,7.011290,Moderate Vulnerability,0.170934,103.000000
+1870,No Shade,4.935914,Low Vulnerability,0.380099,99.000000
 1871,Unknown,4.935914,Low Vulnerability,0.380099,99.000000
-1872,Unknown,4.935914,Low Vulnerability,0.380099,99.000000
-1873,Unknown,4.935914,Low Vulnerability,0.380099,99.000000
-1874,Manmade Shade,5.973496,Low Vulnerability,0.503678,98.000000
+1872,Limited Natural Shade,4.935914,Low Vulnerability,0.380099,99.000000
+1873,No Shade,4.935914,Low Vulnerability,0.380099,99.000000
+1874,Constructed Shade,5.973496,Low Vulnerability,0.503678,98.000000
 1875,Unknown,5.973496,Low Vulnerability,0.503678,98.000000
 1876,Unknown,5.973496,Low Vulnerability,0.503678,98.000000
-1878,Unknown,5.896932,Low Vulnerability,0.367026,101.000000
-1879,Unknown,5.960416,Low Vulnerability,0.291769,103.000000
+1878,Limited Natural Shade,5.896932,Low Vulnerability,0.367026,101.000000
+1879,Limited Natural Shade,5.960416,Low Vulnerability,0.291769,103.000000
 1880,Unknown,5.960416,Low Vulnerability,0.291769,103.000000
 1883,Unknown,7.664625,Moderate Vulnerability,0.332033,103.000000
 1884,Unknown,7.664625,Moderate Vulnerability,0.332033,103.000000
@@ -1359,7 +1359,7 @@ stop_id,shading,heat_vulnerability_index,heat_vulnerability_label,tree_canopy_pc
 4986,Unknown,5.982347,Moderate Vulnerability,0.392756,97.000000
 4987,Unknown,5.791592,Moderate Vulnerability,0.383018,93.000000
 4989,Unknown,5.866855,Low Vulnerability,0.458680,98.000000
-4993,Unknown,6.581797,Moderate Vulnerability,0.276428,103.000000
+4993,Constructed Shade,6.581797,Moderate Vulnerability,0.276428,103.000000
 4994,Unknown,6.461519,Moderate Vulnerability,0.229019,101.000000
 4996,Unknown,6.461519,Moderate Vulnerability,0.229019,101.000000
 4997,Unknown,6.719151,Moderate Vulnerability,0.261420,100.000000

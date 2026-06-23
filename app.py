@@ -19,7 +19,7 @@ SHADING_STATUS = [
     "No Shade",
     "Limited Natural Shade",
     "Significant Natural Shade",
-    "Manmade Shade",
+    "Constructed Shade",
     "Unknown",
 ]
 VALID_SHADING_VALUES = set(SHADING_STATUS)
@@ -27,7 +27,7 @@ VOTE_OPTIONS = [
     "No Shade",
     "Limited Natural Shade",
     "Significant Natural Shade",
-    "Manmade Shade",
+    "Constructed Shade",
 ]
 VOTE_THRESHOLD = 5
 LEGACY_SHADING_MAP = {
@@ -37,7 +37,9 @@ LEGACY_SHADING_MAP = {
     "limited natural shading": "Limited Natural Shade",
     "significant natural shade": "Significant Natural Shade",
     "significant natural shading": "Significant Natural Shade",
-    "manmade shade": "Manmade Shade",
+    "manmade shade": "Constructed Shade",
+    "manmade shelter": "Constructed Shade",
+    "constructed shade": "Constructed Shade",
     "no shade": "No Shade",
     "unknown": "Unknown",
 }
@@ -45,14 +47,14 @@ COLOR_MAP = {
     "No Shade": [220, 20, 60],
     "Limited Natural Shade": [214, 158, 46],
     "Significant Natural Shade": [34, 139, 34],
-    "Manmade Shade": [70, 130, 180],
+    "Constructed Shade": [70, 130, 180],
     "Unknown": [128, 128, 128],
 }
 LEGEND_LABELS = {
     "No Shade": "red marker",
     "Limited Natural Shade": "gold marker",
     "Significant Natural Shade": "green marker",
-    "Manmade Shade": "steel blue marker",
+    "Constructed Shade": "steel blue marker",
     "Unknown": "gray marker",
 }
 SHADE_VOTING_GUIDE = [
@@ -69,7 +71,7 @@ SHADE_VOTING_GUIDE = [
         "Operational Definition": "Vegetation visibly covers most of the waiting area or seating area",
     },
     {
-        "Category": "Manmade Shade",
+        "Category": "Constructed Shade",
         "Operational Definition": "Shelter, awning, overhang, or other built structure is the primary shade source",
     },
 ]
@@ -80,11 +82,11 @@ SHADE_METHODOLOGY_NOTE = (
 SHADE_CLASSIFICATION_EXAMPLES = [
     {
         "Visible condition": "Bus shelter and trees are both present, and the shelter is the primary place riders would wait",
-        "Classification": "Manmade Shade",
+        "Classification": "Constructed Shade",
     },
     {
         "Visible condition": "Large building casts shade onto the stop",
-        "Classification": "Manmade Shade",
+        "Classification": "Constructed Shade",
     },
     {
         "Visible condition": "Only a small sign or pole shadow reaches the stop",
@@ -140,7 +142,7 @@ DATASET_FIELD_GUIDE = [
     {
         "Field": "shading",
         "What it measures": "Observed or voted shade condition at the stop itself.",
-        "How to read it": "No Shade, Limited Natural Shade, Significant Natural Shade, Manmade Shade, or Unknown.",
+        "How to read it": "No Shade, Limited Natural Shade, Significant Natural Shade, Constructed Shade, or Unknown.",
         "What it implies": "This is the direct rider experience variable. No Shade suggests the least protection while waiting, while limited natural shade marks partial vegetation cover.",
     },
     {
@@ -315,7 +317,7 @@ def build_priority_stop_table(df: pd.DataFrame, limit: int = 10) -> pd.DataFrame
         "No Shade": 0,
         "Unknown": 1,
         "Limited Natural Shade": 2,
-        "Manmade Shade": 3,
+        "Constructed Shade": 3,
         "Significant Natural Shade": 4,
     }
     sortable = df.copy()
@@ -454,9 +456,15 @@ def build_deck_chart(df: pd.DataFrame):
         id="stops_layer",
         get_position="[stop_lon, stop_lat]",
         get_fill_color="fill_color",
-        get_radius=90,
+        get_radius=6,
+        radius_units="pixels",
         radius_scale=1,
-        radius_min_pixels=3,
+        radius_min_pixels=4,
+        radius_max_pixels=9,
+        opacity=0.82,
+        stroked=True,
+        get_line_color=[20, 20, 20, 170],
+        line_width_min_pixels=1,
         pickable=True,
         auto_highlight=True,
     )
@@ -510,7 +518,8 @@ def render_map_page() -> None:
         "Use the map to explore stops; colors represent current shading status. Hover over a stop "
         "to see its weighted heat vulnerability index, vulnerability category, tree canopy, and median "
         "land surface temperature. The HVI fields describe relative neighborhood vulnerability, tree canopy "
-        "helps explain local shade context, and LST reflects nearby heat exposure."
+        "helps explain local shade context, and LST reflects nearby heat exposure. Zoom in to separate "
+        "nearby stops and select individual points."
     )
     st.caption(f"Heat vulnerability source: {HEAT_VULNERABILITY_CITATION}")
     st.markdown("### Heat Vulnerability Key")

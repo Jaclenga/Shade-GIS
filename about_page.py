@@ -65,14 +65,14 @@ def render_about_page(
         | No Shade | No visible shelter and no vegetation visibly shading the waiting area |
         | Limited Natural Shade | Vegetation visibly shades part of the waiting area, but does not visibly cover most of it |
         | Significant Natural Shade | Vegetation visibly covers most of the waiting area or seating area |
-        | Manmade Shade | Shelter, awning, overhang, or other built structure is the primary shade source |
+        | Constructed Shade | Shelter, awning, overhang, or other built structure is the primary shade source |
 
         ## Classification Examples
 
         | Visible condition | Classification |
         | --- | --- |
-        | Bus shelter and trees are both present, and the shelter is the primary place riders would wait | Manmade Shade |
-        | Large building casts shade onto the stop | Manmade Shade |
+        | Bus shelter and trees are both present, and the shelter is the primary place riders would wait | Constructed Shade |
+        | Large building casts shade onto the stop | Constructed Shade |
         | Only a small sign or pole shadow reaches the stop | No Shade |
         | Trees are nearby but do not visibly shade the waiting area | No Shade |
         | Hedges or shrubs visibly shade the bench or waiting area | Limited or Significant Natural Shade, depending on coverage |
