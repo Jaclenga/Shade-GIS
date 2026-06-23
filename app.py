@@ -830,6 +830,34 @@ def render_map_page() -> None:
         st.session_state.setdefault("manual_stop", stop_options[0])
 
     st.subheader("Map of Tampa Bus Stops")
+    map_selection = st.pydeck_chart(
+        build_deck_chart(map_stops),
+        on_select="rerun",
+        selection_mode="single-object",
+        key="stops_map",
+    )
+
+    if map_selection is not None:
+        selected = None
+        selection_objects = getattr(map_selection.selection, "objects", {})
+        layer_objects = selection_objects.get("stops_layer") if isinstance(selection_objects, dict) else None
+        if layer_objects:
+            selected = layer_objects[0].get("stop_id")
+        if selected is None:
+            selected_indices = getattr(map_selection.selection, "indices", {})
+            layer_indices = selected_indices.get("stops_layer") if isinstance(selected_indices, dict) else None
+            if layer_indices:
+                selected = stops.iloc[int(layer_indices[0])]["stop_id"]
+
+        if selected is not None:
+            selected_option = next(
+                (opt for opt in stop_options if opt.endswith(f"({selected})")),
+                None,
+            )
+            if selected_option is not None:
+                st.session_state["vote_stop"] = selected_option
+                st.session_state["manual_stop"] = selected_option
+
     st.write(
         "Use the map to explore stops; colors represent current shading status. Hover over a stop "
         "to see its weighted heat vulnerability index, vulnerability category, tree canopy, and median "
@@ -861,34 +889,6 @@ def render_map_page() -> None:
     st.dataframe(pd.DataFrame(SHADE_VOTING_GUIDE), use_container_width=True, hide_index=True)
     st.markdown("### Classification Examples")
     st.dataframe(pd.DataFrame(SHADE_CLASSIFICATION_EXAMPLES), use_container_width=True, hide_index=True)
-
-    map_selection = st.pydeck_chart(
-        build_deck_chart(map_stops),
-        on_select="rerun",
-        selection_mode="single-object",
-        key="stops_map",
-    )
-
-    if map_selection is not None:
-        selected = None
-        selection_objects = getattr(map_selection.selection, "objects", {})
-        layer_objects = selection_objects.get("stops_layer") if isinstance(selection_objects, dict) else None
-        if layer_objects:
-            selected = layer_objects[0].get("stop_id")
-        if selected is None:
-            selected_indices = getattr(map_selection.selection, "indices", {})
-            layer_indices = selected_indices.get("stops_layer") if isinstance(selected_indices, dict) else None
-            if layer_indices:
-                selected = stops.iloc[int(layer_indices[0])]["stop_id"]
-
-        if selected is not None:
-            selected_option = next(
-                (opt for opt in stop_options if opt.endswith(f"({selected})")),
-                None,
-            )
-            if selected_option is not None:
-                st.session_state["vote_stop"] = selected_option
-                st.session_state["manual_stop"] = selected_option
 
     with st.sidebar:
         st.header("Shading status")
