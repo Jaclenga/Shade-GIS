@@ -532,14 +532,14 @@ stop_id,shading,heat_vulnerability_index,heat_vulnerability_label,tree_canopy_pc
 1867,Unknown,6.543161,Moderate Vulnerability,0.197273,102.000000
 1868,Unknown,7.011290,Moderate Vulnerability,0.170934,103.000000
 1869,Unknown,7.011290,Moderate Vulnerability,0.170934,103.000000
-1870,No Shade,4.935914,Low Vulnerability,0.380099,99.000000
-1871,No Shade,4.935914,Low Vulnerability,0.380099,99.000000
+1870,Unknown,4.935914,Low Vulnerability,0.380099,99.000000
+1871,Unknown,4.935914,Low Vulnerability,0.380099,99.000000
 1872,Unknown,4.935914,Low Vulnerability,0.380099,99.000000
-1873,No Shade,4.935914,Low Vulnerability,0.380099,99.000000
+1873,Unknown,4.935914,Low Vulnerability,0.380099,99.000000
 1874,Manmade Shade,5.973496,Low Vulnerability,0.503678,98.000000
 1875,Unknown,5.973496,Low Vulnerability,0.503678,98.000000
 1876,Unknown,5.973496,Low Vulnerability,0.503678,98.000000
-1878,No Shade,5.896932,Low Vulnerability,0.367026,101.000000
+1878,Unknown,5.896932,Low Vulnerability,0.367026,101.000000
 1879,Unknown,5.960416,Low Vulnerability,0.291769,103.000000
 1880,Unknown,5.960416,Low Vulnerability,0.291769,103.000000
 1883,Unknown,7.664625,Moderate Vulnerability,0.332033,103.000000

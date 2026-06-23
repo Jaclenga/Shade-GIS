@@ -27,6 +27,9 @@ def render_about_page(
         opportunities for tree planting, shelter installation, and other improvements that can make transit more
         comfortable and accessible for riders.
 
+        Classifications were based on visible shade coverage of the waiting area in available imagery rather than
+        the mere presence of nearby vegetation or structures.
+
         Research on thermal comfort at bus stops has shown that the waiting environment plays an important role in
         how riders perceive public transportation. In subtropical climates, exposure to direct sunlight, limited
         shade, and high temperatures can reduce comfort and satisfaction while waiting for a bus. Together with
@@ -54,6 +57,27 @@ def render_about_page(
           canopy and potentially more natural cooling in the area.
         - `lst_median`: the median land surface temperature for the surrounding block group. Higher values suggest
           hotter nearby surfaces and stronger local heat exposure.
+
+        ## Shade Voting Categories
+
+        | Category | Operational Definition |
+        | --- | --- |
+        | No Shade | No visible shelter and no vegetation visibly shading the waiting area |
+        | Limited Natural Shade | Vegetation visibly shades part of the waiting area, but does not visibly cover most of it |
+        | Significant Natural Shade | Vegetation visibly covers most of the waiting area or seating area |
+        | Manmade Shade | Shelter, awning, overhang, or other built structure is the primary shade source |
+
+        ## Classification Examples
+
+        | Visible condition | Classification |
+        | --- | --- |
+        | Bus shelter and trees are both present, and the shelter is the primary place riders would wait | Manmade Shade |
+        | Large building casts shade onto the stop | Manmade Shade |
+        | Only a small sign or pole shadow reaches the stop | No Shade |
+        | Trees are nearby but do not visibly shade the waiting area | No Shade |
+        | Hedges or shrubs visibly shade the bench or waiting area | Limited or Significant Natural Shade, depending on coverage |
+        | Palms provide partial coverage | Limited Natural Shade |
+        | Large oak canopy covers the stop | Significant Natural Shade |
 
         ## References
 

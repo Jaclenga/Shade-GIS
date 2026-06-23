@@ -15,23 +15,98 @@ DATA_PATH = APP_DIR / "stops.txt"
 SEED_SHADE_FILE = APP_DIR / "shading_data.csv"
 SHADE_FILE = DATA_DIR / "shading_data.csv"
 VOTES_FILE = DATA_DIR / "shading_votes.csv"
-SHADING_STATUS = ["Unknown", "Natural Shade", "Manmade Shade", "No Shade"]
+SHADING_STATUS = [
+    "No Shade",
+    "Limited Natural Shade",
+    "Significant Natural Shade",
+    "Manmade Shade",
+    "Unknown",
+]
 VALID_SHADING_VALUES = set(SHADING_STATUS)
-VOTE_OPTIONS = ["Natural Shade", "Manmade Shade", "No Shade"]
+VOTE_OPTIONS = [
+    "No Shade",
+    "Limited Natural Shade",
+    "Significant Natural Shade",
+    "Manmade Shade",
+]
 VOTE_THRESHOLD = 5
 LEGACY_SHADING_MAP = {
-    "shaded": "Natural Shade",
-    "natural shade": "Natural Shade",
+    "shaded": "Significant Natural Shade",
+    "natural shade": "Significant Natural Shade",
+    "limited natural shade": "Limited Natural Shade",
+    "limited natural shading": "Limited Natural Shade",
+    "significant natural shade": "Significant Natural Shade",
+    "significant natural shading": "Significant Natural Shade",
     "manmade shade": "Manmade Shade",
     "no shade": "No Shade",
     "unknown": "Unknown",
 }
 COLOR_MAP = {
-    "Natural Shade": [34, 139, 34],
-    "Manmade Shade": [70, 130, 180],
     "No Shade": [220, 20, 60],
+    "Limited Natural Shade": [214, 158, 46],
+    "Significant Natural Shade": [34, 139, 34],
+    "Manmade Shade": [70, 130, 180],
     "Unknown": [128, 128, 128],
 }
+LEGEND_LABELS = {
+    "No Shade": "red marker",
+    "Limited Natural Shade": "gold marker",
+    "Significant Natural Shade": "green marker",
+    "Manmade Shade": "steel blue marker",
+    "Unknown": "gray marker",
+}
+SHADE_VOTING_GUIDE = [
+    {
+        "Category": "No Shade",
+        "Operational Definition": "No visible shelter and no vegetation visibly shading the waiting area",
+    },
+    {
+        "Category": "Limited Natural Shade",
+        "Operational Definition": "Vegetation visibly shades part of the waiting area, but does not visibly cover most of it",
+    },
+    {
+        "Category": "Significant Natural Shade",
+        "Operational Definition": "Vegetation visibly covers most of the waiting area or seating area",
+    },
+    {
+        "Category": "Manmade Shade",
+        "Operational Definition": "Shelter, awning, overhang, or other built structure is the primary shade source",
+    },
+]
+SHADE_METHODOLOGY_NOTE = (
+    "Classifications were based on visible shade coverage of the waiting area in available imagery "
+    "rather than the mere presence of nearby vegetation or structures."
+)
+SHADE_CLASSIFICATION_EXAMPLES = [
+    {
+        "Visible condition": "Bus shelter and trees are both present, and the shelter is the primary place riders would wait",
+        "Classification": "Manmade Shade",
+    },
+    {
+        "Visible condition": "Large building casts shade onto the stop",
+        "Classification": "Manmade Shade",
+    },
+    {
+        "Visible condition": "Only a small sign or pole shadow reaches the stop",
+        "Classification": "No Shade",
+    },
+    {
+        "Visible condition": "Trees are nearby but do not visibly shade the waiting area",
+        "Classification": "No Shade",
+    },
+    {
+        "Visible condition": "Hedges or shrubs visibly shade the bench or waiting area",
+        "Classification": "Limited or Significant Natural Shade, depending on coverage",
+    },
+    {
+        "Visible condition": "Palms provide partial coverage",
+        "Classification": "Limited Natural Shade",
+    },
+    {
+        "Visible condition": "Large oak canopy covers the stop",
+        "Classification": "Significant Natural Shade",
+    },
+]
 APP_TITLE = "Tampa Bus Stops Shade Map"
 STUDY_SUMMARY = "Visualizing bus stop shade for a more comfortable and resilient transit system"
 DATA_CITATION = (
@@ -65,8 +140,8 @@ DATASET_FIELD_GUIDE = [
     {
         "Field": "shading",
         "What it measures": "Observed or voted shade condition at the stop itself.",
-        "How to read it": "Natural Shade, Manmade Shade, No Shade, or Unknown.",
-        "What it implies": "This is the direct rider experience variable. No Shade suggests the least protection while waiting.",
+        "How to read it": "No Shade, Limited Natural Shade, Significant Natural Shade, Manmade Shade, or Unknown.",
+        "What it implies": "This is the direct rider experience variable. No Shade suggests the least protection while waiting, while limited natural shade marks partial vegetation cover.",
     },
     {
         "Field": "heat_vulnerability_index",
@@ -239,8 +314,9 @@ def build_priority_stop_table(df: pd.DataFrame, limit: int = 10) -> pd.DataFrame
     priority_order = {
         "No Shade": 0,
         "Unknown": 1,
-        "Manmade Shade": 2,
-        "Natural Shade": 3,
+        "Limited Natural Shade": 2,
+        "Manmade Shade": 3,
+        "Significant Natural Shade": 4,
     }
     sortable = df.copy()
     sortable["priority_group"] = sortable["shading"].map(priority_order).fillna(len(priority_order))
@@ -337,11 +413,7 @@ def save_vote(stop_id: str, user: str, vote: str) -> None:
 def get_vote_counts(stop_id: str):
     votes = load_votes()
     sel = votes[votes["stop_id"] == stop_id]
-    counts = {
-        "Natural Shade": int((sel["vote"] == "Natural Shade").sum()),
-        "Manmade Shade": int((sel["vote"] == "Manmade Shade").sum()),
-        "No Shade": int((sel["vote"] == "No Shade").sum()),
-    }
+    counts = {option: int((sel["vote"] == option).sum()) for option in VOTE_OPTIONS}
     counts["Total"] = sum(counts.values())
     return counts
 
@@ -452,6 +524,11 @@ def render_map_page() -> None:
         "These are the main fields used in the app. Some describe the stop itself, while others describe the surrounding block group."
     )
     st.dataframe(pd.DataFrame(DATASET_FIELD_GUIDE), use_container_width=True, hide_index=True)
+    st.markdown("### Shade Voting Guide")
+    st.caption(SHADE_METHODOLOGY_NOTE)
+    st.dataframe(pd.DataFrame(SHADE_VOTING_GUIDE), use_container_width=True, hide_index=True)
+    st.markdown("### Classification Examples")
+    st.dataframe(pd.DataFrame(SHADE_CLASSIFICATION_EXAMPLES), use_container_width=True, hide_index=True)
 
     map_selection = st.pydeck_chart(
         build_deck_chart(map_stops),
@@ -484,14 +561,7 @@ def render_map_page() -> None:
     with st.sidebar:
         st.header("Shading status")
         st.write("Counts of current stop states")
-        st.write(
-            {
-                "Natural Shade": int(counts["Natural Shade"]),
-                "Manmade Shade": int(counts["Manmade Shade"]),
-                "No Shade": int(counts["No Shade"]),
-                "Unknown": int(counts["Unknown"]),
-            }
-        )
+        st.write({status: int(counts[status]) for status in SHADING_STATUS})
 
         st.write("---")
         st.info(
@@ -515,18 +585,14 @@ def render_map_page() -> None:
             stops.loc[stops["stop_id"] == stop_id, "shading"] = winner
             save_shading_data(stops)
     vc = get_vote_counts(stop_id)
+    vote_count_text = ", ".join(f"{option}: {vc[option]}" for option in VOTE_OPTIONS)
     st.sidebar.markdown(
-        f"**Votes:** {vc['Total']} (Natural Shade: {vc['Natural Shade']}, Manmade Shade: {vc['Manmade Shade']}, No Shade: {vc['No Shade']})"
+        f"**Votes:** {vc['Total']} ({vote_count_text})"
     )
     st.sidebar.caption(f"Decision after {VOTE_THRESHOLD} votes. Ties go to the tied status with the oldest vote.")
 
     st.markdown("### Legend")
-    st.markdown(
-        "- **Natural Shade**: green marker\n"
-        "- **Manmade Shade**: steel blue marker\n"
-        "- **No Shade**: red marker\n"
-        "- **Unknown**: gray marker"
-    )
+    st.markdown("\n".join(f"- **{status}**: {LEGEND_LABELS[status]}" for status in SHADING_STATUS))
     st.markdown("### Heat Exposure Snapshot")
     st.caption(
         "Weighted HVI, tree canopy, and median LST are averaged within each current shading group so you can "
