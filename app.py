@@ -909,11 +909,18 @@ def render_map_page() -> None:
 
     vote_coverage = st.sidebar.radio("Shade coverage", SHADE_COVERAGE_OPTIONS, index=0, key="vote_coverage")
     source_disabled = vote_coverage == "No Shade"
+
+    def vote_source_key(source: str) -> str:
+        return f"vote_source_{source.lower()}"
+
+    if source_disabled:
+        for source in SHADE_SOURCE_OPTIONS:
+            st.session_state[vote_source_key(source)] = False
     st.sidebar.write("Shade source")
     vote_sources = [
         source
         for source in SHADE_SOURCE_OPTIONS
-        if st.sidebar.checkbox(source, key=f"vote_source_{source.lower()}", disabled=source_disabled)
+        if st.sidebar.checkbox(source, key=vote_source_key(source), disabled=source_disabled)
         and not source_disabled
     ]
     if st.sidebar.button("Submit vote", key="vote_submit", type="primary"):

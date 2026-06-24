@@ -450,10 +450,10 @@ stop_id,shading,heat_vulnerability_index,heat_vulnerability_label,tree_canopy_pc
 1736,Unknown,2.078080,Least Vulnerable,0.417422,96.000000,Unknown,None
 1738,Unknown,2.078080,Least Vulnerable,0.417422,96.000000,Unknown,None
 1739,Unknown,5.960416,Low Vulnerability,0.291769,103.000000,Unknown,None
-1740,Unknown,5.960416,Low Vulnerability,0.291769,103.000000,Unknown,None
-1741,Unknown,5.960416,Low Vulnerability,0.291769,103.000000,Unknown,None
-1742,Unknown,5.960416,Low Vulnerability,0.291769,103.000000,Unknown,None
-1743,Unknown,5.960416,Low Vulnerability,0.291769,103.000000,Unknown,None
+1740,Limited Natural Shade,5.960416,Low Vulnerability,0.291769,103.000000,Limited,Natural
+1741,No Shade,5.960416,Low Vulnerability,0.291769,103.000000,No Shade,None
+1742,Limited Natural Shade,5.960416,Low Vulnerability,0.291769,103.000000,Limited,Natural
+1743,Limited Natural Shade,5.960416,Low Vulnerability,0.291769,103.000000,Limited,Natural
 1744,Constructed Shade,5.960416,Low Vulnerability,0.291769,103.000000,Significant,Constructed
 1745,Unknown,7.290058,Moderate Vulnerability,0.210831,102.000000,Unknown,None
 1746,Constructed Shade,7.290058,Moderate Vulnerability,0.210831,102.000000,Significant,Constructed
@@ -482,11 +482,11 @@ stop_id,shading,heat_vulnerability_index,heat_vulnerability_label,tree_canopy_pc
 1800,Unknown,6.543161,Moderate Vulnerability,0.197273,102.000000,Unknown,None
 1803,Unknown,6.543161,Moderate Vulnerability,0.197273,102.000000,Unknown,None
 1804,Unknown,6.581797,Moderate Vulnerability,0.276428,103.000000,Unknown,None
-1805,Unknown,5.896932,Low Vulnerability,0.367026,101.000000,Unknown,None
-1806,Unknown,5.896932,Low Vulnerability,0.367026,101.000000,Unknown,None
-1807,Unknown,5.896932,Low Vulnerability,0.367026,101.000000,Unknown,None
-1808,Unknown,5.896932,Low Vulnerability,0.367026,101.000000,Unknown,None
-1809,Unknown,4.599468,Low Vulnerability,0.438521,99.000000,Unknown,None
+1805,No Shade,5.896932,Low Vulnerability,0.367026,101.000000,No Shade,None
+1806,Constructed Shade,5.896932,Low Vulnerability,0.367026,101.000000,Significant,Constructed
+1807,Manmade Shade,5.896932,Low Vulnerability,0.367026,101.000000,Limited,Natural; Manmade
+1808,Constructed Shade,5.896932,Low Vulnerability,0.367026,101.000000,Significant,Constructed
+1809,No Shade,4.599468,Low Vulnerability,0.438521,99.000000,No Shade,None
 1810,Unknown,4.599468,Low Vulnerability,0.438521,99.000000,Unknown,None
 1812,Unknown,5.270659,Low Vulnerability,0.369216,100.000000,Unknown,None
 1813,Unknown,5.270659,Low Vulnerability,0.369216,100.000000,Unknown,None
