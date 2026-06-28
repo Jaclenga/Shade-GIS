@@ -1,20 +1,49 @@
-# Tampa Bus Shade Web App
+# Shade Study Builder
 
-Streamlit app for visualizing bus stop shading to provide better insights on Tampa's transport, using Tampa-area GTFS stop data and lightweight anonymous shade votes.
+Streamlit platform for preparing reusable, city-wide bus stop shade studies from GTFS or CSV stop datasets. The app helps researchers, transit agencies, and municipalities configure project metadata, upload or map transit data, choose shade taxonomy and visualization settings, edit public methodology copy, and preview the resulting public Streamlit app.
+
+The repository still includes the Tampa/HART stop and shade files as a starter project, but the app is no longer hard-coded as a Tampa-only viewer.
 
 ## What it does
 
-- Displays all Tampa-area bus stops in an interactive PyDeck map whose camera and dragging stay within the Tampa region.
-- Colors stops by current shade status: no shade, limited natural shade, significant natural shade, constructed shade, manmade shade, or unknown.
-- Adds four heat-context fields for each stop: weighted HVI, vulnerability category, tree canopy percentage, and median land surface temperature.
-- Lets each browser session submit one anonymous vote per stop.
-- Applies a stop's shade status automatically once it reaches 5 valid coverage votes.
-- Uses the majority coverage vote as the status; if coverage values are tied, the tied coverage with the oldest vote wins. Source checkbox yes/no ties also go to the oldest tied vote.
-- Saves runtime votes to `shading_votes.csv` and saved shade status to `shading_data.csv`, including separate shade coverage and source fields.
+- Starts with the bundled Tampa/HART dataset, or lets you upload a GTFS `.zip`, `stops.txt`, or custom bus-stop CSV.
+- Provides CSV field mapping for required stop fields: `stop_id`, `stop_name`, `stop_lat`, and `stop_lon`.
+- Extracts route labels from GTFS uploads when `stop_times.txt`, `trips.txt`, and `routes.txt` are present.
+- Tracks project metadata, source name, license, source URL, dataset version, methodology version, owners, and visibility.
+- Lets project teams edit the shade taxonomy, including category names, definitions, display colors, and sort order.
+- Lets project teams choose map coloring, contextual overlays, dashboard summaries, and priority-score weights.
+- Provides an editable rationale/about page for methodology, data sources, contributors, citations, limitations, and release history.
+- Previews the public Streamlit app with a map, analytics, methodology page, import log, and CSV/GeoJSON/config downloads.
 
-## About the study
+## App Pages
 
-This study focuses on visualizing bus stop shading to provide better insights on Tampa's transport. The app uses GTFS stop locations together with community shading votes to support exploratory analysis, fieldwork planning, and transit-focused discussion.
+- `Data`: project setup, upload/import workflow, CSV field mapping, shade taxonomy, source metadata, and dataset health checks.
+- `Visuals`: map coloring, overlay selection, dashboard metrics, priority formula controls, and map preview.
+- `Methodology`: editable public rationale/about page with live preview.
+- `Preview`: the generated public-facing Streamlit app experience for the current project configuration.
+
+## Supported Input Schema
+
+Required stop fields:
+
+| Field | Description |
+| --- | --- |
+| `stop_id` | Unique stop identifier, usually from GTFS. |
+| `stop_name` | Public stop name. |
+| `stop_lat` | Stop latitude in WGS84. |
+| `stop_lon` | Stop longitude in WGS84. |
+
+Optional fields recognized by the builder include `agency`, `routes`, `municipality`, `shading`, `shade_coverage`, `shade_sources`, `review_status`, `confidence`, `ridership`, `heat_vulnerability_index`, `heat_vulnerability_label`, `tree_canopy_pct`, and `lst_median`.
+
+## Platform Direction
+
+The current app is an MVP for the reusable platform described in the project issue. It establishes the project builder workflow and public preview surface. Future work can add persistent multi-project storage, image uploads, raw label history, reviewer roles, agreement metrics, richer GIS overlays, and API-backed publishing.
+
+See `docs/platform_schema.md` for the current project, stop, taxonomy, export, and future-entity schema notes. The repository also includes `CITATION.cff` as a starter citation file for publication workflows.
+
+## Bundled Tampa Starter Study
+
+The bundled starter project focuses on visualizing bus stop shading to provide better insights on Tampa's transport. The app uses GTFS stop locations and existing shade fields to seed the builder with a real city-wide example.
 
 Classifications were based on visible shade coverage of the waiting area in available imagery rather than the mere presence of nearby vegetation or structures. This is especially important with Street View winter imagery: code what visibly shades the waiting area, not what might shade it at another time.
 
@@ -99,7 +128,7 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-The app reads `stops.txt` from this project directory. The committed `shading_data.csv` is used as seed shade data.
+The app opens to the reusable builder and uses `stops.txt` plus `shading_data.csv` only as the default starter dataset. Uploading a GTFS zip or mapped CSV in the `Data` page replaces the active in-session dataset.
 
 ## Verify heat data
 
@@ -126,13 +155,13 @@ This repo is ready for a basic Streamlit deployment using:
 - main file: `app.py`
 - Python dependencies: `requirements.txt`
 
-The app writes votes and updated shade status to local CSV files. On hosts with ephemeral or read-only source directories, set `APP_DATA_DIR` to a writable directory or mounted volume:
+The current builder stores edits in Streamlit session state and exposes CSV, GeoJSON, and configuration downloads from the `Preview` page. For shared production deployments, add persistent project storage before treating edits as durable.
 
 ```bash
-APP_DATA_DIR=/tmp/tampa-shade streamlit run app.py
+streamlit run app.py
 ```
 
-Without persistent storage, votes recorded after deployment may be lost when the app restarts.
+Without persistent storage, project edits made in the browser reset when the app session restarts.
 
 ## Optional Postgres setup
 

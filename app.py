@@ -1,3 +1,10 @@
+"""Compatibility entrypoint for the Shade Study Builder.
+
+The legacy Tampa-specific Streamlit implementation remains below for reference,
+but the exported ``main`` at the bottom of this file now points to
+``builder_app.main``.
+"""
+
 import os
 import time
 import uuid
@@ -1115,6 +1122,9 @@ def main():
         return
 
     render_map_page()
+
+
+from builder_app import main as main
 
 
 if __name__ == "__main__":
