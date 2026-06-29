@@ -17,6 +17,7 @@ APP_DIR = Path(__file__).parent
 DATA_PATH = APP_DIR / "stops.txt"
 SHADE_DATA_PATH = APP_DIR / "shading_data.csv"
 APP_TITLE = "Shade Study Builder"
+VISUAL_MAP_HEIGHT = 500
 
 DEFAULT_PROJECT = {
     "name": "Tampa Bus Stop Shade Study",
@@ -180,6 +181,14 @@ COLOR_PALETTE = [
     "#0284c7",
     "#15803d",
 ]
+
+SHADE_PALETTES = {
+    "Default shade study": ["#dc143c", "#d69e2e", "#228b22", "#4682b4", "#805aaa", "#808080"],
+    "Colorblind friendly": ["#d55e00", "#e69f00", "#009e73", "#0072b2", "#cc79a7", "#999999"],
+    "High contrast": ["#b91c1c", "#f97316", "#15803d", "#2563eb", "#7c3aed", "#475569"],
+    "Canopy and shelter": ["#dc2626", "#ca8a04", "#16a34a", "#0ea5e9", "#9333ea", "#71717a"],
+    "Civic map": ["#ef4444", "#f59e0b", "#22c55e", "#3b82f6", "#a855f7", "#64748b"],
+}
 
 SHADE_ALIASES = {
     "Constructed Shade": "Intentional Built Shade",
@@ -792,6 +801,23 @@ def render_palette_controls(
     field = color_options.get(visualization.get("color_by", "Shade category"), "shading")
     st.markdown("#### Color Palette")
     if field == "shading":
+        previous_palette = visualization.get("shade_palette", "Custom")
+        palette_options = ["Custom"] + list(SHADE_PALETTES)
+        if previous_palette not in palette_options:
+            previous_palette = "Custom"
+        selected_palette = st.selectbox(
+            "Premade shade palette",
+            palette_options,
+            index=palette_options.index(previous_palette),
+        )
+        if selected_palette != "Custom" and selected_palette != previous_palette:
+            palette = SHADE_PALETTES[selected_palette]
+            for index, item in enumerate(taxonomy):
+                color = palette[index % len(palette)]
+                item["color"] = color
+                st.session_state[f"shade_color_{index}"] = color
+        visualization["shade_palette"] = selected_palette
+
         grid = st.columns(2)
         for index, item in enumerate(taxonomy):
             name = str(item.get("name", "")).strip() or f"Category {index + 1}"
@@ -865,102 +891,110 @@ def render_visuals_page() -> None:
 
     controls, preview = st.columns([0.85, 1.15])
     with controls:
-        color_options = get_color_options(stops)
-        if visualization.get("color_by") not in color_options:
-            visualization["color_by"] = "Shade category"
-        color_labels = list(color_options)
-        visualization["color_by"] = st.selectbox(
-            "Color stops by",
-            color_labels,
-            index=color_labels.index(visualization["color_by"]),
-        )
-        marker_shape = visualization.get("marker_shape", "Circle")
-        if marker_shape not in MARKER_SHAPES:
-            marker_shape = "Circle"
-        visualization["marker_shape"] = st.selectbox(
-            "Marker shape",
-            MARKER_SHAPES,
-            index=MARKER_SHAPES.index(marker_shape),
-        )
-        visualization["marker_size"] = st.slider(
-            "Marker size",
-            4,
-            48,
-            int(visualization.get("marker_size", 7)),
-            1,
-        )
-        visualization["marker_opacity"] = st.slider(
-            "Marker opacity",
-            0.1,
-            1.0,
-            float(visualization.get("marker_opacity", 0.82)),
-            0.05,
-        )
-        visualization["marker_stroke_color"] = st.color_picker(
-            "Marker outline",
-            normalize_hex_color(visualization.get("marker_stroke_color", "#141414"), "#141414"),
-        )
-        visualization["marker_stroke_width"] = st.slider(
-            "Outline width",
-            0,
-            6,
-            int(visualization.get("marker_stroke_width", 1)),
-            1,
-        )
-        map_style = visualization.get("map_style", "Light")
-        if map_style not in MAP_STYLES:
-            map_style = "Light"
-        visualization["map_style"] = st.selectbox(
-            "Base map style",
-            list(MAP_STYLES),
-            index=list(MAP_STYLES).index(map_style),
-        )
-        visualization["overlays"] = st.multiselect(
-            "Context layers to include",
-            [
-                "GTFS routes",
-                "Ridership",
-                "Existing shelters",
-                "Route frequency",
-                "Tree canopy",
-                "Land surface temperature",
-                "Heat vulnerability",
-                "NDVI",
-                "Zero-vehicle households",
-                "Older adult population",
-                "Nearby destinations",
-            ],
-            default=visualization["overlays"],
-        )
-        visualization["metric_cards"] = st.multiselect(
-            "Dashboard summaries",
-            [
-                "Shade distribution",
-                "Stops without shade",
-                "Review status",
-                "Agreement metrics",
-                "Shade by route",
-                "Shade by neighborhood",
-                "Shade vs heat vulnerability",
-                "Priority stops",
-            ],
-            default=visualization["metric_cards"],
-        )
-        visualization["show_legend"] = st.checkbox("Show legend", value=visualization["show_legend"])
-        visualization["show_downloads"] = st.checkbox("Show public downloads", value=visualization["show_downloads"])
+        with st.expander("Visualization Controls", expanded=True):
+            with st.container(height=VISUAL_MAP_HEIGHT, border=False):
+                color_options = get_color_options(stops)
+                if visualization.get("color_by") not in color_options:
+                    visualization["color_by"] = "Shade category"
+                color_labels = list(color_options)
+                visualization["color_by"] = st.selectbox(
+                    "Color stops by",
+                    color_labels,
+                    index=color_labels.index(visualization["color_by"]),
+                )
+                marker_shape = visualization.get("marker_shape", "Circle")
+                if marker_shape not in MARKER_SHAPES:
+                    marker_shape = "Circle"
+                visualization["marker_shape"] = st.selectbox(
+                    "Marker shape",
+                    MARKER_SHAPES,
+                    index=MARKER_SHAPES.index(marker_shape),
+                )
+                visualization["marker_size"] = st.slider(
+                    "Marker size",
+                    4,
+                    48,
+                    int(visualization.get("marker_size", 7)),
+                    1,
+                )
+                visualization["marker_opacity"] = st.slider(
+                    "Marker opacity",
+                    0.1,
+                    1.0,
+                    float(visualization.get("marker_opacity", 0.82)),
+                    0.05,
+                )
+                visualization["marker_stroke_color"] = st.color_picker(
+                    "Marker outline",
+                    normalize_hex_color(visualization.get("marker_stroke_color", "#141414"), "#141414"),
+                )
+                visualization["marker_stroke_width"] = st.slider(
+                    "Outline width",
+                    0,
+                    6,
+                    int(visualization.get("marker_stroke_width", 1)),
+                    1,
+                )
+                map_style = visualization.get("map_style", "Light")
+                if map_style not in MAP_STYLES:
+                    map_style = "Light"
+                visualization["map_style"] = st.selectbox(
+                    "Base map style",
+                    list(MAP_STYLES),
+                    index=list(MAP_STYLES).index(map_style),
+                )
+                visualization["overlays"] = st.multiselect(
+                    "Context layers to include",
+                    [
+                        "GTFS routes",
+                        "Ridership",
+                        "Existing shelters",
+                        "Route frequency",
+                        "Tree canopy",
+                        "Land surface temperature",
+                        "Heat vulnerability",
+                        "NDVI",
+                        "Zero-vehicle households",
+                        "Older adult population",
+                        "Nearby destinations",
+                    ],
+                    default=visualization["overlays"],
+                )
+                visualization["metric_cards"] = st.multiselect(
+                    "Dashboard summaries",
+                    [
+                        "Shade distribution",
+                        "Stops without shade",
+                        "Review status",
+                        "Agreement metrics",
+                        "Shade by route",
+                        "Shade by neighborhood",
+                        "Shade vs heat vulnerability",
+                        "Priority stops",
+                    ],
+                    default=visualization["metric_cards"],
+                )
+                visualization["show_legend"] = st.checkbox("Show legend", value=visualization["show_legend"])
+                visualization["show_downloads"] = st.checkbox(
+                    "Show public downloads", value=visualization["show_downloads"]
+                )
 
-        st.divider()
-        render_palette_controls(visualization, stops, taxonomy, color_options)
-        st.divider()
-        st.subheader("Priority Formula")
-        weights = visualization["priority_weights"]
-        weights["heat_exposure"] = st.slider("Heat exposure weight", 0.0, 1.0, float(weights["heat_exposure"]), 0.05)
-        weights["ridership"] = st.slider("Ridership weight", 0.0, 1.0, float(weights["ridership"]), 0.05)
-        weights["transit_dependency"] = st.slider(
-            "Transit dependency weight", 0.0, 1.0, float(weights["transit_dependency"]), 0.05
-        )
-        weights["low_shade"] = st.slider("Low shade weight", 0.0, 1.0, float(weights["low_shade"]), 0.05)
-        st.caption("The preview stores the selected formula version with exported configuration.")
+                st.divider()
+                render_palette_controls(visualization, stops, taxonomy, color_options)
+                st.divider()
+                st.subheader("Priority Formula")
+                weights = visualization["priority_weights"]
+                weights["heat_exposure"] = st.slider(
+                    "Heat exposure weight", 0.0, 1.0, float(weights["heat_exposure"]), 0.05
+                )
+                weights["ridership"] = st.slider(
+                    "Ridership weight", 0.0, 1.0, float(weights["ridership"]), 0.05
+                )
+                weights["transit_dependency"] = st.slider(
+                    "Transit dependency weight", 0.0, 1.0, float(weights["transit_dependency"]), 0.05
+                )
+                weights["low_shade"] = st.slider("Low shade weight", 0.0, 1.0, float(weights["low_shade"]), 0.05)
+                st.caption("The preview stores the selected formula version with exported configuration.")
 
     st.session_state["stops"]["priority_score"] = calculate_priority_scores(stops, visualization["priority_weights"])
 
@@ -972,6 +1006,7 @@ def render_visuals_page() -> None:
             st.pydeck_chart(
                 build_deck_chart(stops, st.session_state["taxonomy"], visualization),
                 use_container_width=True,
+                height=VISUAL_MAP_HEIGHT,
             )
 
     st.subheader("Available Fields")
