@@ -74,6 +74,11 @@ context layers such as heat vulnerability or tree canopy are exposed only when t
 contains usable values for those fields. The builder presents those settings in an expandable,
 scrollable panel beside the live map preview.
 
+When `priority_score` is used by any configured visualization, the public methodology page
+automatically includes the active priority formula. If `priority_score` is excluded from map
+coloring, custom charts, dashboard summaries, public tables, and map-hover fields, the formula is
+left out.
+
 ## Preview Exports
 
 The `Preview` page currently exports:

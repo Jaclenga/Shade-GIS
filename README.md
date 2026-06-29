@@ -13,6 +13,7 @@ The repository still includes the Tampa/HART stop and shade files as a starter p
 - Lets project teams edit the shade taxonomy, including category names, definitions, display colors, and sort order.
 - Lets project teams choose map coloring, dataset-backed contextual overlays, up to 10 custom X/Y charts, dashboard summaries, public table and map-hover columns, and priority-score weights.
 - Provides an editable rationale/about page for methodology, data sources, contributors, citations, limitations, and release history.
+- Automatically includes the priority formula on the methodology page whenever `priority_score` is used by the configured visualizations.
 - Previews the public Streamlit app with a map, analytics, unlabeled-stop visibility toggle, methodology page, import log, and CSV/GeoJSON/config downloads.
 
 ## App Pages

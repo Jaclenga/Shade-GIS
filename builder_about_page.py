@@ -10,6 +10,7 @@ def render_builder_about_page(
     methodology: dict[str, Any],
     taxonomy: list[dict[str, Any]],
     import_log: list[dict[str, Any]],
+    priority_formula: dict[str, Any] | None = None,
 ) -> None:
     st.title(methodology.get("title") or project.get("name") or "Bus Stop Shade Study")
     st.markdown(f"### {methodology.get('summary', '')}")
@@ -38,6 +39,13 @@ def render_builder_about_page(
             f"License: {project.get('source_license', 'Not specified')} | "
             f"URL: {project.get('source_url', 'Not specified')}"
         )
+
+    if priority_formula:
+        st.markdown("## Priority Formula")
+        st.markdown(priority_formula.get("summary", ""))
+        weights = priority_formula.get("weights", [])
+        if weights:
+            st.dataframe(pd.DataFrame(weights), use_container_width=True, hide_index=True)
 
     st.markdown("## Contributors")
     st.markdown(methodology.get("contributors", ""))

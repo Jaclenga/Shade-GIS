@@ -212,6 +212,24 @@ METRIC_REQUIREMENTS = {
 
 CHART_TYPES = ["Bar", "Line", "Scatter"]
 CHART_AGGREGATIONS = ["Count", "Mean", "Sum", "Median", "Min", "Max"]
+PRIORITY_FACTOR_DETAILS = {
+    "ridership": (
+        "Ridership",
+        "Higher ridership increases priority when the dataset includes ridership values.",
+    ),
+    "low_shade": (
+        "Low shade",
+        "Stops labeled No Shade or Needs Review receive more priority.",
+    ),
+    "heat_vulnerability_index": (
+        "Heat vulnerability",
+        "Higher heat vulnerability values increase priority when that field is present.",
+    ),
+    "low_tree_canopy": (
+        "Low tree canopy",
+        "Lower tree canopy share increases priority when tree canopy data is present.",
+    ),
+}
 
 COLOR_PALETTE = [
     "#2563eb",
@@ -688,6 +706,54 @@ def render_custom_charts(df: pd.DataFrame, visualization: dict[str, Any]) -> Non
         title = str(chart.get("title", "")).strip() or f"Custom chart {index + 1}"
         st.markdown(f"#### {title}")
         render_custom_chart(df, chart)
+
+
+def priority_score_used_in_visualization(visualization: dict[str, Any]) -> bool:
+    if COLOR_MODE_FIELDS.get(visualization.get("color_by", "")) == "priority_score":
+        return True
+    if "Priority stops" in visualization.get("metric_cards", []):
+        return True
+    if "priority_score" in visualization.get("display_columns", []):
+        return True
+    charts = visualization.get("custom_charts")
+    if not isinstance(charts, list) and isinstance(visualization.get("custom_chart"), dict):
+        charts = [visualization["custom_chart"]]
+    for chart in charts or []:
+        if isinstance(chart, dict) and "priority_score" in {chart.get("x"), chart.get("y")}:
+            return True
+    return False
+
+
+def priority_formula_for_about(visualization: dict[str, Any]) -> dict[str, Any] | None:
+    if not priority_score_used_in_visualization(visualization):
+        return None
+
+    weights = visualization.get("priority_weights", {})
+    rows = []
+    for key, (label, description) in PRIORITY_FACTOR_DETAILS.items():
+        weight = float(weights.get(key, 0.0))
+        if weight > 0:
+            rows.append(
+                {
+                    "Factor": label,
+                    "Weight": f"{weight:.2f}",
+                    "Role in score": description,
+                }
+            )
+
+    if rows:
+        summary = (
+            "Priority score is calculated from the weighted factors below and normalized to a 0-100 scale. "
+            "The score is included here automatically because at least one configured visualization uses "
+            "`priority_score`."
+        )
+    else:
+        summary = (
+            "Priority score is included in at least one configured visualization, but no weighted priority "
+            "factors are currently active or available. Scores will remain 0 until a factor is enabled."
+        )
+
+    return {"summary": summary, "weights": rows}
 
 
 def field_values_for_colors(df: pd.DataFrame, field: str) -> list[str]:
@@ -1371,6 +1437,7 @@ def render_methodology_page() -> None:
             methodology=methodology,
             taxonomy=st.session_state["taxonomy"],
             import_log=st.session_state["import_log"],
+            priority_formula=priority_formula_for_about(st.session_state["visualization"]),
         )
 
 
@@ -1459,6 +1526,7 @@ def render_preview_page() -> None:
             methodology=methodology,
             taxonomy=taxonomy,
             import_log=st.session_state["import_log"],
+            priority_formula=priority_formula_for_about(visualization),
         )
     with tabs[3]:
         if visualization.get("show_downloads", True):
