@@ -101,6 +101,17 @@ DEFAULT_METHODOLOGY = {
     "release_history": "- 0.1.0: Draft project configuration and starter dataset",
 }
 
+DEFAULT_DISPLAY_COLUMNS = ["stop_id", "stop_name", "routes", "shading", "review_status", "priority_score"]
+RECORD_COUNT_FIELD = "Record count"
+MAX_CUSTOM_CHARTS = 10
+DEFAULT_CUSTOM_CHART = {
+    "title": "Custom chart",
+    "x": "shading",
+    "y": RECORD_COUNT_FIELD,
+    "aggregation": "Count",
+    "chart_type": "Bar",
+}
+
 DEFAULT_VISUALIZATION = {
     "color_by": "Shade category",
     "marker_shape": "Circle",
@@ -116,15 +127,15 @@ DEFAULT_VISUALIZATION = {
     },
     "field_color_maps": {},
     "metric_cards": ["Shade distribution", "Review status", "Priority stops"],
-    "overlays": ["Heat vulnerability", "Tree canopy"],
+    "overlays": [],
     "priority_weights": {
-        "heat_exposure": 0.4,
-        "ridership": 0.2,
-        "transit_dependency": 0.2,
-        "low_shade": 0.2,
+        "ridership": 0.5,
+        "low_shade": 0.5,
     },
     "show_legend": True,
     "show_downloads": True,
+    "display_columns": DEFAULT_DISPLAY_COLUMNS,
+    "custom_charts": [DEFAULT_CUSTOM_CHART],
 }
 
 REVIEW_STATUS_COLORS = {
@@ -154,14 +165,53 @@ COLOR_MODE_FIELDS = {
 }
 
 FIELD_LABELS = {
+    "stop_id": "Stop ID",
+    "stop_name": "Stop name",
+    "stop_lat": "Latitude",
+    "stop_lon": "Longitude",
     "agency": "Agency",
     "routes": "Routes",
     "municipality": "Municipality",
+    "shading": "Shade category",
     "shade_coverage": "Shade coverage",
     "shade_sources": "Shade sources",
+    "review_status": "Review status",
     "confidence": "Confidence",
+    "ridership": "Ridership",
+    "heat_vulnerability_index": "Heat vulnerability index",
     "heat_vulnerability_label": "Heat vulnerability label",
+    "tree_canopy_pct": "Tree canopy percent",
+    "lst_median": "Land surface temperature",
+    "priority_score": "Priority score",
 }
+
+OVERLAY_REQUIREMENTS = {
+    "GTFS routes": ["routes"],
+    "Ridership": ["ridership"],
+    "Existing shelters": ["shelter", "shelter_status", "has_shelter"],
+    "Route frequency": ["route_frequency", "trips_per_day", "headway_minutes"],
+    "Tree canopy": ["tree_canopy_pct"],
+    "Land surface temperature": ["lst_median"],
+    "Heat vulnerability": ["heat_vulnerability_index", "heat_vulnerability_label"],
+    "NDVI": ["ndvi"],
+    "Zero-vehicle households": ["zero_vehicle_households"],
+    "Older adult population": ["older_adult_population"],
+    "Nearby destinations": ["nearby_destinations"],
+}
+
+METRIC_REQUIREMENTS = {
+    "Shade distribution": ["shading"],
+    "Stops without shade": ["shading"],
+    "Review status": ["review_status"],
+    "Agreement metrics": ["confidence"],
+    "Shade by route": ["routes", "shading"],
+    "Shade by neighborhood": ["municipality", "shading"],
+    "Shade vs heat vulnerability": ["heat_vulnerability_index", "shading"],
+    "Priority stops": ["priority_score"],
+}
+
+CHART_TYPES = ["Bar", "Line", "Scatter"]
+CHART_AGGREGATIONS = ["Count", "Mean", "Sum", "Median", "Min", "Max"]
 
 COLOR_PALETTE = [
     "#2563eb",
@@ -321,10 +371,15 @@ def parse_gtfs_zip(contents: bytes) -> tuple[pd.DataFrame, dict[str, Any]]:
 
 
 def apply_field_mapping(raw: pd.DataFrame, mapping: dict[str, str]) -> pd.DataFrame:
-    mapped = pd.DataFrame()
+    mapped = pd.DataFrame(index=raw.index)
+    used_sources = set()
     for target, source in mapping.items():
         if source and source in raw.columns:
             mapped[target] = raw[source]
+            used_sources.add(source)
+    for column in raw.columns:
+        if column not in used_sources and column not in mapped.columns:
+            mapped[column] = raw[column]
     for field in REQUIRED_STOP_FIELDS:
         if field not in mapped.columns:
             mapped[field] = ""
@@ -365,25 +420,35 @@ def calculate_priority_scores(df: pd.DataFrame, weights: dict[str, float] | None
     if df.empty:
         return pd.Series(dtype=float)
     weights = weights or DEFAULT_VISUALIZATION["priority_weights"]
-    heat_weight = float(weights.get("heat_exposure", 0.0))
+    score_parts: list[tuple[float, pd.Series]] = []
+
     ridership_weight = float(weights.get("ridership", 0.0))
-    transit_dependency_weight = float(weights.get("transit_dependency", 0.0))
+    if ridership_weight > 0 and has_column_data(df, "ridership"):
+        ridership = pd.to_numeric(df.get("ridership"), errors="coerce").fillna(0)
+        ridership = ridership / ridership.max() if ridership.max() and ridership.max() > 0 else ridership
+        score_parts.append((ridership_weight, ridership))
+
+    heat_weight = float(weights.get("heat_vulnerability_index", 0.0))
+    if heat_weight > 0 and has_column_data(df, "heat_vulnerability_index"):
+        heat = pd.to_numeric(df.get("heat_vulnerability_index"), errors="coerce").fillna(0)
+        heat = heat / heat.max() if heat.max() and heat.max() > 0 else heat
+        score_parts.append((heat_weight, heat))
+
+    canopy_weight = float(weights.get("low_tree_canopy", 0.0))
+    if canopy_weight > 0 and has_column_data(df, "tree_canopy_pct"):
+        canopy = pd.to_numeric(df.get("tree_canopy_pct"), errors="coerce").fillna(0)
+        canopy = canopy.clip(lower=0, upper=1)
+        score_parts.append((canopy_weight, 1 - canopy))
+
     low_shade_weight = float(weights.get("low_shade", 0.0))
-    total_weight = heat_weight + ridership_weight + transit_dependency_weight + low_shade_weight
+    if low_shade_weight > 0 and "shading" in df.columns:
+        low_shade = df.get("shading", pd.Series(index=df.index, dtype=str)).isin(["No Shade", "Needs Review"]).astype(float)
+        score_parts.append((low_shade_weight, low_shade))
+
+    total_weight = sum(weight for weight, _series in score_parts)
     if total_weight <= 0:
-        total_weight = 1.0
-    heat = pd.to_numeric(df.get("heat_vulnerability_index"), errors="coerce").fillna(0) / 10
-    ridership = pd.to_numeric(df.get("ridership"), errors="coerce").fillna(0)
-    ridership = ridership / ridership.max() if ridership.max() and ridership.max() > 0 else ridership
-    low_shade = df.get("shading", pd.Series(index=df.index, dtype=str)).isin(["No Shade", "Needs Review"]).astype(float)
-    canopy = pd.to_numeric(df.get("tree_canopy_pct"), errors="coerce").fillna(0)
-    low_canopy = 1 - canopy.clip(lower=0, upper=1)
-    score = (
-        (heat * heat_weight)
-        + (ridership * ridership_weight)
-        + (low_canopy * transit_dependency_weight)
-        + (low_shade * low_shade_weight)
-    ) / total_weight
+        return pd.Series(0.0, index=df.index)
+    score = sum(series * weight for weight, series in score_parts) / total_weight
     return (score * 100).round(1)
 
 
@@ -400,6 +465,8 @@ def load_seed_dataset(taxonomy: list[dict[str, Any]], project: dict[str, Any]) -
 
 def ensure_visualization_defaults() -> None:
     visualization = st.session_state["visualization"]
+    if "custom_charts" not in visualization and isinstance(visualization.get("custom_chart"), dict):
+        visualization["custom_charts"] = [visualization["custom_chart"]]
     for key, value in DEFAULT_VISUALIZATION.items():
         visualization.setdefault(key, json.loads(json.dumps(value)))
 
@@ -439,6 +506,23 @@ def get_taxonomy_color_map(taxonomy: list[dict[str, Any]]) -> dict[str, list[int
     }
 
 
+def has_column_data(df: pd.DataFrame, column: str) -> bool:
+    if column not in df.columns:
+        return False
+    series = df[column].dropna()
+    if series.empty:
+        return False
+    return bool(series.astype(str).str.strip().ne("").any())
+
+
+def has_any_column_data(df: pd.DataFrame, columns: list[str]) -> bool:
+    return any(has_column_data(df, column) for column in columns)
+
+
+def has_all_column_data(df: pd.DataFrame, columns: list[str]) -> bool:
+    return all(has_column_data(df, column) for column in columns)
+
+
 def get_color_options(df: pd.DataFrame) -> dict[str, str]:
     options = COLOR_MODE_FIELDS.copy()
     excluded = {"stop_id", "stop_name", "stop_lat", "stop_lon", "priority_score", "shading", "review_status"}
@@ -450,6 +534,160 @@ def get_color_options(df: pd.DataFrame) -> dict[str, str]:
         if 1 < unique_count <= len(COLOR_PALETTE):
             options[f"Column: {FIELD_LABELS.get(column, column)}"] = column
     return options
+
+
+def display_label(column: str) -> str:
+    return FIELD_LABELS.get(column, column.replace("_", " ").title())
+
+
+def get_active_data_columns(df: pd.DataFrame) -> list[str]:
+    always_show = set(REQUIRED_STOP_FIELDS + ["priority_score"])
+    return [column for column in df.columns if column in always_show or has_column_data(df, column)]
+
+
+def get_display_column_options(df: pd.DataFrame) -> list[str]:
+    options = get_active_data_columns(df)
+    if "priority_score" not in options:
+        options.append("priority_score")
+    return options
+
+
+def get_selected_display_columns(df: pd.DataFrame, visualization: dict[str, Any]) -> list[str]:
+    options = get_display_column_options(df)
+    selected = [column for column in visualization.get("display_columns", []) if column in options]
+    if not selected:
+        selected = [column for column in DEFAULT_DISPLAY_COLUMNS if column in options]
+    if not selected:
+        selected = options[: min(6, len(options))]
+    visualization["display_columns"] = selected
+    return selected
+
+
+def build_tooltip_text(df: pd.DataFrame, visualization: dict[str, Any]) -> str:
+    columns = get_selected_display_columns(df, visualization)[:8]
+    return "\n".join(f"{display_label(column)}: {{{column}}}" for column in columns)
+
+
+def get_available_overlays(df: pd.DataFrame) -> list[str]:
+    return [
+        label
+        for label, columns in OVERLAY_REQUIREMENTS.items()
+        if has_any_column_data(df, columns)
+    ]
+
+
+def get_available_metric_cards(df: pd.DataFrame) -> list[str]:
+    return [
+        label
+        for label, columns in METRIC_REQUIREMENTS.items()
+        if has_all_column_data(df, columns)
+    ]
+
+
+def clean_selected_options(selected: list[str], options: list[str]) -> list[str]:
+    return [item for item in selected if item in options]
+
+
+def get_chart_column_options(df: pd.DataFrame) -> list[str]:
+    return get_display_column_options(df)
+
+
+def ensure_custom_chart_defaults(df: pd.DataFrame, chart: dict[str, Any] | None = None, index: int = 0) -> dict[str, Any]:
+    chart = chart if isinstance(chart, dict) else {}
+    for key, value in DEFAULT_CUSTOM_CHART.items():
+        chart.setdefault(key, json.loads(json.dumps(value)))
+    if not str(chart.get("title", "")).strip():
+        chart["title"] = f"Custom chart {index + 1}"
+    columns = get_chart_column_options(df)
+    fallback_x = "shading" if "shading" in columns else (columns[0] if columns else "")
+    if chart.get("x") not in columns:
+        chart["x"] = fallback_x
+    y_options = [RECORD_COUNT_FIELD] + columns
+    if chart.get("y") not in y_options:
+        chart["y"] = RECORD_COUNT_FIELD
+    if chart.get("aggregation") not in CHART_AGGREGATIONS:
+        chart["aggregation"] = "Count"
+    if chart.get("chart_type") not in CHART_TYPES:
+        chart["chart_type"] = "Bar"
+    return chart
+
+
+def get_custom_charts(df: pd.DataFrame, visualization: dict[str, Any]) -> list[dict[str, Any]]:
+    charts = visualization.get("custom_charts")
+    if not isinstance(charts, list):
+        legacy_chart = visualization.get("custom_chart")
+        charts = [legacy_chart] if isinstance(legacy_chart, dict) else [json.loads(json.dumps(DEFAULT_CUSTOM_CHART))]
+    if not charts:
+        charts = [json.loads(json.dumps(DEFAULT_CUSTOM_CHART))]
+    charts = [
+        ensure_custom_chart_defaults(df, chart if isinstance(chart, dict) else {}, index)
+        for index, chart in enumerate(charts[:MAX_CUSTOM_CHARTS])
+    ]
+    visualization["custom_charts"] = charts
+    return charts
+
+
+def build_custom_chart_data(df: pd.DataFrame, chart: dict[str, Any]) -> tuple[pd.DataFrame, str, str]:
+    x_column = chart.get("x", "")
+    y_column = chart.get("y", RECORD_COUNT_FIELD)
+    chart_type = chart.get("chart_type", "Bar")
+    aggregation = chart.get("aggregation", "Count")
+    if df.empty or x_column not in df.columns:
+        return pd.DataFrame(), "", ""
+
+    working = df.copy()
+    working[x_column] = working[x_column].fillna("(blank)").astype(str).str.strip().replace("", "(blank)")
+    if y_column == RECORD_COUNT_FIELD or y_column not in working.columns:
+        chart_df = working.groupby(x_column, dropna=False).size().reset_index(name="records")
+        return chart_df.sort_values("records", ascending=False).head(50), x_column, "records"
+
+    numeric_y = pd.to_numeric(working[y_column], errors="coerce")
+    if chart_type == "Scatter":
+        chart_df = working.loc[numeric_y.notna(), [x_column]].copy()
+        chart_df[y_column] = numeric_y[numeric_y.notna()]
+        return chart_df.head(500), x_column, y_column
+
+    if numeric_y.notna().any():
+        working[y_column] = numeric_y
+        if aggregation == "Sum":
+            grouped = working.groupby(x_column, dropna=False)[y_column].sum()
+        elif aggregation == "Median":
+            grouped = working.groupby(x_column, dropna=False)[y_column].median()
+        elif aggregation == "Min":
+            grouped = working.groupby(x_column, dropna=False)[y_column].min()
+        elif aggregation == "Max":
+            grouped = working.groupby(x_column, dropna=False)[y_column].max()
+        elif aggregation == "Count":
+            grouped = working.groupby(x_column, dropna=False)[y_column].count()
+        else:
+            grouped = working.groupby(x_column, dropna=False)[y_column].mean()
+        chart_df = grouped.reset_index(name=display_label(y_column))
+        return chart_df.sort_values(display_label(y_column), ascending=False).head(50), x_column, display_label(y_column)
+
+    working[y_column] = working[y_column].fillna("(blank)").astype(str).str.strip().replace("", "(blank)")
+    chart_df = working.groupby([x_column, y_column], dropna=False).size().reset_index(name="records")
+    chart_df["pair"] = chart_df[x_column].astype(str) + " / " + chart_df[y_column].astype(str)
+    return chart_df.sort_values("records", ascending=False).head(50), "pair", "records"
+
+
+def render_custom_chart(df: pd.DataFrame, chart: dict[str, Any]) -> None:
+    chart_df, x_column, y_column = build_custom_chart_data(df, chart)
+    if chart_df.empty or not x_column or not y_column:
+        st.info("No data is available for the selected chart columns.")
+        return
+    if chart.get("chart_type") == "Line":
+        st.line_chart(chart_df, x=x_column, y=y_column)
+    elif chart.get("chart_type") == "Scatter":
+        st.scatter_chart(chart_df, x=x_column, y=y_column)
+    else:
+        st.bar_chart(chart_df, x=x_column, y=y_column)
+
+
+def render_custom_charts(df: pd.DataFrame, visualization: dict[str, Any]) -> None:
+    for index, chart in enumerate(get_custom_charts(df, visualization)):
+        title = str(chart.get("title", "")).strip() or f"Custom chart {index + 1}"
+        st.markdown(f"#### {title}")
+        render_custom_chart(df, chart)
 
 
 def field_values_for_colors(df: pd.DataFrame, field: str) -> list[str]:
@@ -610,15 +848,7 @@ def build_deck_chart(df: pd.DataFrame, taxonomy: list[dict[str, Any]], visualiza
         initial_view_state=calculate_view_state(map_df),
         layers=[layer],
         map_style=MAP_STYLES.get(visualization.get("map_style", "Light"), pdk.map_styles.CARTO_LIGHT),
-        tooltip={
-            "text": (
-                "{stop_name} ({stop_id})\n"
-                "Shade: {shading}\n"
-                "Review: {review_status}\n"
-                "Routes: {routes}\n"
-                "Priority: {priority_score}"
-            )
-        },
+        tooltip={"text": build_tooltip_text(map_df, visualization)},
     )
 
 
@@ -949,37 +1179,112 @@ def render_visuals_page() -> None:
                     list(MAP_STYLES),
                     index=list(MAP_STYLES).index(map_style),
                 )
-                visualization["overlays"] = st.multiselect(
-                    "Context layers to include",
-                    [
-                        "GTFS routes",
-                        "Ridership",
-                        "Existing shelters",
-                        "Route frequency",
-                        "Tree canopy",
-                        "Land surface temperature",
-                        "Heat vulnerability",
-                        "NDVI",
-                        "Zero-vehicle households",
-                        "Older adult population",
-                        "Nearby destinations",
-                    ],
-                    default=visualization["overlays"],
+                overlay_options = get_available_overlays(stops)
+                visualization["overlays"] = clean_selected_options(visualization.get("overlays", []), overlay_options)
+                if overlay_options:
+                    visualization["overlays"] = st.multiselect(
+                        "Context layers to include",
+                        overlay_options,
+                        default=visualization["overlays"],
+                        help=(
+                            "Context layers are optional map/data overlays from fields in the active dataset, "
+                            "such as routes, ridership, shelters, heat vulnerability, or canopy. They only appear "
+                            "when those columns have usable values: at least one non-null cell with text or data "
+                            "after blank spaces are trimmed."
+                        ),
+                    )
+                else:
+                    visualization["overlays"] = []
+                    st.caption("No optional context layers are available in the active dataset.")
+
+                metric_options = get_available_metric_cards(stops)
+                visualization["metric_cards"] = clean_selected_options(
+                    visualization.get("metric_cards", []), metric_options
                 )
-                visualization["metric_cards"] = st.multiselect(
-                    "Dashboard summaries",
-                    [
-                        "Shade distribution",
-                        "Stops without shade",
-                        "Review status",
-                        "Agreement metrics",
-                        "Shade by route",
-                        "Shade by neighborhood",
-                        "Shade vs heat vulnerability",
-                        "Priority stops",
-                    ],
-                    default=visualization["metric_cards"],
+                if metric_options:
+                    visualization["metric_cards"] = st.multiselect(
+                        "Dashboard summaries",
+                        metric_options,
+                        default=visualization["metric_cards"],
+                    )
+                else:
+                    visualization["metric_cards"] = []
+                    st.caption("No dashboard summaries are available for the active dataset yet.")
+
+                st.subheader("Custom Chart")
+                charts = get_custom_charts(stops, visualization)
+                chart_columns = get_chart_column_options(stops)
+                if chart_columns:
+                    chart_count = st.number_input(
+                        "Number of custom charts",
+                        min_value=1,
+                        max_value=MAX_CUSTOM_CHARTS,
+                        value=len(charts),
+                        step=1,
+                        help="Configure up to 10 charts for the public Analytics tab.",
+                    )
+                    chart_count = int(chart_count)
+                    while len(charts) < chart_count:
+                        charts.append(
+                            ensure_custom_chart_defaults(
+                                stops,
+                                json.loads(json.dumps(DEFAULT_CUSTOM_CHART)),
+                                len(charts),
+                            )
+                        )
+                    charts = charts[:chart_count]
+                    for index, chart in enumerate(charts):
+                        chart = ensure_custom_chart_defaults(stops, chart, index)
+                        with st.expander(chart.get("title", f"Custom chart {index + 1}"), expanded=index == 0):
+                            chart["title"] = st.text_input(
+                                "Chart title",
+                                chart.get("title", f"Custom chart {index + 1}"),
+                                key=f"custom_chart_title_{index}",
+                            )
+                            chart["x"] = st.selectbox(
+                                "X column",
+                                chart_columns,
+                                index=chart_columns.index(chart["x"]),
+                                format_func=display_label,
+                                key=f"custom_chart_x_{index}",
+                            )
+                            y_options = [RECORD_COUNT_FIELD] + chart_columns
+                            chart["y"] = st.selectbox(
+                                "Y column",
+                                y_options,
+                                index=y_options.index(chart["y"]),
+                                format_func=lambda value: value if value == RECORD_COUNT_FIELD else display_label(value),
+                                key=f"custom_chart_y_{index}",
+                            )
+                            chart["aggregation"] = st.selectbox(
+                                "Y aggregation",
+                                CHART_AGGREGATIONS,
+                                index=CHART_AGGREGATIONS.index(chart["aggregation"]),
+                                key=f"custom_chart_aggregation_{index}",
+                            )
+                            chart["chart_type"] = st.selectbox(
+                                "Chart type",
+                                CHART_TYPES,
+                                index=CHART_TYPES.index(chart["chart_type"]),
+                                key=f"custom_chart_type_{index}",
+                            )
+                    visualization["custom_charts"] = charts
+                else:
+                    st.caption("Import a dataset before configuring a custom chart.")
+
+                current_display_columns = get_selected_display_columns(stops, visualization)
+                display_columns = st.multiselect(
+                    "Published data columns",
+                    get_display_column_options(stops),
+                    default=current_display_columns,
+                    format_func=display_label,
+                    help="Choose which stop fields appear in the public analytics data table and map hover details.",
                 )
+                if display_columns:
+                    visualization["display_columns"] = display_columns
+                else:
+                    st.warning("Select at least one column for the public data table.")
+                    visualization["display_columns"] = current_display_columns
                 visualization["show_legend"] = st.checkbox("Show legend", value=visualization["show_legend"])
                 visualization["show_downloads"] = st.checkbox(
                     "Show public downloads", value=visualization["show_downloads"]
@@ -990,19 +1295,25 @@ def render_visuals_page() -> None:
                 st.divider()
                 st.subheader("Priority Formula")
                 weights = visualization["priority_weights"]
-                weights["heat_exposure"] = st.slider(
-                    "Heat exposure weight", 0.0, 1.0, float(weights["heat_exposure"]), 0.05
-                )
-                weights["ridership"] = st.slider(
-                    "Ridership weight", 0.0, 1.0, float(weights["ridership"]), 0.05
-                )
-                weights["transit_dependency"] = st.slider(
-                    "Transit dependency weight", 0.0, 1.0, float(weights["transit_dependency"]), 0.05
-                )
-                weights["low_shade"] = st.slider("Low shade weight", 0.0, 1.0, float(weights["low_shade"]), 0.05)
+                priority_factors = []
+                if has_column_data(stops, "ridership"):
+                    priority_factors.append(("ridership", "Ridership weight"))
+                if "shading" in stops.columns:
+                    priority_factors.append(("low_shade", "Low shade weight"))
+                if has_column_data(stops, "heat_vulnerability_index"):
+                    priority_factors.append(("heat_vulnerability_index", "Heat vulnerability weight"))
+                if has_column_data(stops, "tree_canopy_pct"):
+                    priority_factors.append(("low_tree_canopy", "Low tree canopy weight"))
+
+                if priority_factors:
+                    for key, label in priority_factors:
+                        weights[key] = st.slider(label, 0.0, 1.0, float(weights.get(key, 0.0)), 0.05)
+                else:
+                    st.caption("No priority factors are available in the active dataset.")
                 st.caption("The preview stores the selected formula version with exported configuration.")
 
     st.session_state["stops"]["priority_score"] = calculate_priority_scores(stops, visualization["priority_weights"])
+    display_columns = get_selected_display_columns(st.session_state["stops"], visualization)
 
     with preview:
         st.subheader("Map Preview")
@@ -1015,9 +1326,26 @@ def render_visuals_page() -> None:
                 height=VISUAL_MAP_HEIGHT,
             )
 
+    st.subheader("Custom Chart Preview")
+    if stops.empty:
+        st.info("Import a dataset to preview a custom chart.")
+    else:
+        render_custom_charts(st.session_state["stops"], visualization)
+
+    st.subheader("Data Table Preview")
+    if stops.empty:
+        st.info("Import a dataset to preview selected data columns.")
+    else:
+        st.dataframe(
+            st.session_state["stops"].loc[:, display_columns].head(20),
+            use_container_width=True,
+            hide_index=True,
+        )
+
     st.subheader("Available Fields")
+    active_columns = get_active_data_columns(stops)
     field_summary = pd.DataFrame(
-        [{"field": column, "non_null_values": int(stops[column].notna().sum())} for column in stops.columns]
+        [{"field": column, "non_null_values": int(stops[column].notna().sum())} for column in active_columns]
     )
     st.dataframe(field_summary, use_container_width=True, hide_index=True)
 
@@ -1093,22 +1421,38 @@ def render_preview_page() -> None:
             legend = pd.DataFrame(taxonomy).sort_values("sort_order")
             st.dataframe(legend.loc[:, ["name", "description", "color"]], use_container_width=True, hide_index=True)
     with tabs[1]:
-        cols = st.columns([1, 1])
-        with cols[0]:
-            st.markdown("#### Shade Distribution")
-            shade_counts = visible_stops["shading"].value_counts().rename_axis("shade_category").reset_index(name="stops")
-            st.bar_chart(shade_counts, x="shade_category", y="stops")
-        with cols[1]:
-            st.markdown("#### Review Status")
-            review_counts = visible_stops["review_status"].value_counts().rename_axis("review_status").reset_index(name="stops")
-            st.bar_chart(review_counts, x="review_status", y="stops")
-        st.markdown("#### Highest Priority Stops")
-        priority = visible_stops.sort_values("priority_score", ascending=False).head(20)
-        st.dataframe(
-            priority.loc[:, ["stop_id", "stop_name", "routes", "shading", "review_status", "priority_score"]],
-            use_container_width=True,
-            hide_index=True,
+        render_custom_charts(visible_stops, visualization)
+
+        selected_metrics = clean_selected_options(
+            visualization.get("metric_cards", []), get_available_metric_cards(visible_stops)
         )
+        summary_cols = st.columns([1, 1])
+        if "Shade distribution" in selected_metrics and "shading" in visible_stops.columns:
+            with summary_cols[0]:
+                st.markdown("#### Shade Distribution")
+                shade_counts = (
+                    visible_stops["shading"].value_counts().rename_axis("shade_category").reset_index(name="stops")
+                )
+                st.bar_chart(shade_counts, x="shade_category", y="stops")
+        if "Review status" in selected_metrics and "review_status" in visible_stops.columns:
+            with summary_cols[1]:
+                st.markdown("#### Review Status")
+                review_counts = (
+                    visible_stops["review_status"]
+                    .value_counts()
+                    .rename_axis("review_status")
+                    .reset_index(name="stops")
+                )
+                st.bar_chart(review_counts, x="review_status", y="stops")
+        if "Priority stops" in selected_metrics:
+            st.markdown("#### Highest Priority Stops")
+            priority = visible_stops.sort_values("priority_score", ascending=False).head(20)
+            display_columns = get_selected_display_columns(priority, visualization)
+            st.dataframe(
+                priority.loc[:, display_columns],
+                use_container_width=True,
+                hide_index=True,
+            )
     with tabs[2]:
         render_builder_about_page(
             project=project,

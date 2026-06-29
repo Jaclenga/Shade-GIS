@@ -68,9 +68,11 @@ Project teams can edit names, descriptions, colors, and sort order in the `Data`
 
 Visualization settings store the selected map color field, premade and editable palettes for shade
 categories, review statuses, priority-score gradients, and other categorical columns, plus marker
-shape, size, opacity, outline, base map style, overlay selections, dashboard cards, and priority
-weights. The builder presents those settings in an expandable, scrollable panel beside the live map
-preview.
+shape, size, opacity, outline, base map style, data-backed overlay selections, up to 10 custom X/Y chart
+settings, dashboard cards, public data table/map-hover columns, and priority weights. Optional
+context layers such as heat vulnerability or tree canopy are exposed only when the active dataset
+contains usable values for those fields. The builder presents those settings in an expandable,
+scrollable panel beside the live map preview.
 
 ## Preview Exports
 

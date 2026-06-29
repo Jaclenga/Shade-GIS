@@ -11,14 +11,14 @@ The repository still includes the Tampa/HART stop and shade files as a starter p
 - Extracts route labels from GTFS uploads when `stop_times.txt`, `trips.txt`, and `routes.txt` are present.
 - Tracks project metadata, source name, license, source URL, dataset version, methodology version, owners, and visibility.
 - Lets project teams edit the shade taxonomy, including category names, definitions, display colors, and sort order.
-- Lets project teams choose map coloring, contextual overlays, dashboard summaries, and priority-score weights.
+- Lets project teams choose map coloring, dataset-backed contextual overlays, up to 10 custom X/Y charts, dashboard summaries, public table and map-hover columns, and priority-score weights.
 - Provides an editable rationale/about page for methodology, data sources, contributors, citations, limitations, and release history.
 - Previews the public Streamlit app with a map, analytics, unlabeled-stop visibility toggle, methodology page, import log, and CSV/GeoJSON/config downloads.
 
 ## App Pages
 
 - `Data`: project setup, upload/import workflow, CSV field mapping, shade taxonomy, source metadata, and dataset health checks.
-- `Visuals`: side-by-side map preview with expandable, scrollable controls for color fields, premade shade palettes, editable color swatches, marker shape/size/outline, base map style, overlay selection, dashboard metrics, and priority formula weights.
+- `Visuals`: side-by-side map preview with expandable, scrollable controls for color fields, premade shade palettes, editable color swatches, marker shape/size/outline, base map style, dataset-backed overlay selection, up to 10 custom X/Y charts, dashboard metrics, public data table/map-hover columns, and priority formula weights.
 - `Methodology`: editable public rationale/about page with live preview.
 - `Preview`: the generated public-facing Streamlit app experience for the current project configuration, including a toggle to show or hide unlabeled bus stops.
 
@@ -49,7 +49,7 @@ Classifications were based on visible shade coverage of the waiting area in avai
 
 Waiting area: The space where a passenger would reasonably stand or sit while waiting for transit, including benches when present.
 
-Map tooltips now focus on four heat-exposure variables that best support the project story: the county's weighted heat vulnerability index, the vulnerability category label, tree canopy percentage, and median land surface temperature. The app also summarizes these fields by shading category and highlights high-priority stops where low shade and high heat exposure overlap.
+Heat, canopy, and land-surface-temperature fields are optional context fields, not GTFS defaults. When those fields are present in an uploaded or starter dataset, the builder can expose them as visualization, chart, table, map-hover, and priority-score options. When they are absent, those controls stay out of the default visualization choices.
 
 Main dataset fields used in the app:
 - `shade_coverage`: observed or voted amount of shade reaching the waiting area, using no shade, limited, significant, or unknown.
