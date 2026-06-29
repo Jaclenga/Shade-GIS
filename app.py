@@ -984,8 +984,14 @@ def render_map_page() -> None:
         )
 
 
+def set_page(page: str) -> None:
+    st.session_state["page"] = page
+
+
 def render_site_header() -> str:
-    current_page = st.session_state.get("page", "Voting")
+    pages = ["Voting", "About"]
+    if st.session_state.get("page") not in pages:
+        st.session_state["page"] = "Voting"
     st.markdown(
         """
         <style>
@@ -1082,30 +1088,25 @@ def render_site_header() -> str:
     with spacer_col:
         st.markdown("", unsafe_allow_html=True)
     with voting_col:
-        voting_clicked = st.button(
+        st.button(
             "Voting",
             key="nav_voting",
             use_container_width=True,
-            type="primary" if current_page == "Voting" else "secondary",
+            type="primary" if st.session_state["page"] == "Voting" else "secondary",
+            on_click=set_page,
+            args=("Voting",),
         )
     with about_col:
-        about_clicked = st.button(
+        st.button(
             "About",
             key="nav_about",
             use_container_width=True,
-            type="primary" if current_page == "About" else "secondary",
+            type="primary" if st.session_state["page"] == "About" else "secondary",
+            on_click=set_page,
+            args=("About",),
         )
 
-    if voting_clicked:
-        current_page = "Voting"
-        st.session_state["page"] = current_page
-    elif about_clicked:
-        current_page = "About"
-        st.session_state["page"] = current_page
-    else:
-        st.session_state.setdefault("page", current_page)
-
-    return current_page
+    return st.session_state["page"]
 
 
 def main():

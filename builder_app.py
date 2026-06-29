@@ -441,9 +441,14 @@ def validation_summary(df: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(checks, columns=["Check", "Value"])
 
 
+def set_page(page: str) -> None:
+    st.session_state["page"] = page
+
+
 def render_header() -> str:
-    current_page = st.session_state.get("page", "Data")
     pages = ["Data", "Visuals", "Methodology", "Preview"]
+    if st.session_state.get("page") not in pages:
+        st.session_state["page"] = "Data"
     st.markdown(
         """
         <style>
@@ -463,11 +468,15 @@ def render_header() -> str:
         )
     for index, page in enumerate(pages, start=1):
         with cols[index]:
-            if st.button(page, key=f"nav_{page}", type="primary" if current_page == page else "secondary", use_container_width=True):
-                current_page = page
-                st.session_state["page"] = page
-    st.session_state.setdefault("page", current_page)
-    return current_page
+            st.button(
+                page,
+                key=f"nav_{page}",
+                type="primary" if st.session_state["page"] == page else "secondary",
+                use_container_width=True,
+                on_click=set_page,
+                args=(page,),
+            )
+    return st.session_state["page"]
 
 
 def render_data_page() -> None:
