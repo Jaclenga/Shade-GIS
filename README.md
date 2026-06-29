@@ -15,6 +15,7 @@ The repository still includes the Tampa/HART stop and shade files as a starter p
 - Provides an editable rationale/about page for methodology, data sources, contributors, grouped hanging-indent citations and bibliography, limitations, and release history.
 - Automatically includes the priority formula on the methodology page whenever `priority_score` is used by the configured visualizations.
 - Previews the public Streamlit app with a map, analytics, unlabeled-stop visibility toggle, methodology page, import log, and CSV/GeoJSON/config downloads.
+- Builds a GitHub-ready deployment bundle containing the rendered public Streamlit app, current stop data, configuration, dependencies, README, and optional GitHub CLI publish script.
 
 ## App Pages
 
@@ -22,6 +23,7 @@ The repository still includes the Tampa/HART stop and shade files as a starter p
 - `Visuals`: side-by-side map preview with expandable, scrollable controls for color fields, premade shade palettes, editable color swatches, marker shape/size/outline, base map style, dataset-backed overlay selection, up to 10 custom X/Y charts, dashboard metrics, public data table/map-hover columns, and priority formula weights.
 - `Methodology`: editable public rationale/about page with live preview.
 - `Preview`: the generated public-facing Streamlit app experience for the current project configuration, including a toggle to show or hide unlabeled bus stops.
+- `Deploy`: GitHub publishing workspace with a repository-name helper, new-repository link, downloadable Streamlit app bundle, and PowerShell `gh` CLI publish command.
 
 ## Supported Input Schema
 
@@ -151,18 +153,33 @@ The script exits with status `0` when all checks pass, `1` when data errors are 
 
 ## Deploy
 
-This repo is ready for a basic Streamlit deployment using:
+The builder itself is ready for a basic Streamlit deployment using:
 
 - main file: `app.py`
 - Python dependencies: `requirements.txt`
 
-The current builder stores edits in Streamlit session state and exposes CSV, GeoJSON, and configuration downloads from the `Preview` page. For shared production deployments, add persistent project storage before treating edits as durable.
+The current builder stores edits in Streamlit session state and exposes CSV, GeoJSON, and configuration downloads from the `Preview` page. For shared production deployments of the builder, add persistent project storage before treating edits as durable.
 
 ```bash
 streamlit run app.py
 ```
 
 Without persistent storage, project edits made in the browser reset when the app session restarts.
+
+To publish a rendered study app, use the builder's `Deploy` page. It creates a ZIP bundle with:
+
+- `app.py`: standalone public Streamlit app rendered from the current builder state.
+- `shade_study_stops.csv`: exported stop dataset.
+- `shade_study_config.json`: exported project metadata, methodology, taxonomy, visualization settings, and import log.
+- `requirements.txt`, `.streamlit/config.toml`, `README.md`, and `deploy_to_github.ps1`.
+
+Either create a GitHub repository and upload the bundle contents, or run the included PowerShell helper with the GitHub CLI:
+
+```powershell
+.\deploy_to_github.ps1 -RepositoryName "your-shade-study"
+```
+
+The generated repository can then be connected to Streamlit Community Cloud with `app.py` as the main file.
 
 ## Optional Postgres setup
 

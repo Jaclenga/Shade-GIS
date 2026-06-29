@@ -91,6 +91,13 @@ The `Preview` page currently exports:
 - Stops GeoJSON.
 - Study configuration JSON containing project metadata, taxonomy, methodology copy, visualization settings, and import log.
 
+The `Deploy` page also exports a GitHub-ready ZIP bundle for the rendered public app. The bundle includes:
+
+- Standalone `app.py` for the public Streamlit experience.
+- `shade_study_stops.csv` with the active stop dataset and current priority scores.
+- `shade_study_config.json` with project metadata, taxonomy, methodology copy, visualization settings, and import log.
+- `requirements.txt`, `.streamlit/config.toml`, generated `README.md`, `.gitignore`, and optional `deploy_to_github.ps1` helper.
+
 Import log `imported_at` values are stored as timezone-aware local timestamps with a UTC offset.
 
 The public preview also includes a user-facing toggle to show or hide stops whose shade label is

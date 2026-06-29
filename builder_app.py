@@ -1,5 +1,6 @@
 import io
 import json
+import re
 import urllib.parse
 import zipfile
 from datetime import datetime
@@ -945,16 +946,488 @@ def dataframe_to_geojson(df: pd.DataFrame) -> str:
 
 
 def study_config_json() -> str:
-    return json.dumps(
-        {
-            "project": st.session_state["project"],
-            "taxonomy": st.session_state["taxonomy"],
-            "methodology": st.session_state["methodology"],
-            "visualization": st.session_state["visualization"],
-            "import_log": st.session_state["import_log"],
-        },
-        indent=2,
+    return json.dumps(study_config_payload(), indent=2, default=str)
+
+
+def study_config_payload() -> dict[str, Any]:
+    return {
+        "project": st.session_state["project"],
+        "taxonomy": st.session_state["taxonomy"],
+        "methodology": st.session_state["methodology"],
+        "visualization": st.session_state["visualization"],
+        "import_log": st.session_state["import_log"],
+    }
+
+
+def slugify_repo_name(value: str) -> str:
+    slug = re.sub(r"[^a-z0-9._-]+", "-", str(value or "").strip().lower())
+    slug = re.sub(r"-{2,}", "-", slug).strip(".-_")
+    return slug or "shade-study-app"
+
+
+def github_new_repo_url(project: dict[str, Any], repo_name: str) -> str:
+    params = {
+        "name": slugify_repo_name(repo_name),
+        "description": f"{project.get('name', 'Shade study')} Streamlit app",
+        "visibility": "public" if project.get("visibility") == "Public" else "private",
+    }
+    return "https://github.com/new?" + urllib.parse.urlencode(params)
+
+
+def published_app_source() -> str:
+    return r'''import base64
+import json
+from pathlib import Path
+from typing import Any
+
+import pandas as pd
+import pydeck as pdk
+import streamlit as st
+
+
+APP_DIR = Path(__file__).parent
+CONFIG_PATH = APP_DIR / "shade_study_config.json"
+DATA_PATH = APP_DIR / "shade_study_stops.csv"
+RECORD_COUNT_FIELD = "Record count"
+
+MAP_STYLES = {
+    "Light": pdk.map_styles.CARTO_LIGHT,
+    "Dark": pdk.map_styles.CARTO_DARK,
+    "Road": pdk.map_styles.CARTO_ROAD,
+    "Light, no labels": pdk.map_styles.CARTO_LIGHT_NO_LABELS,
+    "Dark, no labels": pdk.map_styles.CARTO_DARK_NO_LABELS,
+}
+
+COLOR_MODE_FIELDS = {
+    "Shade category": "shading",
+    "Review status": "review_status",
+    "Priority score": "priority_score",
+}
+
+DEFAULT_DISPLAY_COLUMNS = ["stop_id", "stop_name", "routes", "shading", "review_status", "priority_score"]
+DEFAULT_PALETTE = [
+    "#2563eb", "#16a34a", "#dc2626", "#9333ea", "#d97706",
+    "#0891b2", "#be123c", "#4d7c0f", "#7c3aed", "#0f766e",
+]
+
+
+def load_study() -> tuple[dict[str, Any], pd.DataFrame]:
+    config = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+    stops = pd.read_csv(DATA_PATH)
+    stops["priority_score"] = calculate_priority_scores(
+        stops, config.get("visualization", {}).get("priority_weights", {})
     )
+    return config, stops
+
+
+def normalize_hex_color(value: str, fallback: str = "#808080") -> str:
+    text = str(value or "").strip()
+    if not text.startswith("#"):
+        text = f"#{text}"
+    return text if len(text) == 7 else fallback
+
+
+def hex_to_rgb(value: str) -> list[int]:
+    color = normalize_hex_color(value).lstrip("#")
+    return [int(color[index : index + 2], 16) for index in (0, 2, 4)]
+
+
+def calculate_priority_scores(df: pd.DataFrame, weights: dict[str, float]) -> pd.Series:
+    if df.empty:
+        return pd.Series(dtype=float)
+    score = pd.Series(0.0, index=df.index)
+    weight_total = 0.0
+    ridership_weight = float(weights.get("ridership", 0) or 0)
+    if ridership_weight and "ridership" in df:
+        ridership = pd.to_numeric(df["ridership"], errors="coerce").fillna(0)
+        max_ridership = ridership.max()
+        if max_ridership > 0:
+            score += ridership_weight * (ridership / max_ridership)
+            weight_total += ridership_weight
+    low_shade_weight = float(weights.get("low_shade", 0) or 0)
+    if low_shade_weight and "shading" in df:
+        low_shade = df["shading"].isin(["No Shade", "Limited Natural Shade", "Needs Review"]).astype(float)
+        score += low_shade_weight * low_shade
+        weight_total += low_shade_weight
+    if weight_total == 0:
+        return pd.Series(0.0, index=df.index)
+    return (score / weight_total).round(4)
+
+
+def get_selected_display_columns(df: pd.DataFrame, visualization: dict[str, Any]) -> list[str]:
+    configured = visualization.get("display_columns") or DEFAULT_DISPLAY_COLUMNS
+    columns = [column for column in configured if column in df.columns]
+    return columns or [column for column in DEFAULT_DISPLAY_COLUMNS if column in df.columns] or list(df.columns[:8])
+
+
+def color_lookup(df: pd.DataFrame, taxonomy: list[dict[str, Any]], visualization: dict[str, Any]) -> tuple[str, dict[str, list[int]]]:
+    label = visualization.get("color_by", "Shade category")
+    field = COLOR_MODE_FIELDS.get(label, label)
+    if field not in df.columns:
+        field = "shading" if "shading" in df.columns else df.columns[0]
+    if field == "priority_score":
+        colors = visualization.get("priority_colors", {})
+        return field, {
+            "low": hex_to_rgb(colors.get("low", "#34d399")),
+            "mid": hex_to_rgb(colors.get("mid", "#facc15")),
+            "high": hex_to_rgb(colors.get("high", "#ef4444")),
+        }
+    if field == "shading":
+        mapping = {
+            str(item.get("name", "")): hex_to_rgb(item.get("color", "#808080"))
+            for item in taxonomy
+        }
+    else:
+        stored = visualization.get("field_color_maps", {}).get(field, {})
+        values = sorted(str(value) for value in df[field].fillna("Unknown").unique())
+        mapping = {
+            value: hex_to_rgb(stored.get(value, DEFAULT_PALETTE[index % len(DEFAULT_PALETTE)]))
+            for index, value in enumerate(values)
+        }
+    mapping.setdefault("Unknown", [128, 128, 128])
+    return field, mapping
+
+
+def marker_color(row: pd.Series, field: str, mapping: dict[str, list[int]]) -> list[int]:
+    if field == "priority_score":
+        score = float(row.get("priority_score", 0) or 0)
+        if score >= 0.66:
+            return mapping["high"]
+        if score >= 0.33:
+            return mapping["mid"]
+        return mapping["low"]
+    return mapping.get(str(row.get(field, "Unknown")), mapping.get("Unknown", [128, 128, 128]))
+
+
+def build_tooltip_text(df: pd.DataFrame, visualization: dict[str, Any]) -> str:
+    columns = get_selected_display_columns(df, visualization)[:8]
+    return "\n".join([f"{column}: {{{column}}}" for column in columns])
+
+
+def marker_svg(shape: str, fill: list[int], stroke: str) -> str:
+    fill_hex = "#%02x%02x%02x" % tuple(fill)
+    stroke_hex = normalize_hex_color(stroke, "#141414")
+    if shape == "Square":
+        body = f"<rect x='6' y='6' width='52' height='52' rx='6' fill='{fill_hex}' stroke='{stroke_hex}' stroke-width='4'/>"
+    elif shape == "Diamond":
+        body = f"<path d='M32 4 L60 32 L32 60 L4 32 Z' fill='{fill_hex}' stroke='{stroke_hex}' stroke-width='4'/>"
+    elif shape == "Triangle":
+        body = f"<path d='M32 5 L60 58 L4 58 Z' fill='{fill_hex}' stroke='{stroke_hex}' stroke-width='4'/>"
+    else:
+        body = f"<path d='M32 4 C18 4 7 15 7 29 C7 49 32 62 32 62 C32 62 57 49 57 29 C57 15 46 4 32 4 Z' fill='{fill_hex}' stroke='{stroke_hex}' stroke-width='4'/><circle cx='32' cy='29' r='9' fill='white' fill-opacity='0.85'/>"
+    svg = f"<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'>{body}</svg>"
+    encoded = base64.b64encode(svg.encode("utf-8")).decode("ascii")
+    return f"data:image/svg+xml;base64,{encoded}"
+
+
+def calculate_view_state(df: pd.DataFrame) -> pdk.ViewState:
+    return pdk.ViewState(
+        latitude=float(df["stop_lat"].mean()),
+        longitude=float(df["stop_lon"].mean()),
+        zoom=10,
+        pitch=0,
+    )
+
+
+def build_deck_chart(df: pd.DataFrame, taxonomy: list[dict[str, Any]], visualization: dict[str, Any]) -> pdk.Deck:
+    map_df = df.dropna(subset=["stop_lat", "stop_lon"]).copy()
+    field, colors = color_lookup(map_df, taxonomy, visualization)
+    map_df["marker_color"] = map_df.apply(lambda row: marker_color(row, field, colors), axis=1)
+    marker_size = int(visualization.get("marker_size", 7) or 7)
+    shape = visualization.get("marker_shape", "Circle")
+    if shape == "Circle":
+        layer = pdk.Layer(
+            "ScatterplotLayer",
+            data=map_df,
+            get_position="[stop_lon, stop_lat]",
+            get_fill_color="marker_color",
+            get_radius=marker_size,
+            radius_units="pixels",
+            radius_min_pixels=4,
+            radius_max_pixels=48,
+            opacity=float(visualization.get("marker_opacity", 0.82) or 0.82),
+            stroked=True,
+            get_line_color=hex_to_rgb(visualization.get("marker_stroke_color", "#141414")),
+            line_width_min_pixels=int(visualization.get("marker_stroke_width", 1) or 1),
+            pickable=True,
+            auto_highlight=True,
+        )
+    else:
+        stroke = visualization.get("marker_stroke_color", "#141414")
+        map_df["icon_data"] = map_df["marker_color"].apply(
+            lambda color: {"url": marker_svg(shape, color, stroke), "width": 64, "height": 64, "anchorY": 64}
+        )
+        map_df["icon_size"] = marker_size * 4
+        layer = pdk.Layer(
+            "IconLayer",
+            data=map_df,
+            get_icon="icon_data",
+            get_position="[stop_lon, stop_lat]",
+            get_size="icon_size",
+            size_units="pixels",
+            size_min_pixels=16,
+            size_max_pixels=96,
+            pickable=True,
+            auto_highlight=True,
+        )
+    return pdk.Deck(
+        initial_view_state=calculate_view_state(map_df),
+        layers=[layer],
+        map_style=MAP_STYLES.get(visualization.get("map_style", "Light"), pdk.map_styles.CARTO_LIGHT),
+        tooltip={"text": build_tooltip_text(map_df, visualization)},
+    )
+
+
+def filter_unlabeled_stops(df: pd.DataFrame, show_unlabeled: bool) -> pd.DataFrame:
+    if show_unlabeled or "shading" not in df.columns:
+        return df
+    return df[df["shading"] != "Needs Review"].copy()
+
+
+def render_metric_cards(df: pd.DataFrame) -> None:
+    no_shade = int((df.get("shading", pd.Series(dtype=str)) == "No Shade").sum()) if not df.empty else 0
+    needs_review = int((df.get("shading", pd.Series(dtype=str)) == "Needs Review").sum()) if not df.empty else 0
+    accepted = int((df.get("review_status", pd.Series(dtype=str)) == "Accepted").sum()) if not df.empty else 0
+    cols = st.columns(4)
+    cols[0].metric("Stops", f"{len(df):,}")
+    cols[1].metric("No shade", f"{no_shade:,}")
+    cols[2].metric("Needs review", f"{needs_review:,}")
+    cols[3].metric("Accepted", f"{accepted:,}")
+
+
+def chart_data(df: pd.DataFrame, chart: dict[str, Any]) -> tuple[pd.DataFrame, str, str]:
+    x_field = chart.get("x", "shading")
+    y_field = chart.get("y", RECORD_COUNT_FIELD)
+    aggregation = chart.get("aggregation", "Count")
+    if x_field not in df.columns:
+        return pd.DataFrame(), "", ""
+    if y_field == RECORD_COUNT_FIELD or aggregation == "Count":
+        data = df.groupby(x_field, dropna=False).size().reset_index(name="stops")
+        return data, x_field, "stops"
+    if y_field not in df.columns:
+        return pd.DataFrame(), "", ""
+    working = df.loc[:, [x_field, y_field]].copy()
+    working[y_field] = pd.to_numeric(working[y_field], errors="coerce")
+    grouped = working.groupby(x_field, dropna=False)[y_field]
+    if aggregation == "Average":
+        data = grouped.mean().reset_index()
+    elif aggregation == "Maximum":
+        data = grouped.max().reset_index()
+    elif aggregation == "Minimum":
+        data = grouped.min().reset_index()
+    else:
+        data = grouped.sum().reset_index()
+    return data, x_field, y_field
+
+
+def render_custom_charts(df: pd.DataFrame, visualization: dict[str, Any]) -> None:
+    charts = visualization.get("custom_charts") or []
+    if not charts:
+        return
+    columns = st.columns(2)
+    for index, chart in enumerate(charts):
+        data, x_field, y_field = chart_data(df, chart)
+        if data.empty:
+            continue
+        with columns[index % 2]:
+            st.markdown(f"#### {chart.get('title') or 'Chart'}")
+            chart_type = chart.get("chart_type", "Bar")
+            if chart_type == "Line":
+                st.line_chart(data, x=x_field, y=y_field)
+            elif chart_type == "Area":
+                st.area_chart(data, x=x_field, y=y_field)
+            elif chart_type == "Scatter":
+                st.scatter_chart(data, x=x_field, y=y_field)
+            else:
+                st.bar_chart(data, x=x_field, y=y_field)
+
+
+def render_methodology(config: dict[str, Any]) -> None:
+    project = config.get("project", {})
+    methodology = config.get("methodology", {})
+    st.title(methodology.get("title") or project.get("name") or "Bus Stop Shade Study")
+    st.markdown(f"### {methodology.get('summary', '')}")
+    st.caption(
+        f"{project.get('agency', 'Transit agency')} | {project.get('region', 'Region')} | "
+        f"dataset v{project.get('dataset_version', 'draft')} | methodology v{project.get('methodology_version', 'draft')}"
+    )
+    sections = [
+        ("Rationale", methodology.get("purpose", "")),
+        ("Shade Assessment Method", methodology.get("shade_method", "")),
+        ("Data Sources", methodology.get("data_sources", "")),
+        ("Contributors", methodology.get("contributors", "")),
+        ("Known Limitations", methodology.get("limitations", "")),
+        ("Bibliography", methodology.get("bibliography", "")),
+        ("Release History", methodology.get("release_history", "")),
+        ("Citation", methodology.get("citation", "")),
+    ]
+    for title, body in sections:
+        if str(body or "").strip():
+            st.markdown(f"## {title}")
+            st.markdown(body)
+    taxonomy = config.get("taxonomy", [])
+    if taxonomy:
+        st.markdown("## Shade Taxonomy")
+        st.dataframe(pd.DataFrame(taxonomy), use_container_width=True, hide_index=True)
+
+
+def dataframe_to_geojson(df: pd.DataFrame) -> str:
+    features = []
+    for _, row in df.iterrows():
+        properties = row.drop(labels=["stop_lat", "stop_lon"], errors="ignore").to_dict()
+        features.append(
+            {
+                "type": "Feature",
+                "geometry": {"type": "Point", "coordinates": [float(row["stop_lon"]), float(row["stop_lat"])]},
+                "properties": {key: (None if pd.isna(value) else value) for key, value in properties.items()},
+            }
+        )
+    return json.dumps({"type": "FeatureCollection", "features": features}, indent=2)
+
+
+def main() -> None:
+    config, stops = load_study()
+    project = config.get("project", {})
+    methodology = config.get("methodology", {})
+    visualization = config.get("visualization", {})
+    taxonomy = config.get("taxonomy", [])
+
+    st.set_page_config(page_title=project.get("name", "Shade Study"), layout="wide")
+    st.title(project.get("name", "Shade Study"))
+    st.markdown(f"### {methodology.get('summary', '')}")
+    st.caption(f"{project.get('agency', '')} | {project.get('region', '')} | dataset v{project.get('dataset_version', 'draft')}")
+
+    show_unlabeled = st.toggle("Show unlabeled bus stops", value=True)
+    visible_stops = filter_unlabeled_stops(stops, show_unlabeled)
+    render_metric_cards(visible_stops)
+
+    tabs = st.tabs(["Map", "Analytics", "Methodology", "Downloads"])
+    with tabs[0]:
+        if visible_stops.empty:
+            st.info("No stops match the current visibility settings.")
+        else:
+            st.pydeck_chart(build_deck_chart(visible_stops, taxonomy, visualization), use_container_width=True)
+        if visualization.get("show_legend", True) and taxonomy:
+            legend = pd.DataFrame(taxonomy)
+            columns = [column for column in ["name", "description", "color"] if column in legend.columns]
+            st.dataframe(legend.loc[:, columns], use_container_width=True, hide_index=True)
+    with tabs[1]:
+        render_custom_charts(visible_stops, visualization)
+        selected = visualization.get("metric_cards", [])
+        summary_cols = st.columns([1, 1])
+        if "Shade distribution" in selected and "shading" in visible_stops.columns:
+            with summary_cols[0]:
+                st.markdown("#### Shade Distribution")
+                counts = visible_stops["shading"].value_counts().rename_axis("shade_category").reset_index(name="stops")
+                st.bar_chart(counts, x="shade_category", y="stops")
+        if "Review status" in selected and "review_status" in visible_stops.columns:
+            with summary_cols[1]:
+                st.markdown("#### Review Status")
+                counts = visible_stops["review_status"].value_counts().rename_axis("review_status").reset_index(name="stops")
+                st.bar_chart(counts, x="review_status", y="stops")
+        if "Priority stops" in selected:
+            st.markdown("#### Highest Priority Stops")
+            priority = visible_stops.sort_values("priority_score", ascending=False).head(20)
+            columns = get_selected_display_columns(priority, visualization)
+            st.dataframe(priority.loc[:, columns], use_container_width=True, hide_index=True)
+    with tabs[2]:
+        render_methodology(config)
+    with tabs[3]:
+        if visualization.get("show_downloads", True):
+            st.download_button("Download stops CSV", stops.to_csv(index=False).encode("utf-8"), "shade_study_stops.csv", "text/csv")
+            st.download_button("Download stops GeoJSON", dataframe_to_geojson(stops).encode("utf-8"), "shade_study_stops.geojson", "application/geo+json")
+            st.download_button("Download study configuration", json.dumps(config, indent=2).encode("utf-8"), "shade_study_config.json", "application/json")
+
+
+if __name__ == "__main__":
+    main()
+'''
+
+
+def deploy_readme(repo_name: str, project: dict[str, Any]) -> str:
+    app_name = project.get("name", "Shade Study")
+    return f"""# {app_name}
+
+This repository was generated by Shade Study Builder. It contains a public Streamlit app rendered from the builder state at export time.
+
+## Files
+
+- `app.py`: public Streamlit app.
+- `shade_study_stops.csv`: published stop dataset.
+- `shade_study_config.json`: project metadata, methodology, taxonomy, visualization settings, and import log.
+- `requirements.txt`: Python dependencies for Streamlit deployment.
+
+## Publish To GitHub
+
+Either create a new GitHub repository named `{repo_name}` and upload these files, or run:
+
+```powershell
+./deploy_to_github.ps1 -RepositoryName "{repo_name}"
+```
+
+The script requires Git and the GitHub CLI (`gh`) with an authenticated account.
+
+## Run Locally
+
+```bash
+pip install -r requirements.txt
+streamlit run app.py
+```
+
+## Streamlit Community Cloud
+
+After the repository is on GitHub, create a Streamlit Community Cloud app with:
+
+- repository: `{repo_name}`
+- branch: `main`
+- main file path: `app.py`
+"""
+
+
+def deploy_script(repo_name: str) -> str:
+    return f"""param(
+    [string]$RepositoryName = "{repo_name}",
+    [ValidateSet("public", "private")]
+    [string]$Visibility = "public"
+)
+
+$ErrorActionPreference = "Stop"
+
+if (-not (Get-Command git -ErrorAction SilentlyContinue)) {{
+    throw "Git is required before publishing."
+}}
+
+if (-not (Get-Command gh -ErrorAction SilentlyContinue)) {{
+    throw "GitHub CLI is required before publishing. Install gh and run gh auth login."
+}}
+
+if (-not (Test-Path ".git")) {{
+    git init
+    git branch -M main
+}}
+
+git add .
+git commit -m "Publish shade study app"
+gh repo create $RepositoryName --$Visibility --source=. --remote=origin --push
+"""
+
+
+def build_github_deploy_bundle(repo_name: str) -> bytes:
+    stops = st.session_state["stops"].copy()
+    stops["priority_score"] = calculate_priority_scores(stops, st.session_state["visualization"]["priority_weights"])
+    config_json = study_config_json()
+
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as bundle:
+        bundle.writestr("app.py", published_app_source())
+        bundle.writestr("shade_study_stops.csv", stops.to_csv(index=False))
+        bundle.writestr("shade_study_config.json", config_json)
+        bundle.writestr("requirements.txt", "streamlit>=1.57,<2\npandas>=2,<4\npydeck>=0.8,<1\n")
+        bundle.writestr(".streamlit/config.toml", "[server]\nheadless = true\n\n[browser]\ngatherUsageStats = false\n")
+        bundle.writestr(".gitignore", "__pycache__/\n*.pyc\n.streamlit/secrets.toml\n")
+        bundle.writestr("README.md", deploy_readme(repo_name, st.session_state["project"]))
+        bundle.writestr("deploy_to_github.ps1", deploy_script(repo_name))
+    return buffer.getvalue()
 
 
 def validation_summary(df: pd.DataFrame) -> pd.DataFrame:
@@ -973,27 +1446,54 @@ def set_page(page: str) -> None:
 
 
 def render_header() -> str:
-    pages = ["Data", "Visuals", "Methodology", "Preview"]
+    pages = ["Data", "Visuals", "Methods", "Preview", "Deploy"]
     if st.session_state.get("page") not in pages:
         st.session_state["page"] = "Data"
     st.markdown(
         """
         <style>
-        .builder-brand {font-size: 1.25rem; font-weight: 700; color: #14532d; line-height: 1.15;}
-        .builder-subtitle {color: #64748b; font-size: 0.92rem; margin-top: 0.2rem;}
-        .stButton button {border-radius: 999px; min-height: 2.6rem; font-weight: 650;}
+        .builder-topbar {
+            border-bottom: 1px solid #e5e7eb;
+            margin: -1rem -1rem 1.2rem;
+            padding: 0.55rem 1rem 0.85rem;
+        }
+        .builder-brand {
+            color: #14532d;
+            font-size: 1.12rem;
+            font-weight: 700;
+            letter-spacing: 0;
+            white-space: nowrap;
+        }
+        .stButton button {
+            border-radius: 999px;
+            font-size: 0.86rem;
+            min-height: 2.25rem;
+            font-weight: 650;
+            padding: 0.3rem 0.45rem;
+            white-space: nowrap;
+        }
+        .stButton button p {
+            white-space: nowrap;
+        }
+        .stButton button[kind="primary"] {
+            background: #ff4b4b;
+            border-color: #ff4b4b;
+            color: white;
+        }
+        .stButton button[kind="secondary"] {
+            background: white;
+            border-color: #d1d5db;
+            color: #31333f;
+        }
         </style>
         """,
         unsafe_allow_html=True,
     )
-    cols = st.columns([3.2, 1, 1, 1, 1])
+    st.markdown("<div class='builder-topbar'>", unsafe_allow_html=True)
+    cols = st.columns([2.15, 2.25, 0.92, 0.92, 0.92, 0.92, 0.92], gap="small", vertical_alignment="center")
     with cols[0]:
-        st.markdown(
-            "<div class='builder-brand'>Shade Study Builder</div>"
-            "<div class='builder-subtitle'>Prepare, configure, and preview reusable bus stop shade studies</div>",
-            unsafe_allow_html=True,
-        )
-    for index, page in enumerate(pages, start=1):
+        st.markdown("<div class='builder-brand'>Shade-GIS Study Builder</div>", unsafe_allow_html=True)
+    for index, page in enumerate(pages, start=2):
         with cols[index]:
             st.button(
                 page,
@@ -1003,6 +1503,7 @@ def render_header() -> str:
                 on_click=set_page,
                 args=(page,),
             )
+    st.markdown("</div>", unsafe_allow_html=True)
     return st.session_state["page"]
 
 
@@ -1595,15 +2096,79 @@ def render_preview_page() -> None:
         st.dataframe(pd.DataFrame(st.session_state["import_log"]), use_container_width=True, hide_index=True)
 
 
+def render_deploy_page() -> None:
+    project = st.session_state["project"]
+    visualization = st.session_state["visualization"]
+    stops = st.session_state["stops"]
+    default_repo_name = slugify_repo_name(project.get("name", "shade-study-app"))
+
+    st.title("Deploy")
+    st.markdown(f"### Publish {project.get('name', 'this shade study')} as a GitHub-backed Streamlit app")
+
+    if stops.empty:
+        st.warning("Import a stop dataset before creating a deployment bundle.")
+        return
+
+    stops_for_export = stops.copy()
+    stops_for_export["priority_score"] = calculate_priority_scores(stops_for_export, visualization["priority_weights"])
+
+    left, right = st.columns([1, 1])
+    with left:
+        repo_name = st.text_input("GitHub repository name", default_repo_name)
+        repo_name = slugify_repo_name(repo_name)
+        st.link_button("Create GitHub repository", github_new_repo_url(project, repo_name))
+    with right:
+        st.metric("Stops included", f"{len(stops_for_export):,}")
+        st.metric("Dataset version", project.get("dataset_version", "draft"))
+
+    bundle_name = f"{repo_name}.zip"
+    st.download_button(
+        "Download GitHub deploy bundle",
+        data=build_github_deploy_bundle(repo_name),
+        file_name=bundle_name,
+        mime="application/zip",
+        type="primary",
+    )
+
+    st.markdown("#### Bundle Contents")
+    st.dataframe(
+        pd.DataFrame(
+            [
+                ("app.py", "Public Streamlit app rendered from the current builder state"),
+                ("shade_study_stops.csv", "Published stop dataset"),
+                ("shade_study_config.json", "Project, methodology, taxonomy, visualization, and import-log settings"),
+                ("requirements.txt", "Runtime dependencies for Streamlit Community Cloud"),
+                ("README.md", "GitHub and Streamlit deployment notes"),
+                ("deploy_to_github.ps1", "Optional GitHub CLI publishing helper"),
+            ],
+            columns=["File", "Purpose"],
+        ),
+        use_container_width=True,
+        hide_index=True,
+    )
+
+    st.markdown("#### Command-Line Publish")
+    st.code(
+        f'Expand-Archive .\\{bundle_name} -DestinationPath .\\{repo_name}\n'
+        f"Set-Location .\\{repo_name}\n"
+        f'.\\deploy_to_github.ps1 -RepositoryName "{repo_name}"',
+        language="powershell",
+    )
+
+
 def main() -> None:
     st.set_page_config(page_title=APP_TITLE, layout="wide")
     ensure_state()
+    if st.session_state.get("page") == "Methodology":
+        st.session_state["page"] = "Methods"
     page = render_header()
     if page == "Visuals":
         render_visuals_page()
-    elif page == "Methodology":
+    elif page == "Methods":
         render_methodology_page()
     elif page == "Preview":
         render_preview_page()
+    elif page == "Deploy":
+        render_deploy_page()
     else:
         render_data_page()
