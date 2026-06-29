@@ -782,7 +782,13 @@ def render_data_page() -> None:
             "sort_order": st.column_config.NumberColumn("Sort order", min_value=1, step=1),
         },
     )
-    if st.button("Apply taxonomy"):
+    if st.button(
+        "Apply taxonomy",
+        help=(
+            "Save the edited shade categories and reapply them to the active dataset "
+            "so maps, legends, previews, and exports use the latest taxonomy."
+        ),
+    ):
         st.session_state["taxonomy"] = edited_taxonomy.fillna("").to_dict("records")
         st.session_state["stops"] = prepare_stop_dataset(st.session_state["stops"], project, st.session_state["taxonomy"])
         st.success("Taxonomy applied to the active dataset.")
