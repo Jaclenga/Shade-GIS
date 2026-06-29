@@ -103,7 +103,7 @@ DEFAULT_METHODOLOGY = {
 DEFAULT_VISUALIZATION = {
     "color_by": "Shade category",
     "marker_shape": "Circle",
-    "marker_size": 18,
+    "marker_size": 7,
     "marker_opacity": 0.82,
     "marker_stroke_color": "#141414",
     "marker_stroke_width": 1,
@@ -563,20 +563,22 @@ def calculate_view_state(df: pd.DataFrame) -> pdk.ViewState:
 def build_deck_chart(df: pd.DataFrame, taxonomy: list[dict[str, Any]], visualization: dict[str, Any]) -> pdk.Deck:
     map_df = color_dataset(df, taxonomy, visualization)
     if visualization.get("marker_shape", "Circle") == "Circle":
+        marker_size = max(4, min(48, int(visualization.get("marker_size", 7))))
+        map_df["marker_size"] = marker_size
         layer = pdk.Layer(
             "ScatterplotLayer",
             data=map_df,
             id="stops_layer",
             get_position="[stop_lon, stop_lat]",
             get_fill_color="fill_color",
-            get_radius=7,
+            get_radius="marker_size",
             radius_units="pixels",
             radius_min_pixels=4,
-            radius_max_pixels=11,
-            opacity=0.82,
+            radius_max_pixels=48,
+            opacity=max(0.1, min(1.0, float(visualization.get("marker_opacity", 0.82)))),
             stroked=True,
-            get_line_color=[20, 20, 20, 160],
-            line_width_min_pixels=1,
+            get_line_color=hex_to_rgb(visualization.get("marker_stroke_color", "#141414")),
+            line_width_min_pixels=max(0, int(visualization.get("marker_stroke_width", 1))),
             pickable=True,
             auto_highlight=True,
         )
@@ -590,7 +592,7 @@ def build_deck_chart(df: pd.DataFrame, taxonomy: list[dict[str, Any]], visualiza
             get_position="[stop_lon, stop_lat]",
             get_size="marker_size",
             size_units="pixels",
-            size_min_pixels=8,
+            size_min_pixels=4,
             size_max_pixels=48,
             pickable=True,
             auto_highlight=True,
@@ -861,8 +863,8 @@ def render_visuals_page() -> None:
     stops = st.session_state["stops"]
     taxonomy = st.session_state["taxonomy"]
 
-    left, right = st.columns([0.9, 1.1])
-    with left:
+    controls, preview = st.columns([0.85, 1.15])
+    with controls:
         color_options = get_color_options(stops)
         if visualization.get("color_by") not in color_options:
             visualization["color_by"] = "Shade category"
@@ -882,9 +884,9 @@ def render_visuals_page() -> None:
         )
         visualization["marker_size"] = st.slider(
             "Marker size",
-            8,
+            4,
             48,
-            int(visualization.get("marker_size", 18)),
+            int(visualization.get("marker_size", 7)),
             1,
         )
         visualization["marker_opacity"] = st.slider(
@@ -947,7 +949,7 @@ def render_visuals_page() -> None:
         visualization["show_legend"] = st.checkbox("Show legend", value=visualization["show_legend"])
         visualization["show_downloads"] = st.checkbox("Show public downloads", value=visualization["show_downloads"])
 
-    with right:
+        st.divider()
         render_palette_controls(visualization, stops, taxonomy, color_options)
         st.divider()
         st.subheader("Priority Formula")
@@ -962,11 +964,15 @@ def render_visuals_page() -> None:
 
     st.session_state["stops"]["priority_score"] = calculate_priority_scores(stops, visualization["priority_weights"])
 
-    st.subheader("Map Preview")
-    if stops.empty:
-        st.warning("Import a dataset before configuring the map.")
-    else:
-        st.pydeck_chart(build_deck_chart(stops, st.session_state["taxonomy"], visualization), use_container_width=True)
+    with preview:
+        st.subheader("Map Preview")
+        if stops.empty:
+            st.warning("Import a dataset before configuring the map.")
+        else:
+            st.pydeck_chart(
+                build_deck_chart(stops, st.session_state["taxonomy"], visualization),
+                use_container_width=True,
+            )
 
     st.subheader("Available Fields")
     field_summary = pd.DataFrame(
