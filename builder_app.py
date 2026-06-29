@@ -19,6 +19,7 @@ DATA_PATH = APP_DIR / "stops.txt"
 SHADE_DATA_PATH = APP_DIR / "shading_data.csv"
 APP_TITLE = "Shade Study Builder"
 VISUAL_MAP_HEIGHT = 500
+METHODS_PREVIEW_HEIGHT = 1220
 
 
 def timestamp_with_timezone() -> str:
@@ -1446,7 +1447,7 @@ def set_page(page: str) -> None:
 
 
 def render_header() -> str:
-    pages = ["Data", "Visuals", "Methods", "Preview", "Deploy"]
+    pages = ["Data", "Visuals", "Docs", "Preview", "Deploy"]
     if st.session_state.get("page") not in pages:
         st.session_state["page"] = "Data"
     st.markdown(
@@ -1930,7 +1931,7 @@ def render_visuals_page() -> None:
 
 
 def render_methodology_page() -> None:
-    st.title("Rationale And About Page")
+    st.title("Project Documentation")
     methodology = st.session_state["methodology"]
 
     edit, preview = st.columns([1, 1])
@@ -1977,13 +1978,14 @@ def render_methodology_page() -> None:
             ),
         )
     with preview:
-        render_builder_about_page(
-            project=st.session_state["project"],
-            methodology=methodology,
-            taxonomy=st.session_state["taxonomy"],
-            import_log=st.session_state["import_log"],
-            priority_formula=priority_formula_for_about(st.session_state["visualization"]),
-        )
+        with st.container(height=METHODS_PREVIEW_HEIGHT, border=False):
+            render_builder_about_page(
+                project=st.session_state["project"],
+                methodology=methodology,
+                taxonomy=st.session_state["taxonomy"],
+                import_log=st.session_state["import_log"],
+                priority_formula=priority_formula_for_about(st.session_state["visualization"]),
+            )
 
 
 def render_metric_cards(df: pd.DataFrame) -> None:
@@ -2159,12 +2161,12 @@ def render_deploy_page() -> None:
 def main() -> None:
     st.set_page_config(page_title=APP_TITLE, layout="wide")
     ensure_state()
-    if st.session_state.get("page") == "Methodology":
-        st.session_state["page"] = "Methods"
+    if st.session_state.get("page") in {"Methodology", "Methods"}:
+        st.session_state["page"] = "Docs"
     page = render_header()
     if page == "Visuals":
         render_visuals_page()
-    elif page == "Methods":
+    elif page == "Docs":
         render_methodology_page()
     elif page == "Preview":
         render_preview_page()
