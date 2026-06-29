@@ -1051,6 +1051,12 @@ def render_metric_cards(df: pd.DataFrame) -> None:
     cols[3].metric("Accepted", f"{accepted:,}")
 
 
+def filter_unlabeled_stops(df: pd.DataFrame, show_unlabeled: bool) -> pd.DataFrame:
+    if show_unlabeled or "shading" not in df.columns:
+        return df
+    return df[df["shading"] != "Needs Review"].copy()
+
+
 def render_preview_page() -> None:
     project = st.session_state["project"]
     methodology = st.session_state["methodology"]
@@ -1067,10 +1073,16 @@ def render_preview_page() -> None:
         st.warning("Import a stop dataset before previewing the public app.")
         return
 
-    render_metric_cards(stops)
+    show_unlabeled = st.toggle("Show unlabeled bus stops", value=True, key="preview_show_unlabeled_stops")
+    visible_stops = filter_unlabeled_stops(stops, show_unlabeled)
+
+    render_metric_cards(visible_stops)
     tabs = st.tabs(["Map", "Analytics", "Methodology", "Exports"])
     with tabs[0]:
-        st.pydeck_chart(build_deck_chart(stops, taxonomy, visualization), use_container_width=True)
+        if visible_stops.empty:
+            st.info("No stops match the current visibility settings.")
+        else:
+            st.pydeck_chart(build_deck_chart(visible_stops, taxonomy, visualization), use_container_width=True)
         if visualization.get("show_legend", True):
             legend = pd.DataFrame(taxonomy).sort_values("sort_order")
             st.dataframe(legend.loc[:, ["name", "description", "color"]], use_container_width=True, hide_index=True)
@@ -1078,14 +1090,14 @@ def render_preview_page() -> None:
         cols = st.columns([1, 1])
         with cols[0]:
             st.markdown("#### Shade Distribution")
-            shade_counts = stops["shading"].value_counts().rename_axis("shade_category").reset_index(name="stops")
+            shade_counts = visible_stops["shading"].value_counts().rename_axis("shade_category").reset_index(name="stops")
             st.bar_chart(shade_counts, x="shade_category", y="stops")
         with cols[1]:
             st.markdown("#### Review Status")
-            review_counts = stops["review_status"].value_counts().rename_axis("review_status").reset_index(name="stops")
+            review_counts = visible_stops["review_status"].value_counts().rename_axis("review_status").reset_index(name="stops")
             st.bar_chart(review_counts, x="review_status", y="stops")
         st.markdown("#### Highest Priority Stops")
-        priority = stops.sort_values("priority_score", ascending=False).head(20)
+        priority = visible_stops.sort_values("priority_score", ascending=False).head(20)
         st.dataframe(
             priority.loc[:, ["stop_id", "stop_name", "routes", "shading", "review_status", "priority_score"]],
             use_container_width=True,

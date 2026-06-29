@@ -13,14 +13,14 @@ The repository still includes the Tampa/HART stop and shade files as a starter p
 - Lets project teams edit the shade taxonomy, including category names, definitions, display colors, and sort order.
 - Lets project teams choose map coloring, contextual overlays, dashboard summaries, and priority-score weights.
 - Provides an editable rationale/about page for methodology, data sources, contributors, citations, limitations, and release history.
-- Previews the public Streamlit app with a map, analytics, methodology page, import log, and CSV/GeoJSON/config downloads.
+- Previews the public Streamlit app with a map, analytics, unlabeled-stop visibility toggle, methodology page, import log, and CSV/GeoJSON/config downloads.
 
 ## App Pages
 
 - `Data`: project setup, upload/import workflow, CSV field mapping, shade taxonomy, source metadata, and dataset health checks.
 - `Visuals`: side-by-side map preview with expandable, scrollable controls for color fields, premade shade palettes, editable color swatches, marker shape/size/outline, base map style, overlay selection, dashboard metrics, and priority formula weights.
 - `Methodology`: editable public rationale/about page with live preview.
-- `Preview`: the generated public-facing Streamlit app experience for the current project configuration.
+- `Preview`: the generated public-facing Streamlit app experience for the current project configuration, including a toggle to show or hide unlabeled bus stops.
 
 ## Supported Input Schema
 

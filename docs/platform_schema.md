@@ -80,6 +80,9 @@ The `Preview` page currently exports:
 - Stops GeoJSON.
 - Study configuration JSON containing project metadata, taxonomy, methodology copy, visualization settings, and import log.
 
+The public preview also includes a user-facing toggle to show or hide stops whose shade label is
+still `Needs Review` without changing the exported dataset.
+
 ## Future Entities
 
 The issue roadmap points to these additional entities:
