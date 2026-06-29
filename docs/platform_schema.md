@@ -20,6 +20,10 @@ Each study is configured as a project.
 | `source_license` | License or terms for the source data. |
 | `source_url` | Source URL when available. |
 
+Methodology citation and bibliography text support grouped hanging-indent formatting with APA-style
+templates: unindented lines render as group labels, and indented lines render as citation or
+bibliography entries.
+
 ## Bus Stops
 
 The builder accepts GTFS-compatible stops and mapped CSV files.
@@ -86,6 +90,8 @@ The `Preview` page currently exports:
 - Stops CSV.
 - Stops GeoJSON.
 - Study configuration JSON containing project metadata, taxonomy, methodology copy, visualization settings, and import log.
+
+Import log `imported_at` values are stored as timezone-aware local timestamps with a UTC offset.
 
 The public preview also includes a user-facing toggle to show or hide stops whose shade label is
 still `Needs Review` without changing the exported dataset.

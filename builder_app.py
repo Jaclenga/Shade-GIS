@@ -1,8 +1,8 @@
 import io
 import json
-import time
 import urllib.parse
 import zipfile
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -18,6 +18,10 @@ DATA_PATH = APP_DIR / "stops.txt"
 SHADE_DATA_PATH = APP_DIR / "shading_data.csv"
 APP_TITLE = "Shade Study Builder"
 VISUAL_MAP_HEIGHT = 500
+
+
+def timestamp_with_timezone() -> str:
+    return datetime.now().astimezone().isoformat(timespec="seconds")
 
 DEFAULT_PROJECT = {
     "name": "Tampa Bus Stop Shade Study",
@@ -93,7 +97,15 @@ DEFAULT_METHODOLOGY = {
         "- Optional environmental, demographic, and transportation overlays"
     ),
     "contributors": "Project team, reviewers, and community contributors",
-    "citation": "Cite the released dataset version, source GTFS feed, and methodology version.",
+    "citation": (
+        "Dataset release:\n"
+        "    Author or Organization. (Year). Title of dataset or study release (Version number) [Data set]. Publisher. URL"
+    ),
+    "bibliography": (
+        "Works referenced:\n"
+        "    Author, A. A., & Author, B. B. (Year). Title of article. Title of Journal, volume(issue), page range. https://doi.org/xxxxx\n"
+        "    Author or Organization. (Year). Title of report. Publisher. URL"
+    ),
     "limitations": (
         "Imagery date, time of day, season, and reviewer uncertainty can affect shade labels. "
         "Published releases should document these limitations."
@@ -383,7 +395,7 @@ def parse_gtfs_zip(contents: bytes) -> tuple[pd.DataFrame, dict[str, Any]]:
         "format": "GTFS",
         "tables": ["stops.txt"],
         "routes_joined": bool(route_map),
-        "imported_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "imported_at": timestamp_with_timezone(),
     }
     return stops, metadata
 
@@ -511,7 +523,7 @@ def ensure_state() -> None:
                 "source": "Seed Tampa GTFS and shade CSV",
                 "format": "CSV",
                 "rows": len(st.session_state["stops"]),
-                "imported_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+                "imported_at": timestamp_with_timezone(),
             }
         ]
 
@@ -1050,7 +1062,7 @@ def render_data_page() -> None:
                             "source": uploaded.name,
                             "format": "CSV",
                             "rows": len(prepared),
-                            "imported_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+                            "imported_at": timestamp_with_timezone(),
                         }
                     )
                     st.success(f"Imported {len(prepared):,} mapped stops.")
@@ -1428,9 +1440,41 @@ def render_methodology_page() -> None:
         methodology["shade_method"] = st.text_area("Shade assessment method", methodology["shade_method"], height=130)
         methodology["data_sources"] = st.text_area("Data sources", methodology["data_sources"], height=135)
         methodology["contributors"] = st.text_area("Contributors", methodology["contributors"], height=85)
-        methodology["citation"] = st.text_area("Citation", methodology["citation"], height=85)
         methodology["limitations"] = st.text_area("Known limitations", methodology["limitations"], height=110)
+        methodology.setdefault("bibliography", DEFAULT_METHODOLOGY["bibliography"])
+        methodology["bibliography"] = st.text_area(
+            "Bibliography",
+            methodology["bibliography"],
+            height=170,
+            help=(
+                "Use the same grouped APA format as citations: unindented lines are group labels, "
+                "and indented lines render as hanging-indent bibliography entries."
+            ),
+            placeholder=(
+                "Works referenced:\n"
+                "    Author, A. A., & Author, B. B. (Year). Title of article. Title of Journal, volume(issue), page range. https://doi.org/xxxxx\n"
+                "    Author or Organization. (Year). Title of report. Publisher. URL\n\n"
+                "Data and software:\n"
+                "    Author or Organization. (Year). Title of software or dataset (Version number) [Software or data set]. Publisher. URL"
+            ),
+        )
         methodology["release_history"] = st.text_area("Release history", methodology["release_history"], height=95)
+        methodology["citation"] = st.text_area(
+            "Citation",
+            methodology["citation"],
+            height=150,
+            help=(
+                "Use unindented lines as citation group labels. Put each citation on an indented line "
+                "under its group to render a hanging indent on the public methodology page. The examples use APA style."
+            ),
+            placeholder=(
+                "Transit data:\n"
+                "    Author or Organization. (Year). Title of dataset (Version number) [Data set]. Publisher. URL\n\n"
+                "Methods and references:\n"
+                "    Author, A. A., & Author, B. B. (Year). Title of article. Title of Journal, volume(issue), page range. https://doi.org/xxxxx\n"
+                "    Author or Organization. (Year). Title of report. Publisher. URL"
+            ),
+        )
     with preview:
         render_builder_about_page(
             project=st.session_state["project"],

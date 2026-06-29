@@ -1,7 +1,49 @@
+import html
 from typing import Any
 
 import pandas as pd
 import streamlit as st
+
+
+def render_grouped_citations(citation_text: str) -> None:
+    lines = str(citation_text or "").splitlines()
+    if not any(line.strip() for line in lines):
+        return
+
+    st.markdown(
+        """
+        <style>
+        .citation-group {font-weight: 700; margin: 0.85rem 0 0.25rem;}
+        .citation-entry {
+            margin: 0.25rem 0 0.45rem 1.5rem;
+            padding-left: 1.5rem;
+            text-indent: -1.5rem;
+            line-height: 1.45;
+        }
+        .citation-gap {height: 0.35rem;}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    html_parts = []
+    for index, line in enumerate(lines):
+        if not line.strip():
+            html_parts.append("<div class='citation-gap'></div>")
+            continue
+        stripped = line.strip()
+        is_indented = line.startswith((" ", "\t")) or stripped.startswith(("- ", "* "))
+        next_content = next((candidate for candidate in lines[index + 1 :] if candidate.strip()), "")
+        next_is_indented = next_content.startswith((" ", "\t")) or next_content.strip().startswith(("- ", "* "))
+        if is_indented:
+            text = stripped[2:].strip() if stripped.startswith(("- ", "* ")) else stripped
+            html_parts.append(f"<div class='citation-entry'>{html.escape(text)}</div>")
+        elif stripped.endswith(":") or next_is_indented:
+            html_parts.append(f"<div class='citation-group'>{html.escape(stripped)}</div>")
+        else:
+            html_parts.append(f"<div class='citation-entry'>{html.escape(stripped)}</div>")
+
+    st.markdown("".join(html_parts), unsafe_allow_html=True)
 
 
 def render_builder_about_page(
@@ -50,11 +92,13 @@ def render_builder_about_page(
     st.markdown("## Contributors")
     st.markdown(methodology.get("contributors", ""))
 
-    st.markdown("## Citation")
-    st.markdown(methodology.get("citation", ""))
-
     st.markdown("## Known Limitations")
     st.markdown(methodology.get("limitations", ""))
+
+    bibliography = methodology.get("bibliography", "")
+    if str(bibliography or "").strip():
+        st.markdown("## Bibliography")
+        render_grouped_citations(bibliography)
 
     st.markdown("## Release History")
     st.markdown(methodology.get("release_history", ""))
@@ -62,3 +106,6 @@ def render_builder_about_page(
     if import_log:
         st.markdown("## Import Log")
         st.dataframe(pd.DataFrame(import_log), use_container_width=True, hide_index=True)
+
+    st.markdown("## Citation")
+    render_grouped_citations(methodology.get("citation", ""))
