@@ -18,7 +18,7 @@ The repository still includes the Tampa/HART stop and shade files as a starter p
 ## App Pages
 
 - `Data`: project setup, upload/import workflow, CSV field mapping, shade taxonomy, source metadata, and dataset health checks.
-- `Visuals`: map coloring, overlay selection, dashboard metrics, priority formula controls, and map preview.
+- `Visuals`: map color fields and palettes, marker shape/size/outline controls, base map style, overlay selection, dashboard metrics, priority formula controls, and map preview.
 - `Methodology`: editable public rationale/about page with live preview.
 - `Preview`: the generated public-facing Streamlit app experience for the current project configuration.
 

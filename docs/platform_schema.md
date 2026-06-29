@@ -66,6 +66,10 @@ The default reusable taxonomy is:
 
 Project teams can edit names, descriptions, colors, and sort order in the `Data` page.
 
+Visualization settings store the selected map color field, editable palettes for shade categories,
+review statuses, priority-score gradients, and other categorical columns, plus marker shape, size,
+opacity, outline, base map style, overlay selections, dashboard cards, and priority weights.
+
 ## Preview Exports
 
 The `Preview` page currently exports:

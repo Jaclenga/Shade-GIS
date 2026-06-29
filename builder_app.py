@@ -1,6 +1,7 @@
 import io
 import json
 import time
+import urllib.parse
 import zipfile
 from pathlib import Path
 from typing import Any
@@ -101,6 +102,18 @@ DEFAULT_METHODOLOGY = {
 
 DEFAULT_VISUALIZATION = {
     "color_by": "Shade category",
+    "marker_shape": "Circle",
+    "marker_size": 18,
+    "marker_opacity": 0.82,
+    "marker_stroke_color": "#141414",
+    "marker_stroke_width": 1,
+    "map_style": "Light",
+    "priority_colors": {
+        "low": "#34d399",
+        "mid": "#facc15",
+        "high": "#ef4444",
+    },
+    "field_color_maps": {},
     "metric_cards": ["Shade distribution", "Review status", "Priority stops"],
     "overlays": ["Heat vulnerability", "Tree canopy"],
     "priority_weights": {
@@ -122,6 +135,51 @@ REVIEW_STATUS_COLORS = {
     "Disputed": [239, 68, 68],
     "Archived": [107, 114, 128],
 }
+
+MARKER_SHAPES = ["Circle", "Pin", "Square", "Diamond", "Triangle"]
+
+MAP_STYLES = {
+    "Light": pdk.map_styles.CARTO_LIGHT,
+    "Dark": pdk.map_styles.CARTO_DARK,
+    "Road": pdk.map_styles.CARTO_ROAD,
+    "Light, no labels": pdk.map_styles.CARTO_LIGHT_NO_LABELS,
+    "Dark, no labels": pdk.map_styles.CARTO_DARK_NO_LABELS,
+}
+
+COLOR_MODE_FIELDS = {
+    "Shade category": "shading",
+    "Review status": "review_status",
+    "Priority score": "priority_score",
+}
+
+FIELD_LABELS = {
+    "agency": "Agency",
+    "routes": "Routes",
+    "municipality": "Municipality",
+    "shade_coverage": "Shade coverage",
+    "shade_sources": "Shade sources",
+    "confidence": "Confidence",
+    "heat_vulnerability_label": "Heat vulnerability label",
+}
+
+COLOR_PALETTE = [
+    "#2563eb",
+    "#16a34a",
+    "#dc2626",
+    "#9333ea",
+    "#0891b2",
+    "#ea580c",
+    "#4f46e5",
+    "#65a30d",
+    "#db2777",
+    "#0f766e",
+    "#7c3aed",
+    "#ca8a04",
+    "#475569",
+    "#be123c",
+    "#0284c7",
+    "#15803d",
+]
 
 SHADE_ALIASES = {
     "Constructed Shade": "Intentional Built Shade",
@@ -155,6 +213,24 @@ def hex_to_rgb(value: str) -> list[int]:
         return [int(text[index : index + 2], 16) for index in (0, 2, 4)]
     except ValueError:
         return [128, 128, 128]
+
+
+def rgb_to_hex(value: list[int]) -> str:
+    rgb = [max(0, min(255, int(channel))) for channel in value[:3]]
+    return "#{:02x}{:02x}{:02x}".format(*rgb)
+
+
+def normalize_hex_color(value: Any, fallback: str = "#808080") -> str:
+    text = str(value or "").strip()
+    if not text.startswith("#"):
+        text = f"#{text}"
+    if len(text) != 7:
+        return fallback
+    try:
+        int(text[1:], 16)
+    except ValueError:
+        return fallback
+    return text.lower()
 
 
 def normalize_category(value: Any, taxonomy: list[dict[str, Any]]) -> str:
@@ -313,11 +389,26 @@ def load_seed_dataset(taxonomy: list[dict[str, Any]], project: dict[str, Any]) -
     return prepare_stop_dataset(stops, project, taxonomy)
 
 
+def ensure_visualization_defaults() -> None:
+    visualization = st.session_state["visualization"]
+    for key, value in DEFAULT_VISUALIZATION.items():
+        visualization.setdefault(key, json.loads(json.dumps(value)))
+
+    review_colors = visualization.setdefault("review_status_colors", {})
+    for status, color in REVIEW_STATUS_COLORS.items():
+        review_colors.setdefault(status, rgb_to_hex(color))
+
+    priority_colors = visualization.setdefault("priority_colors", {})
+    for key, color in DEFAULT_VISUALIZATION["priority_colors"].items():
+        priority_colors.setdefault(key, color)
+
+
 def ensure_state() -> None:
     st.session_state.setdefault("project", DEFAULT_PROJECT.copy())
     st.session_state.setdefault("taxonomy", [item.copy() for item in DEFAULT_TAXONOMY])
     st.session_state.setdefault("methodology", DEFAULT_METHODOLOGY.copy())
     st.session_state.setdefault("visualization", json.loads(json.dumps(DEFAULT_VISUALIZATION)))
+    ensure_visualization_defaults()
     st.session_state.setdefault("import_log", [])
     if "stops" not in st.session_state:
         st.session_state["stops"] = load_seed_dataset(st.session_state["taxonomy"], st.session_state["project"])
@@ -339,18 +430,119 @@ def get_taxonomy_color_map(taxonomy: list[dict[str, Any]]) -> dict[str, list[int
     }
 
 
-def color_dataset(df: pd.DataFrame, taxonomy: list[dict[str, Any]], color_by: str) -> pd.DataFrame:
-    colored = df.copy()
-    if color_by == "Review status":
-        colored["fill_color"] = colored["review_status"].map(REVIEW_STATUS_COLORS)
-    elif color_by == "Priority score":
-        score = pd.to_numeric(colored["priority_score"], errors="coerce").fillna(0).clip(0, 100)
-        colored["fill_color"] = score.apply(lambda value: [int(120 + value), int(210 - value), 80])
+def get_color_options(df: pd.DataFrame) -> dict[str, str]:
+    options = COLOR_MODE_FIELDS.copy()
+    excluded = {"stop_id", "stop_name", "stop_lat", "stop_lon", "priority_score", "shading", "review_status"}
+    for column in df.columns:
+        if column in excluded:
+            continue
+        series = df[column].dropna().astype(str).str.strip()
+        unique_count = series[series != ""].nunique()
+        if 1 < unique_count <= len(COLOR_PALETTE):
+            options[f"Column: {FIELD_LABELS.get(column, column)}"] = column
+    return options
+
+
+def field_values_for_colors(df: pd.DataFrame, field: str) -> list[str]:
+    if field not in df.columns:
+        return []
+    values = df[field].fillna("Unknown").astype(str).str.strip()
+    values = values.where(values != "", "Unknown")
+    return sorted(values.unique().tolist())[: len(COLOR_PALETTE)]
+
+
+def ensure_field_color_map(visualization: dict[str, Any], df: pd.DataFrame, field: str) -> dict[str, str]:
+    field_maps = visualization.setdefault("field_color_maps", {})
+    color_map = field_maps.setdefault(field, {})
+    for index, value in enumerate(field_values_for_colors(df, field)):
+        color_map.setdefault(value, COLOR_PALETTE[index % len(COLOR_PALETTE)])
+    return color_map
+
+
+def color_for_priority(value: Any, visualization: dict[str, Any]) -> list[int]:
+    numeric = pd.to_numeric(pd.Series([value]), errors="coerce").iloc[0]
+    score = 0.0 if pd.isna(numeric) else max(0.0, min(100.0, float(numeric)))
+    colors = visualization.get("priority_colors", DEFAULT_VISUALIZATION["priority_colors"])
+    low = hex_to_rgb(colors.get("low", DEFAULT_VISUALIZATION["priority_colors"]["low"]))
+    mid = hex_to_rgb(colors.get("mid", DEFAULT_VISUALIZATION["priority_colors"]["mid"]))
+    high = hex_to_rgb(colors.get("high", DEFAULT_VISUALIZATION["priority_colors"]["high"]))
+    if score <= 50:
+        start, end, fraction = low, mid, score / 50
     else:
+        start, end, fraction = mid, high, (score - 50) / 50
+    return [int(start[channel] + (end[channel] - start[channel]) * fraction) for channel in range(3)]
+
+
+def color_dataset(df: pd.DataFrame, taxonomy: list[dict[str, Any]], visualization: dict[str, Any]) -> pd.DataFrame:
+    colored = df.copy()
+    color_options = get_color_options(colored)
+    color_by = visualization.get("color_by", "Shade category")
+    field = color_options.get(color_by, "shading")
+    if field == "review_status":
+        review_colors = visualization.get("review_status_colors", {})
+        colored["fill_color"] = colored["review_status"].map(
+            {status: hex_to_rgb(color) for status, color in review_colors.items()}
+        )
+    elif field == "priority_score":
+        colored["fill_color"] = colored["priority_score"].apply(lambda value: color_for_priority(value, visualization))
+    elif field == "shading":
         color_map = get_taxonomy_color_map(taxonomy)
         colored["fill_color"] = colored["shading"].map(color_map)
+    else:
+        color_map = ensure_field_color_map(visualization, colored, field)
+        values = colored[field].fillna("Unknown").astype(str).str.strip()
+        values = values.where(values != "", "Unknown")
+        colored["fill_color"] = values.map({value: hex_to_rgb(color) for value, color in color_map.items()})
     colored["fill_color"] = colored["fill_color"].apply(lambda value: value if isinstance(value, list) else [128, 128, 128])
     return colored
+
+
+def marker_icon_svg(
+    shape: str,
+    fill_color: list[int],
+    stroke_color: list[int],
+    opacity: float,
+    stroke_width: int,
+) -> str:
+    fill = f"rgb({fill_color[0]},{fill_color[1]},{fill_color[2]})"
+    stroke = f"rgb({stroke_color[0]},{stroke_color[1]},{stroke_color[2]})"
+    stroke_width = max(0, int(stroke_width))
+    base_attrs = f'fill="{fill}" fill-opacity="{opacity:.2f}" stroke="{stroke}" stroke-width="{stroke_width}"'
+    if shape == "Pin":
+        body = (
+            f'<path {base_attrs} d="M32 4C20.4 4 11 13.4 11 25c0 15.2 21 35 21 35s21-19.8 21-35C53 13.4 43.6 4 32 4z"/>'
+            f'<circle cx="32" cy="25" r="8" fill="#ffffff" fill-opacity="0.8" stroke="none"/>'
+        )
+    elif shape == "Square":
+        body = f'<rect {base_attrs} x="12" y="12" width="40" height="40" rx="4"/>'
+    elif shape == "Diamond":
+        body = f'<polygon {base_attrs} points="32,6 58,32 32,58 6,32"/>'
+    elif shape == "Triangle":
+        body = f'<polygon {base_attrs} points="32,7 58,55 6,55"/>'
+    else:
+        body = f'<circle {base_attrs} cx="32" cy="32" r="24"/>'
+    svg = f'<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">{body}</svg>'
+    return f"data:image/svg+xml;charset=utf-8,{urllib.parse.quote(svg)}"
+
+
+def add_marker_icons(map_df: pd.DataFrame, visualization: dict[str, Any]) -> pd.DataFrame:
+    shaped = map_df.copy()
+    shape = visualization.get("marker_shape", "Circle")
+    if shape not in MARKER_SHAPES:
+        shape = "Circle"
+    opacity = max(0.1, min(1.0, float(visualization.get("marker_opacity", 0.82))))
+    stroke_color = hex_to_rgb(visualization.get("marker_stroke_color", "#141414"))
+    stroke_width = int(visualization.get("marker_stroke_width", 1))
+    shaped["icon_data"] = shaped["fill_color"].apply(
+        lambda color: {
+            "url": marker_icon_svg(shape, color, stroke_color, opacity, stroke_width),
+            "width": 64,
+            "height": 64,
+            "anchorY": 64 if shape == "Pin" else 32,
+        }
+    )
+    shaped["marker_size"] = int(visualization.get("marker_size", 18))
+    return shaped
 
 
 def calculate_view_state(df: pd.DataFrame) -> pdk.ViewState:
@@ -369,28 +561,44 @@ def calculate_view_state(df: pd.DataFrame) -> pdk.ViewState:
 
 
 def build_deck_chart(df: pd.DataFrame, taxonomy: list[dict[str, Any]], visualization: dict[str, Any]) -> pdk.Deck:
-    color_by = visualization.get("color_by", "Shade category")
-    map_df = color_dataset(df, taxonomy, color_by)
-    layer = pdk.Layer(
-        "ScatterplotLayer",
-        data=map_df,
-        id="stops_layer",
-        get_position="[stop_lon, stop_lat]",
-        get_fill_color="fill_color",
-        get_radius=7,
-        radius_units="pixels",
-        radius_min_pixels=4,
-        radius_max_pixels=11,
-        opacity=0.82,
-        stroked=True,
-        get_line_color=[20, 20, 20, 160],
-        line_width_min_pixels=1,
-        pickable=True,
-        auto_highlight=True,
-    )
+    map_df = color_dataset(df, taxonomy, visualization)
+    if visualization.get("marker_shape", "Circle") == "Circle":
+        layer = pdk.Layer(
+            "ScatterplotLayer",
+            data=map_df,
+            id="stops_layer",
+            get_position="[stop_lon, stop_lat]",
+            get_fill_color="fill_color",
+            get_radius=7,
+            radius_units="pixels",
+            radius_min_pixels=4,
+            radius_max_pixels=11,
+            opacity=0.82,
+            stroked=True,
+            get_line_color=[20, 20, 20, 160],
+            line_width_min_pixels=1,
+            pickable=True,
+            auto_highlight=True,
+        )
+    else:
+        map_df = add_marker_icons(map_df, visualization)
+        layer = pdk.Layer(
+            "IconLayer",
+            data=map_df,
+            id="stops_layer",
+            get_icon="icon_data",
+            get_position="[stop_lon, stop_lat]",
+            get_size="marker_size",
+            size_units="pixels",
+            size_min_pixels=8,
+            size_max_pixels=48,
+            pickable=True,
+            auto_highlight=True,
+        )
     return pdk.Deck(
         initial_view_state=calculate_view_state(map_df),
         layers=[layer],
+        map_style=MAP_STYLES.get(visualization.get("map_style", "Light"), pdk.map_styles.CARTO_LIGHT),
         tooltip={
             "text": (
                 "{stop_name} ({stop_id})\n"
@@ -573,17 +781,137 @@ def render_data_page() -> None:
     st.dataframe(st.session_state["stops"].head(50), use_container_width=True, hide_index=True)
 
 
+def render_palette_controls(
+    visualization: dict[str, Any],
+    stops: pd.DataFrame,
+    taxonomy: list[dict[str, Any]],
+    color_options: dict[str, str],
+) -> None:
+    field = color_options.get(visualization.get("color_by", "Shade category"), "shading")
+    st.markdown("#### Color Palette")
+    if field == "shading":
+        grid = st.columns(2)
+        for index, item in enumerate(taxonomy):
+            name = str(item.get("name", "")).strip() or f"Category {index + 1}"
+            with grid[index % 2]:
+                item["color"] = st.color_picker(
+                    name,
+                    normalize_hex_color(item.get("color", "#808080")),
+                    key=f"shade_color_{index}",
+                )
+        return
+
+    if field == "review_status":
+        review_colors = visualization.setdefault("review_status_colors", {})
+        grid = st.columns(2)
+        for index, status in enumerate(REVIEW_STATUS_COLORS):
+            review_colors.setdefault(status, rgb_to_hex(REVIEW_STATUS_COLORS[status]))
+            with grid[index % 2]:
+                review_colors[status] = st.color_picker(
+                    status,
+                    normalize_hex_color(review_colors[status]),
+                    key=f"review_color_{status}",
+                )
+        return
+
+    if field == "priority_score":
+        priority_colors = visualization.setdefault("priority_colors", DEFAULT_VISUALIZATION["priority_colors"].copy())
+        grid = st.columns(3)
+        with grid[0]:
+            priority_colors["low"] = st.color_picker(
+                "Low score",
+                normalize_hex_color(priority_colors.get("low"), DEFAULT_VISUALIZATION["priority_colors"]["low"]),
+                key="priority_color_low",
+            )
+        with grid[1]:
+            priority_colors["mid"] = st.color_picker(
+                "Mid score",
+                normalize_hex_color(priority_colors.get("mid"), DEFAULT_VISUALIZATION["priority_colors"]["mid"]),
+                key="priority_color_mid",
+            )
+        with grid[2]:
+            priority_colors["high"] = st.color_picker(
+                "High score",
+                normalize_hex_color(priority_colors.get("high"), DEFAULT_VISUALIZATION["priority_colors"]["high"]),
+                key="priority_color_high",
+            )
+        return
+
+    color_map = ensure_field_color_map(visualization, stops, field)
+    values = field_values_for_colors(stops, field)
+    if not values:
+        st.caption("No values are available for the selected column.")
+        return
+    total_unique = stops[field].fillna("Unknown").astype(str).str.strip().replace("", "Unknown").nunique()
+    if total_unique > len(values):
+        st.caption(f"Showing colors for the first {len(values)} values in this column.")
+    grid = st.columns(2)
+    for index, value in enumerate(values):
+        with grid[index % 2]:
+            color_map[value] = st.color_picker(
+                value[:80],
+                normalize_hex_color(color_map.get(value, COLOR_PALETTE[index % len(COLOR_PALETTE)])),
+                key=f"field_color_{field}_{index}",
+            )
+
+
 def render_visuals_page() -> None:
     st.title("Metrics And Visualizations")
     visualization = st.session_state["visualization"]
     stops = st.session_state["stops"]
+    taxonomy = st.session_state["taxonomy"]
 
     left, right = st.columns([0.9, 1.1])
     with left:
+        color_options = get_color_options(stops)
+        if visualization.get("color_by") not in color_options:
+            visualization["color_by"] = "Shade category"
+        color_labels = list(color_options)
         visualization["color_by"] = st.selectbox(
-            "Map color",
-            ["Shade category", "Review status", "Priority score"],
-            index=["Shade category", "Review status", "Priority score"].index(visualization["color_by"]),
+            "Color stops by",
+            color_labels,
+            index=color_labels.index(visualization["color_by"]),
+        )
+        marker_shape = visualization.get("marker_shape", "Circle")
+        if marker_shape not in MARKER_SHAPES:
+            marker_shape = "Circle"
+        visualization["marker_shape"] = st.selectbox(
+            "Marker shape",
+            MARKER_SHAPES,
+            index=MARKER_SHAPES.index(marker_shape),
+        )
+        visualization["marker_size"] = st.slider(
+            "Marker size",
+            8,
+            48,
+            int(visualization.get("marker_size", 18)),
+            1,
+        )
+        visualization["marker_opacity"] = st.slider(
+            "Marker opacity",
+            0.1,
+            1.0,
+            float(visualization.get("marker_opacity", 0.82)),
+            0.05,
+        )
+        visualization["marker_stroke_color"] = st.color_picker(
+            "Marker outline",
+            normalize_hex_color(visualization.get("marker_stroke_color", "#141414"), "#141414"),
+        )
+        visualization["marker_stroke_width"] = st.slider(
+            "Outline width",
+            0,
+            6,
+            int(visualization.get("marker_stroke_width", 1)),
+            1,
+        )
+        map_style = visualization.get("map_style", "Light")
+        if map_style not in MAP_STYLES:
+            map_style = "Light"
+        visualization["map_style"] = st.selectbox(
+            "Base map style",
+            list(MAP_STYLES),
+            index=list(MAP_STYLES).index(map_style),
         )
         visualization["overlays"] = st.multiselect(
             "Context layers to include",
@@ -620,6 +948,8 @@ def render_visuals_page() -> None:
         visualization["show_downloads"] = st.checkbox("Show public downloads", value=visualization["show_downloads"])
 
     with right:
+        render_palette_controls(visualization, stops, taxonomy, color_options)
+        st.divider()
         st.subheader("Priority Formula")
         weights = visualization["priority_weights"]
         weights["heat_exposure"] = st.slider("Heat exposure weight", 0.0, 1.0, float(weights["heat_exposure"]), 0.05)
