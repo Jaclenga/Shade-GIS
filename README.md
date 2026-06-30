@@ -10,6 +10,7 @@ The repository still includes the Tampa/HART stop and shade files as a starter p
 - Provides CSV field mapping for required stop fields: `stop_id`, `stop_name`, `stop_lat`, and `stop_lon`.
 - Extracts route labels from GTFS uploads when `stop_times.txt`, `trips.txt`, and `routes.txt` are present.
 - Tracks project metadata, source name, license, source URL, dataset version, methodology version, owners, and visibility.
+- Persists multiple builder projects in a local SQLite platform database by default, with a Postgres-ready schema for shared deployments.
 - Lets project teams edit the shade taxonomy, including category names, definitions, display colors, and sort order.
 - Lets project teams choose map coloring, dataset-backed contextual overlays, up to 10 custom X/Y charts, dashboard summaries, public table and map-hover columns, and priority-score weights.
 - Provides an editable rationale/about page for methodology, data sources, contributors, grouped hanging-indent citations and bibliography, limitations, and release history.
@@ -40,9 +41,9 @@ Optional fields recognized by the builder include `agency`, `routes`, `municipal
 
 ## Platform Direction
 
-The current app is an MVP for the reusable platform described in the project issue. It establishes the project builder workflow and public preview surface. Future work can add persistent multi-project storage, image uploads, raw label history, reviewer roles, agreement metrics, richer GIS overlays, and API-backed publishing.
+The current app is an MVP for the reusable platform described in the project issue. It establishes the project builder workflow, durable multi-project storage, public preview surface, and schema foundations for imagery, raw labels, review history, releases, richer GIS overlays, and API-backed publishing.
 
-See `docs/platform_schema.md` for the current project, stop, taxonomy, export, and future-entity schema notes. The repository also includes `CITATION.cff` as a starter citation file for publication workflows.
+See `docs/platform_schema.md` for the current project, stop, taxonomy, image, label, review, release, and export schema notes. The repository also includes `CITATION.cff` as a starter citation file for publication workflows.
 
 ## Bundled Tampa Starter Study
 
@@ -158,13 +159,13 @@ The builder itself is ready for a basic Streamlit deployment using:
 - main file: `app.py`
 - Python dependencies: `requirements.txt`
 
-The current builder stores edits in Streamlit session state and exposes CSV, GeoJSON, and configuration downloads from the `Preview` page. For shared production deployments of the builder, add persistent project storage before treating edits as durable.
+The builder persists edits in a local SQLite platform database and exposes CSV, GeoJSON, and configuration downloads from the `Preview` page. Streamlit session state is only the live editing cache for the active browser session.
 
 ```bash
 streamlit run app.py
 ```
 
-Without persistent storage, project edits made in the browser reset when the app session restarts.
+On Windows, the default database is created at `%LOCALAPPDATA%\Shade-GIS\shade_study_builder.sqlite3` to avoid OneDrive file-locking issues. On other systems, it falls back to `platform_data/shade_study_builder.sqlite3`. Set `SHADE_GIS_DB_PATH` to use a different writable SQLite database file.
 
 To publish a rendered study app, use the builder's `Deploy` page. It creates a ZIP bundle with:
 
@@ -183,7 +184,7 @@ The generated repository can then be connected to Streamlit Community Cloud with
 
 ## Optional Postgres setup
 
-Postgres is only used by the database initialization script; the Streamlit app currently uses CSV files at runtime.
+The Streamlit builder uses SQLite by default. `sql/schema.sql` mirrors the richer platform model for shared Postgres deployments with projects, stops, images, labels, releases, review history, taxonomy, settings, and import logs.
 
 1. Start Postgres:
 
@@ -197,7 +198,7 @@ docker-compose up -d
 pip install -r requirements-db.txt
 ```
 
-3. Load the stops table:
+3. Initialize the schema and seed project stops:
 
 ```bash
 python scripts/init_db.py

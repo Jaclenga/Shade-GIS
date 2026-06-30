@@ -2,3 +2,5 @@ users.csv
 shading_votes.csv
 __pycache__/
 *.pyc
+platform_data/
+*.sqlite3

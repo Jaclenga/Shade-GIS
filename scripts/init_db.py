@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Initialize Postgres database and populate `stops` table from local `stops.txt`.
+"""Initialize Postgres database and populate a seed Shade-GIS project.
 
 Usage:
   python scripts/init_db.py
@@ -7,6 +7,7 @@ Usage:
 It reads DB connection info from environment variables with sensible defaults.
 """
 import os
+import json
 import psycopg2
 from psycopg2.extras import execute_values
 from pathlib import Path
@@ -22,6 +23,7 @@ HERE = Path(__file__).parent.parent
 STOPS_FILE = HERE / "stops.txt"
 
 SCHEMA = "public"
+PROJECT_ID = os.environ.get("SHADE_GIS_PROJECT_ID", "seed-tampa-shade-study")
 
 
 def connect():
@@ -33,7 +35,17 @@ def load_stops_csv(path: Path):
     with path.open("r", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for r in reader:
-            rows.append((r["stop_id"], r.get("stop_code"), r.get("stop_name"), float(r.get("stop_lat")), float(r.get("stop_lon"))))
+            rows.append(
+                (
+                    PROJECT_ID,
+                    r["stop_id"],
+                    r.get("stop_name") or "Unnamed stop",
+                    float(r.get("stop_lat")),
+                    float(r.get("stop_lon")),
+                    "Hillsborough Area Regional Transit (HART)",
+                    json.dumps({"stop_code": r.get("stop_code")}),
+                )
+            )
     return rows
 
 
@@ -52,14 +64,59 @@ def main():
             # ensure schema (tables) exist; schema.sql is executed by docker init, but double-check
             cur.execute(open(HERE / "sql" / "schema.sql", "r").read())
 
-            # upsert stops
+            cur.execute(
+                """
+                INSERT INTO projects (
+                    id, name, agency, region, description, owners, visibility,
+                    dataset_version, methodology_version, source_name, source_license, source_url
+                )
+                VALUES (
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                )
+                ON CONFLICT (id) DO UPDATE SET
+                    name = EXCLUDED.name,
+                    agency = EXCLUDED.agency,
+                    region = EXCLUDED.region,
+                    description = EXCLUDED.description,
+                    owners = EXCLUDED.owners,
+                    visibility = EXCLUDED.visibility,
+                    dataset_version = EXCLUDED.dataset_version,
+                    methodology_version = EXCLUDED.methodology_version,
+                    source_name = EXCLUDED.source_name,
+                    source_license = EXCLUDED.source_license,
+                    source_url = EXCLUDED.source_url,
+                    updated_at = now()
+                """,
+                (
+                    PROJECT_ID,
+                    "Tampa Bus Stop Shade Study",
+                    "Hillsborough Area Regional Transit (HART)",
+                    "Tampa, Florida",
+                    "Seed project for the reusable Shade-GIS platform.",
+                    "Open transit and climate research contributors",
+                    "Public",
+                    "0.1.0",
+                    "0.1.0",
+                    "HART GTFS feed",
+                    "Agency GTFS terms",
+                    "",
+                ),
+            )
+
+            # upsert seed stops into the project namespace
             sql = (
-                "INSERT INTO stops (stop_id, stop_code, stop_name, stop_lat, stop_lon) VALUES %s "
-                "ON CONFLICT (stop_id) DO UPDATE SET stop_code = EXCLUDED.stop_code, stop_name = EXCLUDED.stop_name, stop_lat = EXCLUDED.stop_lat, stop_lon = EXCLUDED.stop_lon"
+                "INSERT INTO stops (project_id, stop_id, stop_name, stop_lat, stop_lon, agency, extra_json) VALUES %s "
+                "ON CONFLICT (project_id, stop_id) DO UPDATE SET "
+                "stop_name = EXCLUDED.stop_name, "
+                "stop_lat = EXCLUDED.stop_lat, "
+                "stop_lon = EXCLUDED.stop_lon, "
+                "agency = EXCLUDED.agency, "
+                "extra_json = EXCLUDED.extra_json, "
+                "updated_at = now()"
             )
             execute_values(cur, sql, rows)
         conn.commit()
-    print(f"Inserted/updated {len(rows)} stops into {DB_NAME}.")
+    print(f"Inserted/updated {len(rows)} stops for project {PROJECT_ID} into {DB_NAME}.")
 
 
 if __name__ == '__main__':

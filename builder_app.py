@@ -12,6 +12,14 @@ import pydeck as pdk
 import streamlit as st
 
 from builder_about_page import render_builder_about_page
+from platform_store import (
+    create_project,
+    database_path,
+    init_database,
+    list_projects,
+    load_project_bundle,
+    save_project_bundle,
+)
 
 
 APP_DIR = Path(__file__).parent
@@ -495,6 +503,28 @@ def load_seed_dataset(taxonomy: list[dict[str, Any]], project: dict[str, Any]) -
     return prepare_stop_dataset(stops, project, taxonomy)
 
 
+def empty_stop_dataset() -> pd.DataFrame:
+    return pd.DataFrame(columns=REQUIRED_STOP_FIELDS + OPTIONAL_FIELDS + ["priority_score"])
+
+
+def with_default_project_values(project: dict[str, Any]) -> dict[str, Any]:
+    merged = DEFAULT_PROJECT.copy()
+    merged.update(project or {})
+    return merged
+
+
+def with_default_methodology_values(methodology: dict[str, Any]) -> dict[str, Any]:
+    merged = DEFAULT_METHODOLOGY.copy()
+    merged.update(methodology or {})
+    return merged
+
+
+def with_default_visualization_values(visualization: dict[str, Any]) -> dict[str, Any]:
+    merged = json.loads(json.dumps(DEFAULT_VISUALIZATION))
+    merged.update(visualization or {})
+    return merged
+
+
 def ensure_visualization_defaults() -> None:
     visualization = st.session_state["visualization"]
     if "custom_charts" not in visualization and isinstance(visualization.get("custom_chart"), dict):
@@ -511,23 +541,100 @@ def ensure_visualization_defaults() -> None:
         priority_colors.setdefault(key, color)
 
 
-def ensure_state() -> None:
-    st.session_state.setdefault("project", DEFAULT_PROJECT.copy())
-    st.session_state.setdefault("taxonomy", [item.copy() for item in DEFAULT_TAXONOMY])
-    st.session_state.setdefault("methodology", DEFAULT_METHODOLOGY.copy())
-    st.session_state.setdefault("visualization", json.loads(json.dumps(DEFAULT_VISUALIZATION)))
+def create_seed_project() -> str:
+    project = DEFAULT_PROJECT.copy()
+    taxonomy = [item.copy() for item in DEFAULT_TAXONOMY]
+    methodology = DEFAULT_METHODOLOGY.copy()
+    visualization = json.loads(json.dumps(DEFAULT_VISUALIZATION))
+    stops = load_seed_dataset(taxonomy, project)
+    import_log = [
+        {
+            "source": "Seed Tampa GTFS and shade CSV",
+            "format": "CSV",
+            "rows": len(stops),
+            "imported_at": timestamp_with_timezone(),
+        }
+    ]
+    return create_project(project, taxonomy, methodology, visualization, stops, import_log)
+
+
+def load_project_into_session(project_id: str) -> None:
+    bundle = load_project_bundle(project_id)
+    project = with_default_project_values(bundle["project"])
+    taxonomy = bundle["taxonomy"] or [item.copy() for item in DEFAULT_TAXONOMY]
+    methodology = with_default_methodology_values(bundle["methodology"])
+    visualization = with_default_visualization_values(bundle["visualization"])
+    stops = bundle["stops"]
+    if stops.empty:
+        stops = empty_stop_dataset()
+    else:
+        stops = prepare_stop_dataset(stops, project, taxonomy)
+
+    st.session_state["active_project_id"] = project_id
+    st.session_state["loaded_project_id"] = project_id
+    st.session_state["project"] = project
+    st.session_state["taxonomy"] = taxonomy
+    st.session_state["methodology"] = methodology
+    st.session_state["visualization"] = visualization
+    st.session_state["stops"] = stops
+    st.session_state["import_log"] = bundle["import_log"]
     ensure_visualization_defaults()
-    st.session_state.setdefault("import_log", [])
-    if "stops" not in st.session_state:
-        st.session_state["stops"] = load_seed_dataset(st.session_state["taxonomy"], st.session_state["project"])
-        st.session_state["import_log"] = [
-            {
-                "source": "Seed Tampa GTFS and shade CSV",
-                "format": "CSV",
-                "rows": len(st.session_state["stops"]),
-                "imported_at": timestamp_with_timezone(),
-            }
-        ]
+
+
+def save_active_project_to_store() -> None:
+    project_id = st.session_state.get("active_project_id")
+    if not project_id:
+        return
+    save_project_bundle(
+        project_id,
+        st.session_state.get("project", DEFAULT_PROJECT.copy()),
+        st.session_state.get("taxonomy", [item.copy() for item in DEFAULT_TAXONOMY]),
+        st.session_state.get("methodology", DEFAULT_METHODOLOGY.copy()),
+        st.session_state.get("visualization", json.loads(json.dumps(DEFAULT_VISUALIZATION))),
+        st.session_state.get("stops", empty_stop_dataset()),
+        st.session_state.get("import_log", []),
+    )
+
+
+def create_blank_project(name: str) -> str:
+    project = DEFAULT_PROJECT.copy()
+    project.update(
+        {
+            "name": name.strip() or "Untitled Shade Study",
+            "agency": "",
+            "region": "",
+            "description": "A reusable bus stop shade study project.",
+            "dataset_version": "draft",
+            "methodology_version": "draft",
+            "source_name": "",
+            "source_license": "",
+            "source_url": "",
+        }
+    )
+    return create_project(
+        project,
+        [item.copy() for item in DEFAULT_TAXONOMY],
+        DEFAULT_METHODOLOGY.copy(),
+        json.loads(json.dumps(DEFAULT_VISUALIZATION)),
+        empty_stop_dataset(),
+        [],
+    )
+
+
+def ensure_state() -> None:
+    init_database()
+    projects = list_projects()
+    if not projects:
+        create_seed_project()
+        projects = list_projects()
+
+    active_project_id = st.session_state.get("active_project_id") or projects[0]["id"]
+    known_ids = {project["id"] for project in projects}
+    if active_project_id not in known_ids:
+        active_project_id = projects[0]["id"]
+
+    if st.session_state.get("loaded_project_id") != active_project_id:
+        load_project_into_session(active_project_id)
 
 
 def get_taxonomy_color_map(taxonomy: list[dict[str, Any]]) -> dict[str, list[int]]:
@@ -1514,8 +1621,54 @@ def render_header() -> str:
     return st.session_state["page"]
 
 
+def render_project_storage_controls() -> None:
+    projects = list_projects()
+    project_ids = [project["id"] for project in projects]
+    active_project_id = st.session_state.get("active_project_id")
+    if active_project_id not in project_ids and project_ids:
+        active_project_id = project_ids[0]
+
+    def project_label(project_id: str) -> str:
+        project = next((item for item in projects if item["id"] == project_id), {})
+        name = project.get("name") or "Untitled Shade Study"
+        region = project.get("region") or "No region"
+        version = project.get("dataset_version") or "draft"
+        return f"{name} - {region} - v{version}"
+
+    st.subheader("Project Store")
+    cols = st.columns([1.5, 0.55, 0.95], vertical_alignment="bottom")
+    with cols[0]:
+        if project_ids:
+            selected_project_id = st.selectbox(
+                "Active saved project",
+                project_ids,
+                index=project_ids.index(active_project_id),
+                format_func=project_label,
+            )
+            if selected_project_id != active_project_id:
+                save_active_project_to_store()
+                load_project_into_session(selected_project_id)
+                st.rerun()
+    with cols[1]:
+        if st.button("Save now", use_container_width=True):
+            save_active_project_to_store()
+            st.success("Project saved.")
+    with cols[2]:
+        st.caption(f"Database: `{database_path()}`")
+
+    create_cols = st.columns([1.5, 0.65], vertical_alignment="bottom")
+    with create_cols[0]:
+        new_project_name = st.text_input("New blank project name", key="new_project_name")
+    with create_cols[1]:
+        if st.button("Create blank project", use_container_width=True):
+            new_project_id = create_blank_project(new_project_name)
+            load_project_into_session(new_project_id)
+            st.rerun()
+
+
 def render_data_page() -> None:
     st.title("Project Data")
+    render_project_storage_controls()
     project = st.session_state["project"]
     taxonomy = st.session_state["taxonomy"]
 
@@ -2180,3 +2333,4 @@ def main() -> None:
         render_deploy_page()
     else:
         render_data_page()
+    save_active_project_to_store()

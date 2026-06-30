@@ -1,6 +1,28 @@
 # Shade Study Platform Schema
 
-This document describes the MVP schema implemented by the Streamlit builder and the broader entities the repository is moving toward.
+This document describes the durable project schema implemented by the Streamlit builder and the Postgres-ready relational schema in `sql/schema.sql`.
+
+## Platform Backend
+
+The builder uses a local SQLite database by default. On Windows, the database is created under
+`%LOCALAPPDATA%\Shade-GIS\shade_study_builder.sqlite3` to avoid OneDrive file-locking issues; on
+other systems it falls back to `platform_data/shade_study_builder.sqlite3`. Set `SHADE_GIS_DB_PATH`
+to point the app at a different SQLite database file. The database stores multiple projects and
+treats Streamlit session state as a live editing cache, not the durable source of record.
+
+The canonical relational shape is:
+
+| Entity | Purpose |
+| --- | --- |
+| `projects` | One row per shade study, including publication metadata and source metadata. |
+| `project_settings` | JSON methodology and visualization settings for each project. |
+| `shade_taxonomy` | Editable shade category names, definitions, colors, and sort order. |
+| `stops` | Per-project stop records, priority scores, review fields, and extra imported columns. |
+| `images` | Uploaded or referenced imagery associated with projects and stops. |
+| `shade_labels` | Raw expert, crowd, imported, or model-assisted label submissions. |
+| `review_history` | Status transitions, reviewer actions, notes, and audit metadata. |
+| `releases` | Published or draft dataset/app release records and artifact manifests. |
+| `import_logs` | Source, format, row count, timestamp, and import metadata. |
 
 ## Project
 
@@ -85,7 +107,7 @@ left out.
 
 ## Preview Exports
 
-The `Preview` page currently exports:
+The `Preview` page exports:
 
 - Stops CSV.
 - Stops GeoJSON.
@@ -103,11 +125,8 @@ Import log `imported_at` values are stored as timezone-aware local timestamps wi
 The public preview also includes a user-facing toggle to show or hide stops whose shade label is
 still `Needs Review` without changing the exported dataset.
 
-## Future Entities
+## Review And Release Entities
 
-The issue roadmap points to these additional entities:
-
-- `Image`: uploaded field photos, Street View references, Mapillary images, or satellite screenshots.
-- `ShadeLabel`: every expert, crowd, imported, or model-assisted label submission.
-- `PriorityScore`: score, component values, and formula version.
-- `Release`: dataset version, methodology version, taxonomy version, import version, release date, source revisions, and download artifacts.
+`images`, `shade_labels`, `review_history`, and `releases` are part of the durable schema even when
+the current Streamlit screens do not expose every field yet. This keeps image evidence, raw labels,
+review audit trails, and release metadata from being collapsed into a single exported CSV.
