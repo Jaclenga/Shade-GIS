@@ -1,5 +1,6 @@
 import io
 import json
+import math
 import re
 import urllib.error
 import urllib.parse
@@ -152,7 +153,7 @@ DEFAULT_VISUALIZATION = {
         "high": "#ef4444",
     },
     "field_color_maps": {},
-    "metric_cards": ["Shade distribution", "Review status", "Priority stops"],
+    "metric_cards": ["Shade distribution", "Review status", "Agreement metrics", "Priority stops"],
     "overlays": [],
     "priority_weights": {
         "ridership": 0.5,
@@ -229,7 +230,7 @@ METRIC_REQUIREMENTS = {
     "Shade distribution": ["shading"],
     "Stops without shade": ["shading"],
     "Review status": ["review_status"],
-    "Agreement metrics": ["confidence"],
+    "Agreement metrics": [],
     "Shade by route": ["routes", "shading"],
     "Shade by neighborhood": ["municipality", "shading"],
     "Shade vs heat vulnerability": ["heat_vulnerability_index", "shading"],
@@ -864,6 +865,9 @@ def ensure_visualization_defaults() -> None:
         visualization["custom_charts"] = [visualization["custom_chart"]]
     for key, value in DEFAULT_VISUALIZATION.items():
         visualization.setdefault(key, json.loads(json.dumps(value)))
+    metric_cards = visualization.setdefault("metric_cards", [])
+    if "Agreement metrics" not in metric_cards:
+        metric_cards.append("Agreement metrics")
 
     review_colors = visualization.setdefault("review_status_colors", {})
     for status, color in REVIEW_STATUS_COLORS.items():
@@ -1425,6 +1429,7 @@ def github_new_repo_url(project: dict[str, Any], repo_name: str) -> str:
 def published_app_source() -> str:
     return r'''import base64
 import json
+import math
 from pathlib import Path
 from typing import Any
 
@@ -1436,6 +1441,7 @@ import streamlit as st
 APP_DIR = Path(__file__).parent
 CONFIG_PATH = APP_DIR / "shade_study_config.json"
 DATA_PATH = APP_DIR / "shade_study_stops.csv"
+RAW_LABELS_PATH = APP_DIR / "shade_study_raw_labels.csv"
 RECORD_COUNT_FIELD = "Record count"
 
 MAP_STYLES = {
@@ -1459,13 +1465,14 @@ DEFAULT_PALETTE = [
 ]
 
 
-def load_study() -> tuple[dict[str, Any], pd.DataFrame]:
+def load_study() -> tuple[dict[str, Any], pd.DataFrame, pd.DataFrame]:
     config = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
     stops = pd.read_csv(DATA_PATH)
+    raw_labels = pd.read_csv(RAW_LABELS_PATH) if RAW_LABELS_PATH.exists() else pd.DataFrame()
     stops["priority_score"] = calculate_priority_scores(
         stops, config.get("visualization", {}).get("priority_weights", {})
     )
-    return config, stops
+    return config, stops, raw_labels
 
 
 def normalize_hex_color(value: str, fallback: str = "#808080") -> str:
@@ -1733,8 +1740,157 @@ def dataframe_to_geojson(df: pd.DataFrame) -> str:
     return json.dumps({"type": "FeatureCollection", "features": features}, indent=2)
 
 
+def clean_label_values(labels: pd.DataFrame, label_column: str = "shade_category") -> pd.DataFrame:
+    if labels.empty or label_column not in labels.columns or "stop_id" not in labels.columns:
+        return pd.DataFrame(columns=["stop_id", label_column])
+    clean = labels.copy()
+    clean["stop_id"] = clean["stop_id"].fillna("").astype(str).str.strip()
+    clean[label_column] = clean[label_column].fillna("").astype(str).str.strip()
+    return clean[(clean["stop_id"] != "") & (clean[label_column] != "")]
+
+
+def majority_label_table(labels: pd.DataFrame, label_column: str = "shade_category") -> pd.DataFrame:
+    clean = clean_label_values(labels, label_column)
+    rows = []
+    for stop_id, group in clean.groupby("stop_id", sort=True):
+        counts = group[label_column].value_counts()
+        max_count = int(counts.max())
+        winners = sorted(counts[counts == max_count].index.astype(str).tolist())
+        total = int(counts.sum())
+        rows.append({
+            "stop_id": stop_id,
+            "majority_label": "; ".join(winners),
+            "label_count": total,
+            "majority_count": max_count,
+            "agreement_pct": round(max_count / total * 100, 1) if total else 0.0,
+            "disagreement_flag": len(counts) > 1,
+            "tied_majority": len(winners) > 1,
+        })
+    return pd.DataFrame(rows)
+
+
+def label_rater_key(row: pd.Series) -> str:
+    labeler_id = str(row.get("labeler_id", "") or "").strip()
+    if labeler_id:
+        return labeler_id
+    role = str(row.get("labeler_role", "") or "").strip()
+    source = str(row.get("source", "") or "").strip()
+    return f"{role or 'unknown'}:{source or 'manual'}"
+
+
+def latest_labels_by_rater(labels: pd.DataFrame, label_column: str = "shade_category") -> pd.DataFrame:
+    clean = clean_label_values(labels, label_column)
+    if clean.empty:
+        return pd.DataFrame(columns=["stop_id", "rater", label_column])
+    clean = clean.copy()
+    clean["rater"] = clean.apply(label_rater_key, axis=1)
+    if "created_at" in clean.columns:
+        clean = clean.sort_values("created_at")
+    return clean.drop_duplicates(subset=["stop_id", "rater"], keep="last")
+
+
+def cohen_kappa_for_pair(left: pd.Series, right: pd.Series, categories: list[str]) -> float | None:
+    paired = pd.DataFrame({"left": left, "right": right}).dropna()
+    if paired.empty:
+        return None
+    observed = float((paired["left"] == paired["right"]).mean())
+    total = len(paired)
+    expected = sum((paired["left"].eq(category).sum() / total) * (paired["right"].eq(category).sum() / total) for category in categories)
+    if math.isclose(1.0 - expected, 0.0):
+        return 1.0 if math.isclose(observed, 1.0) else None
+    return (observed - expected) / (1.0 - expected)
+
+
+def average_pairwise_cohen_kappa(labels: pd.DataFrame) -> tuple[float | None, int]:
+    latest = latest_labels_by_rater(labels)
+    if latest.empty or latest["rater"].nunique() < 2:
+        return None, 0
+    matrix = latest.pivot(index="stop_id", columns="rater", values="shade_category")
+    categories = sorted(latest["shade_category"].dropna().astype(str).unique().tolist())
+    kappas = []
+    raters = list(matrix.columns)
+    for left_index, left_rater in enumerate(raters):
+        for right_rater in raters[left_index + 1:]:
+            paired = matrix[[left_rater, right_rater]].dropna()
+            if len(paired) < 2:
+                continue
+            kappa = cohen_kappa_for_pair(paired[left_rater], paired[right_rater], categories)
+            if kappa is not None:
+                kappas.append(kappa)
+    return (float(sum(kappas) / len(kappas)), len(kappas)) if kappas else (None, 0)
+
+
+def category_count_matrix(labels: pd.DataFrame) -> pd.DataFrame:
+    clean = clean_label_values(labels)
+    return pd.crosstab(clean["stop_id"], clean["shade_category"]) if not clean.empty else pd.DataFrame()
+
+
+def fleiss_kappa(labels: pd.DataFrame) -> float | None:
+    counts = category_count_matrix(labels)
+    if counts.empty:
+        return None
+    counts = counts[counts.sum(axis=1) >= 2]
+    if counts.empty:
+        return None
+    item_totals = counts.sum(axis=1)
+    total_assignments = float(item_totals.sum())
+    p_i = ((counts.pow(2).sum(axis=1) - item_totals) / (item_totals * (item_totals - 1))).fillna(0)
+    p_bar = float((p_i * item_totals / total_assignments).sum())
+    p_e = float((counts.sum(axis=0) / total_assignments).pow(2).sum())
+    if math.isclose(1.0 - p_e, 0.0):
+        return 1.0 if math.isclose(p_bar, 1.0) else None
+    return (p_bar - p_e) / (1.0 - p_e)
+
+
+def krippendorff_alpha_nominal(labels: pd.DataFrame) -> float | None:
+    counts = category_count_matrix(labels)
+    if counts.empty:
+        return None
+    counts = counts[counts.sum(axis=1) >= 2]
+    if counts.empty:
+        return None
+    item_totals = counts.sum(axis=1)
+    observed = sum(float((row * (float(item_totals.loc[stop_id]) - row)).sum() / (float(item_totals.loc[stop_id]) - 1)) for stop_id, row in counts.iterrows()) / float(item_totals.sum())
+    category_totals = counts.sum(axis=0)
+    total = float(category_totals.sum())
+    if total <= 1:
+        return None
+    expected = float((category_totals * (total - category_totals)).sum() / (total - 1) / total)
+    if math.isclose(expected, 0.0):
+        return 1.0 if math.isclose(observed, 0.0) else None
+    return 1.0 - (observed / expected)
+
+
+def format_metric_value(value: float | None) -> str:
+    if value is None or pd.isna(value):
+        return "Not enough data"
+    return f"{float(value):.3f}"
+
+
+def render_agreement_metrics(labels: pd.DataFrame) -> None:
+    st.markdown("#### Agreement Metrics")
+    if labels.empty:
+        st.info("No raw labels were included with this published study.")
+        return
+    majority = majority_label_table(labels)
+    cohen, cohen_pairs = average_pairwise_cohen_kappa(labels)
+    summary = pd.DataFrame([
+        ("Stops with labels", int(majority["stop_id"].nunique()) if not majority.empty else 0),
+        ("Stops with 2+ labels", int((majority["label_count"] >= 2).sum()) if not majority.empty else 0),
+        ("Stops with disagreement", int(majority["disagreement_flag"].sum()) if not majority.empty else 0),
+        ("Mean majority agreement", f"{float(majority['agreement_pct'].mean()):.1f}%" if not majority.empty else "Not enough data"),
+        ("Average pairwise Cohen kappa", format_metric_value(cohen)),
+        ("Cohen rater pairs compared", cohen_pairs),
+        ("Fleiss kappa", format_metric_value(fleiss_kappa(labels))),
+        ("Krippendorff alpha", format_metric_value(krippendorff_alpha_nominal(labels))),
+    ], columns=["Metric", "Value"])
+    st.dataframe(summary, use_container_width=True, hide_index=True)
+    if not majority.empty:
+        st.dataframe(majority.sort_values(["disagreement_flag", "agreement_pct", "stop_id"], ascending=[False, True, True]), use_container_width=True, hide_index=True)
+
+
 def main() -> None:
-    config, stops = load_study()
+    config, stops, raw_labels = load_study()
     project = config.get("project", {})
     methodology = config.get("methodology", {})
     visualization = config.get("visualization", {})
@@ -1773,6 +1929,8 @@ def main() -> None:
                 st.markdown("#### Review Status")
                 counts = visible_stops["review_status"].value_counts().rename_axis("review_status").reset_index(name="stops")
                 st.bar_chart(counts, x="review_status", y="stops")
+        if "Agreement metrics" in selected:
+            render_agreement_metrics(raw_labels)
         if "Priority stops" in selected:
             st.markdown("#### Highest Priority Stops")
             priority = visible_stops.sort_values("priority_score", ascending=False).head(20)
@@ -1785,6 +1943,8 @@ def main() -> None:
             st.download_button("Download stops CSV", stops.to_csv(index=False).encode("utf-8"), "shade_study_stops.csv", "text/csv")
             st.download_button("Download stops GeoJSON", dataframe_to_geojson(stops).encode("utf-8"), "shade_study_stops.geojson", "application/geo+json")
             st.download_button("Download study configuration", json.dumps(config, indent=2).encode("utf-8"), "shade_study_config.json", "application/json")
+            if not raw_labels.empty:
+                st.download_button("Download raw labels CSV", raw_labels.to_csv(index=False).encode("utf-8"), "shade_study_raw_labels.csv", "text/csv")
 
 
 if __name__ == "__main__":
@@ -1923,6 +2083,195 @@ def raw_label_summary(labels: pd.DataFrame, stops: pd.DataFrame) -> pd.DataFrame
         ("Stops with conflicting raw labels", conflicting_stops),
     ]
     return pd.DataFrame(checks, columns=["Check", "Value"])
+
+
+def clean_label_values(labels: pd.DataFrame, label_column: str = "shade_category") -> pd.DataFrame:
+    if labels.empty or label_column not in labels.columns or "stop_id" not in labels.columns:
+        return pd.DataFrame(columns=list(labels.columns) if not labels.empty else ["stop_id", label_column])
+    clean = labels.copy()
+    clean["stop_id"] = clean["stop_id"].fillna("").astype(str).str.strip()
+    clean[label_column] = clean[label_column].fillna("").astype(str).str.strip()
+    clean = clean[(clean["stop_id"] != "") & (clean[label_column] != "")]
+    return clean
+
+
+def majority_label_table(labels: pd.DataFrame, label_column: str = "shade_category") -> pd.DataFrame:
+    clean = clean_label_values(labels, label_column)
+    if clean.empty:
+        return pd.DataFrame(
+            columns=[
+                "stop_id",
+                "majority_label",
+                "label_count",
+                "majority_count",
+                "agreement_pct",
+                "disagreement_flag",
+                "tied_majority",
+            ]
+        )
+    rows = []
+    for stop_id, group in clean.groupby("stop_id", sort=True):
+        counts = group[label_column].value_counts()
+        max_count = int(counts.max())
+        winners = sorted(counts[counts == max_count].index.astype(str).tolist())
+        total = int(counts.sum())
+        rows.append(
+            {
+                "stop_id": stop_id,
+                "majority_label": "; ".join(winners),
+                "label_count": total,
+                "majority_count": max_count,
+                "agreement_pct": round(max_count / total * 100, 1) if total else 0.0,
+                "disagreement_flag": len(counts) > 1,
+                "tied_majority": len(winners) > 1,
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def label_rater_key(row: pd.Series) -> str:
+    labeler_id = str(row.get("labeler_id", "") or "").strip()
+    if labeler_id:
+        return labeler_id
+    role = str(row.get("labeler_role", "") or "").strip()
+    source = str(row.get("source", "") or "").strip()
+    return f"{role or 'unknown'}:{source or 'manual'}"
+
+
+def latest_labels_by_rater(labels: pd.DataFrame, label_column: str = "shade_category") -> pd.DataFrame:
+    clean = clean_label_values(labels, label_column)
+    if clean.empty:
+        return pd.DataFrame(columns=["stop_id", "rater", label_column])
+    clean = clean.copy()
+    clean["rater"] = clean.apply(label_rater_key, axis=1)
+    if "created_at" in clean.columns:
+        clean = clean.sort_values("created_at")
+    return clean.drop_duplicates(subset=["stop_id", "rater"], keep="last")
+
+
+def cohen_kappa_for_pair(left: pd.Series, right: pd.Series, categories: list[str]) -> float | None:
+    paired = pd.DataFrame({"left": left, "right": right}).dropna()
+    if paired.empty:
+        return None
+    observed = float((paired["left"] == paired["right"]).mean())
+    total = len(paired)
+    expected = 0.0
+    for category in categories:
+        expected += (paired["left"].eq(category).sum() / total) * (paired["right"].eq(category).sum() / total)
+    if math.isclose(1.0 - expected, 0.0):
+        return 1.0 if math.isclose(observed, 1.0) else None
+    return (observed - expected) / (1.0 - expected)
+
+
+def average_pairwise_cohen_kappa(labels: pd.DataFrame, label_column: str = "shade_category") -> tuple[float | None, int]:
+    latest = latest_labels_by_rater(labels, label_column)
+    if latest.empty or latest["rater"].nunique() < 2:
+        return None, 0
+    matrix = latest.pivot(index="stop_id", columns="rater", values=label_column)
+    categories = sorted(latest[label_column].dropna().astype(str).unique().tolist())
+    kappas = []
+    raters = list(matrix.columns)
+    for left_index, left_rater in enumerate(raters):
+        for right_rater in raters[left_index + 1 :]:
+            paired = matrix[[left_rater, right_rater]].dropna()
+            if len(paired) < 2:
+                continue
+            kappa = cohen_kappa_for_pair(paired[left_rater], paired[right_rater], categories)
+            if kappa is not None:
+                kappas.append(kappa)
+    if not kappas:
+        return None, 0
+    return float(sum(kappas) / len(kappas)), len(kappas)
+
+
+def category_count_matrix(labels: pd.DataFrame, label_column: str = "shade_category") -> pd.DataFrame:
+    clean = clean_label_values(labels, label_column)
+    if clean.empty:
+        return pd.DataFrame()
+    return pd.crosstab(clean["stop_id"], clean[label_column])
+
+
+def fleiss_kappa(labels: pd.DataFrame, label_column: str = "shade_category") -> float | None:
+    counts = category_count_matrix(labels, label_column)
+    if counts.empty:
+        return None
+    counts = counts[counts.sum(axis=1) >= 2]
+    if counts.empty:
+        return None
+    item_totals = counts.sum(axis=1)
+    total_assignments = float(item_totals.sum())
+    p_i = ((counts.pow(2).sum(axis=1) - item_totals) / (item_totals * (item_totals - 1))).fillna(0)
+    p_bar = float((p_i * item_totals / total_assignments).sum())
+    category_props = counts.sum(axis=0) / total_assignments
+    p_e = float(category_props.pow(2).sum())
+    if math.isclose(1.0 - p_e, 0.0):
+        return 1.0 if math.isclose(p_bar, 1.0) else None
+    return (p_bar - p_e) / (1.0 - p_e)
+
+
+def krippendorff_alpha_nominal(labels: pd.DataFrame, label_column: str = "shade_category") -> float | None:
+    counts = category_count_matrix(labels, label_column)
+    if counts.empty:
+        return None
+    counts = counts[counts.sum(axis=1) >= 2]
+    if counts.empty:
+        return None
+    item_totals = counts.sum(axis=1)
+    observed_terms = []
+    for stop_id, row in counts.iterrows():
+        n_i = float(item_totals.loc[stop_id])
+        observed_terms.append(float((row * (n_i - row)).sum() / (n_i - 1)))
+    observed = sum(observed_terms) / float(item_totals.sum())
+    category_totals = counts.sum(axis=0)
+    total = float(category_totals.sum())
+    if total <= 1:
+        return None
+    expected = float((category_totals * (total - category_totals)).sum() / (total - 1) / total)
+    if math.isclose(expected, 0.0):
+        return 1.0 if math.isclose(observed, 0.0) else None
+    return 1.0 - (observed / expected)
+
+
+def format_metric_value(value: float | None, digits: int = 3) -> str:
+    if value is None or pd.isna(value):
+        return "Not enough data"
+    return f"{float(value):.{digits}f}"
+
+
+def agreement_metric_summary(labels: pd.DataFrame, stops: pd.DataFrame) -> pd.DataFrame:
+    majority = majority_label_table(labels)
+    labeled_stops = int(majority["stop_id"].nunique()) if not majority.empty else 0
+    multi_label_stops = int((majority["label_count"] >= 2).sum()) if not majority.empty else 0
+    disagreement_stops = int(majority["disagreement_flag"].sum()) if not majority.empty else 0
+    average_agreement = (
+        float(majority["agreement_pct"].mean()) if not majority.empty and "agreement_pct" in majority else None
+    )
+    cohen, cohen_pairs = average_pairwise_cohen_kappa(labels)
+    return pd.DataFrame(
+        [
+            ("Stops with labels", labeled_stops),
+            ("Stops with 2+ labels", multi_label_stops),
+            ("Stops with disagreement", disagreement_stops),
+            ("Mean majority agreement", f"{average_agreement:.1f}%" if average_agreement is not None else "Not enough data"),
+            ("Average pairwise Cohen kappa", format_metric_value(cohen)),
+            ("Cohen rater pairs compared", cohen_pairs),
+            ("Fleiss kappa", format_metric_value(fleiss_kappa(labels))),
+            ("Krippendorff alpha", format_metric_value(krippendorff_alpha_nominal(labels))),
+        ],
+        columns=["Metric", "Value"],
+    )
+
+
+def render_agreement_metrics(labels: pd.DataFrame, stops: pd.DataFrame) -> None:
+    st.markdown("#### Agreement Metrics")
+    if labels.empty:
+        st.info("Submit raw labels from at least two assessments to compute agreement metrics.")
+        return
+    st.dataframe(agreement_metric_summary(labels, stops), use_container_width=True, hide_index=True)
+    majority = majority_label_table(labels)
+    if not majority.empty:
+        display = majority.sort_values(["disagreement_flag", "agreement_pct", "stop_id"], ascending=[False, True, True])
+        st.dataframe(display, use_container_width=True, hide_index=True)
 
 
 def apply_label_to_current_stop(
@@ -2265,6 +2614,7 @@ def render_labels_page() -> None:
 
     labels = list_shade_labels(project_id)
     st.dataframe(raw_label_summary(labels, stops), use_container_width=True, hide_index=True)
+    render_agreement_metrics(labels, stops)
 
     stop_options = stops.reset_index(drop=True)
     stop_labels = [stop_picker_label(row) for _, row in stop_options.iterrows()]
@@ -2820,6 +3170,8 @@ def render_preview_page() -> None:
                     .reset_index(name="stops")
                 )
                 st.bar_chart(review_counts, x="review_status", y="stops")
+        if "Agreement metrics" in selected_metrics:
+            render_agreement_metrics(active_raw_labels(), visible_stops)
         if "Priority stops" in selected_metrics:
             st.markdown("#### Highest Priority Stops")
             priority = visible_stops.sort_values("priority_score", ascending=False).head(20)

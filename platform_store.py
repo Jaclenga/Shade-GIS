@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import sqlite3
 import tempfile
 import uuid
@@ -18,6 +19,7 @@ APP_DIR = Path(__file__).parent
 _ACTIVE_DATABASE_PATH: Path | None = None
 _UNUSABLE_DATABASE_PATHS: set[Path] = set()
 _DATABASE_FALLBACK_REASON = ""
+_READABLE_SOURCE_DATABASE_PATH: Path | None = None
 
 
 def default_database_path() -> Path:
@@ -80,16 +82,62 @@ def probe_database_writable(path: Path) -> None:
 
 
 def mark_database_path_unusable(path: Path, reason: BaseException | str) -> None:
-    global _ACTIVE_DATABASE_PATH, _DATABASE_FALLBACK_REASON
+    global _ACTIVE_DATABASE_PATH, _DATABASE_FALLBACK_REASON, _READABLE_SOURCE_DATABASE_PATH
     resolved = path.expanduser().resolve()
     _UNUSABLE_DATABASE_PATHS.add(resolved)
     if _ACTIVE_DATABASE_PATH == resolved:
         _ACTIVE_DATABASE_PATH = None
     _DATABASE_FALLBACK_REASON = str(reason)
+    if resolved.exists() and sqlite_database_readable(resolved):
+        _READABLE_SOURCE_DATABASE_PATH = resolved
+
+
+def sqlite_database_readable(path: Path) -> bool:
+    if not path.exists():
+        return False
+    try:
+        with sqlite3.connect(f"file:{path}?mode=ro", uri=True) as conn:
+            conn.execute("SELECT name FROM sqlite_master LIMIT 1").fetchone()
+        return True
+    except sqlite3.Error:
+        return False
+
+
+def project_ids_at(path: Path) -> set[str]:
+    if not path.exists():
+        return set()
+    try:
+        with sqlite3.connect(f"file:{path}?mode=ro", uri=True) as conn:
+            rows = conn.execute("SELECT id FROM projects").fetchall()
+        return {str(row[0]) for row in rows}
+    except sqlite3.Error:
+        return set()
+
+
+def fallback_needs_source_copy(source: Path, target: Path) -> bool:
+    source_ids = project_ids_at(source)
+    if not source_ids:
+        return False
+    if not target.exists():
+        return True
+    target_ids = project_ids_at(target)
+    return not source_ids.issubset(target_ids)
+
+
+def copy_readonly_source_to_fallback(source: Path, target: Path) -> None:
+    target.parent.mkdir(parents=True, exist_ok=True)
+    if target.exists() and fallback_needs_source_copy(source, target):
+        backup = target.with_name(f"{target.stem}.backup-{utc_timestamp().replace(':', '').replace('-', '').replace('T', '-')}{target.suffix}")
+        shutil.copy2(target, backup)
+    if fallback_needs_source_copy(source, target):
+        with sqlite3.connect(f"file:{source}?mode=ro", uri=True) as source_conn:
+            with sqlite3.connect(target) as target_conn:
+                source_conn.backup(target_conn)
+                target_conn.commit()
 
 
 def choose_database_path() -> Path:
-    global _ACTIVE_DATABASE_PATH, _DATABASE_FALLBACK_REASON
+    global _ACTIVE_DATABASE_PATH, _DATABASE_FALLBACK_REASON, _READABLE_SOURCE_DATABASE_PATH
     if _ACTIVE_DATABASE_PATH and _ACTIVE_DATABASE_PATH not in _UNUSABLE_DATABASE_PATHS:
         return _ACTIVE_DATABASE_PATH
 
@@ -98,11 +146,15 @@ def choose_database_path() -> Path:
         if candidate in _UNUSABLE_DATABASE_PATHS:
             continue
         try:
+            if _READABLE_SOURCE_DATABASE_PATH and candidate != _READABLE_SOURCE_DATABASE_PATH:
+                copy_readonly_source_to_fallback(_READABLE_SOURCE_DATABASE_PATH, candidate)
             probe_database_writable(candidate)
         except (OSError, sqlite3.Error) as error:
             last_error = error
             _UNUSABLE_DATABASE_PATHS.add(candidate)
             _DATABASE_FALLBACK_REASON = str(error)
+            if candidate.exists() and sqlite_database_readable(candidate):
+                _READABLE_SOURCE_DATABASE_PATH = candidate
             continue
         _ACTIVE_DATABASE_PATH = candidate
         return candidate
@@ -120,6 +172,7 @@ def database_status() -> dict[str, Any]:
         "preferred_path": str(preferred),
         "using_fallback": active != preferred,
         "fallback_reason": _DATABASE_FALLBACK_REASON,
+        "source_path": str(_READABLE_SOURCE_DATABASE_PATH) if _READABLE_SOURCE_DATABASE_PATH else "",
     }
 
 

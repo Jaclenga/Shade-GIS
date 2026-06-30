@@ -116,7 +116,16 @@ timestamp. A reviewer can optionally apply a submitted label to the current stop
 map and exports, but the raw label row is still retained either way.
 
 The page also exposes raw-label history, basic counts for labeled/unlabeled/conflicting stops, and
-a raw-label CSV download.
+a raw-label CSV download. Agreement metrics are computed from `shade_category` labels:
+
+- Per-stop majority label, label count, majority count, agreement percentage, disagreement flag, and tied-majority flag.
+- Average pairwise Cohen's kappa using the latest label per stop per reviewer.
+- Fleiss' kappa across stops with at least two raw labels.
+- Nominal Krippendorff's alpha across stops with at least two raw labels.
+
+Reviewer-based metrics use `labeler_id` when present; otherwise they fall back to the submitted
+role/source combination. These metrics summarize reliability and do not overwrite raw labels or
+current stop fields.
 
 Visualization settings store the selected map color field, premade and editable palettes for shade
 categories, review statuses, priority-score gradients, and other categorical columns, plus marker
