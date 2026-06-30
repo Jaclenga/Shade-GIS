@@ -1456,44 +1456,50 @@ def render_header() -> str:
         .builder-topbar {
             border-bottom: 1px solid #e5e7eb;
             margin: -1rem -1rem 1.2rem;
-            padding: 0.55rem 1rem 0.85rem;
+            padding: 0.9rem 1.4rem 1.1rem;
         }
         .builder-brand {
             color: #14532d;
-            font-size: 1.12rem;
-            font-weight: 700;
+            font-size: 2.85rem;
+            font-weight: 800;
             letter-spacing: 0;
+            line-height: 1.08;
             white-space: nowrap;
         }
-        .stButton button {
+        .builder-topbar .stButton button {
             border-radius: 999px;
-            font-size: 0.86rem;
-            min-height: 2.25rem;
-            font-weight: 650;
-            padding: 0.3rem 0.45rem;
+            font-size: 1.2rem;
+            min-height: 3.05rem;
+            font-weight: 680;
+            padding: 0.5rem 1rem;
+            white-space: nowrap;
+            width: 100%;
+        }
+        .builder-topbar .stButton button p {
             white-space: nowrap;
         }
-        .stButton button p {
-            white-space: nowrap;
-        }
-        .stButton button[kind="primary"] {
+        .builder-topbar .stButton button[kind="primary"] {
             background: #ff4b4b;
             border-color: #ff4b4b;
             color: white;
         }
-        .stButton button[kind="secondary"] {
+        .builder-topbar .stButton button[kind="secondary"] {
             background: white;
             border-color: #d1d5db;
             color: #31333f;
+        }
+        h1 {
+            font-size: 1.85rem;
+            line-height: 1.15;
         }
         </style>
         """,
         unsafe_allow_html=True,
     )
     st.markdown("<div class='builder-topbar'>", unsafe_allow_html=True)
-    cols = st.columns([2.15, 2.25, 0.92, 0.92, 0.92, 0.92, 0.92], gap="small", vertical_alignment="center")
+    cols = st.columns([3.45, 1.15, 1, 1, 1, 1, 1], gap="small", vertical_alignment="center")
     with cols[0]:
-        st.markdown("<div class='builder-brand'>Shade-GIS Study Builder</div>", unsafe_allow_html=True)
+        st.markdown("<div class='builder-brand'>Shade-GIS</div>", unsafe_allow_html=True)
     for index, page in enumerate(pages, start=2):
         with cols[index]:
             st.button(
