@@ -48,7 +48,18 @@ bibliography entries.
 
 ## Bus Stops
 
-The builder accepts GTFS-compatible stops and mapped CSV files.
+The builder accepts GTFS-compatible stops, mapped tabular files, spatial files, API responses, and manually entered stop records.
+
+Supported import paths:
+
+| Source | Current behavior |
+| --- | --- |
+| GTFS ZIP | Requires `stops.txt`; optional `stop_times.txt`, `trips.txt`, and `routes.txt` enrich route labels. |
+| CSV or `stops.txt` | Uses the field-mapping panel before import. |
+| GeoJSON | Converts feature geometry into `stop_lon` and `stop_lat`, preserves feature properties as mappable fields, and records geometry metadata in the import log. |
+| Zipped Shapefile | Reads `.shp`/`.dbf` bundles through `pyshp`, converts geometry into `stop_lon` and `stop_lat`, and preserves attributes as mappable fields. |
+| API URL | Fetches CSV or GeoJSON from a URL, then uses the same field-mapping panel. |
+| Manual entry | Provides an editable table for adding individual stop records. |
 
 Required fields:
 
@@ -121,6 +132,7 @@ The `Deploy` page also exports a GitHub-ready ZIP bundle for the rendered public
 - `requirements.txt`, `.streamlit/config.toml`, generated `README.md`, `.gitignore`, and optional `deploy_to_github.ps1` helper.
 
 Import log `imported_at` values are stored as timezone-aware local timestamps with a UTC offset.
+File imports also record the original filename when available; API imports record the source URL.
 
 The public preview also includes a user-facing toggle to show or hide stops whose shade label is
 still `Needs Review` without changing the exported dataset.

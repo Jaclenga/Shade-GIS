@@ -1,7 +1,9 @@
 import io
 import json
 import re
+import urllib.error
 import urllib.parse
+import urllib.request
 import zipfile
 from datetime import datetime
 from pathlib import Path
@@ -303,6 +305,35 @@ OPTIONAL_FIELDS = [
     "lst_median",
 ]
 
+MANUAL_ENTRY_COLUMNS = REQUIRED_STOP_FIELDS + [
+    "agency",
+    "routes",
+    "municipality",
+    "shading",
+    "review_status",
+    "confidence",
+]
+
+FIELD_ALIASES = {
+    "stop_id": ["stop_id", "stopid", "stop_code", "id", "objectid"],
+    "stop_name": ["stop_name", "stopname", "name", "stop_desc", "description"],
+    "stop_lat": ["stop_lat", "stoplat", "latitude", "lat", "y"],
+    "stop_lon": ["stop_lon", "stoplon", "longitude", "lon", "lng", "long", "x"],
+    "agency": ["agency", "agency_name", "operator"],
+    "routes": ["routes", "route", "route_short_name", "route_ids"],
+    "municipality": ["municipality", "city", "jurisdiction", "neighborhood"],
+    "shading": ["shading", "shade", "shade_category", "shade_label"],
+    "shade_coverage": ["shade_coverage", "coverage"],
+    "shade_sources": ["shade_sources", "shade_source", "source"],
+    "review_status": ["review_status", "status"],
+    "confidence": ["confidence", "score"],
+    "ridership": ["ridership", "boardings", "ons", "passengers"],
+    "heat_vulnerability_index": ["heat_vulnerability_index", "hvi", "heat_index"],
+    "heat_vulnerability_label": ["heat_vulnerability_label", "hvi_label"],
+    "tree_canopy_pct": ["tree_canopy_pct", "canopy", "tree_canopy"],
+    "lst_median": ["lst_median", "lst", "land_surface_temperature"],
+}
+
 
 def hex_to_rgb(value: str) -> list[int]:
     text = str(value or "").strip().lstrip("#")
@@ -353,6 +384,195 @@ def normalize_review_status(value: Any) -> str:
 
 def read_csv_bytes(contents: bytes) -> pd.DataFrame:
     return pd.read_csv(io.BytesIO(contents), dtype=str)
+
+
+def normalize_column_key(value: Any) -> str:
+    return re.sub(r"[^a-z0-9]+", "", str(value or "").strip().lower())
+
+
+def suggest_source_column(target: str, columns: list[str]) -> str:
+    normalized_columns = {normalize_column_key(column): column for column in columns}
+    for alias in FIELD_ALIASES.get(target, [target]):
+        match = normalized_columns.get(normalize_column_key(alias))
+        if match:
+            return match
+    return ""
+
+
+def geometry_coordinate_pairs(geometry: dict[str, Any] | None) -> list[tuple[float, float]]:
+    if not geometry:
+        return []
+    geometry_type = str(geometry.get("type", "")).lower()
+    coordinates = geometry.get("coordinates")
+    if geometry_type == "point" and isinstance(coordinates, (list, tuple)) and len(coordinates) >= 2:
+        try:
+            return [(float(coordinates[0]), float(coordinates[1]))]
+        except (TypeError, ValueError):
+            return []
+    if geometry_type == "geometrycollection":
+        pairs: list[tuple[float, float]] = []
+        for child in geometry.get("geometries", []) or []:
+            pairs.extend(geometry_coordinate_pairs(child))
+        return pairs
+
+    pairs: list[tuple[float, float]] = []
+
+    def collect(value: Any) -> None:
+        if isinstance(value, (list, tuple)) and len(value) >= 2 and not isinstance(value[0], (list, tuple)):
+            try:
+                pairs.append((float(value[0]), float(value[1])))
+            except (TypeError, ValueError):
+                return
+            return
+        if isinstance(value, (list, tuple)):
+            for item in value:
+                collect(item)
+
+    collect(coordinates)
+    return pairs
+
+
+def geometry_centroid(geometry: dict[str, Any] | None) -> tuple[float | None, float | None]:
+    pairs = geometry_coordinate_pairs(geometry)
+    if not pairs:
+        return None, None
+    lon = sum(pair[0] for pair in pairs) / len(pairs)
+    lat = sum(pair[1] for pair in pairs) / len(pairs)
+    return lon, lat
+
+
+def geojson_features(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    payload_type = str(payload.get("type", "")).lower()
+    if payload_type == "featurecollection":
+        return [feature for feature in payload.get("features", []) if isinstance(feature, dict)]
+    if payload_type == "feature":
+        return [payload]
+    if payload_type in {"point", "multipoint", "linestring", "multilinestring", "polygon", "multipolygon"}:
+        return [{"type": "Feature", "properties": {}, "geometry": payload}]
+    raise ValueError("GeoJSON must be a FeatureCollection, Feature, or geometry object")
+
+
+def parse_geojson_bytes(contents: bytes) -> tuple[pd.DataFrame, dict[str, Any]]:
+    payload = json.loads(contents.decode("utf-8-sig"))
+    features = geojson_features(payload)
+    records: list[dict[str, Any]] = []
+    geometry_types: set[str] = set()
+    missing_geometry = 0
+    for index, feature in enumerate(features, start=1):
+        properties = feature.get("properties") or {}
+        if not isinstance(properties, dict):
+            properties = {}
+        geometry = feature.get("geometry")
+        geometry_types.add(str((geometry or {}).get("type", "None")))
+        lon, lat = geometry_centroid(geometry)
+        record = {str(key): value for key, value in properties.items()}
+        record.setdefault("stop_id", str(feature.get("id") or record.get("stop_id") or index))
+        record.setdefault("stop_name", record.get("name") or record.get("stop_name") or f"GeoJSON stop {index}")
+        if lon is None or lat is None:
+            missing_geometry += 1
+        else:
+            record.setdefault("stop_lon", lon)
+            record.setdefault("stop_lat", lat)
+        record["geometry_type"] = str((geometry or {}).get("type", ""))
+        records.append(record)
+    if not records:
+        raise ValueError("GeoJSON did not contain any features")
+    return pd.DataFrame(records), {
+        "geometry_types": "; ".join(sorted(geometry_types)),
+        "features": len(records),
+        "missing_geometry": missing_geometry,
+    }
+
+
+def zip_member_names(contents: bytes) -> list[str]:
+    with zipfile.ZipFile(io.BytesIO(contents)) as archive:
+        return archive.namelist()
+
+
+def detect_zip_import_format(contents: bytes) -> str:
+    names = [Path(name).name.lower() for name in zip_member_names(contents)]
+    if "stops.txt" in names:
+        return "GTFS"
+    if any(name.endswith(".shp") for name in names) and any(name.endswith(".dbf") for name in names):
+        return "Shapefile"
+    raise ValueError("ZIP upload must contain GTFS stops.txt or a zipped Shapefile with .shp and .dbf files")
+
+
+def parse_shapefile_zip(contents: bytes) -> tuple[pd.DataFrame, dict[str, Any]]:
+    try:
+        import shapefile  # type: ignore[import-not-found]
+    except ImportError as error:
+        raise RuntimeError("Install pyshp to import zipped Shapefiles: pip install pyshp") from error
+
+    with zipfile.ZipFile(io.BytesIO(contents)) as archive:
+        members = {member.lower(): member for member in archive.namelist()}
+        shp_member = next((member for member in members.values() if member.lower().endswith(".shp")), None)
+        dbf_member = next((member for member in members.values() if member.lower().endswith(".dbf")), None)
+        shx_member = next((member for member in members.values() if member.lower().endswith(".shx")), None)
+        if not shp_member or not dbf_member:
+            raise ValueError("Shapefile ZIP must include at least .shp and .dbf files")
+        shp = io.BytesIO(archive.read(shp_member))
+        dbf = io.BytesIO(archive.read(dbf_member))
+        shx = io.BytesIO(archive.read(shx_member)) if shx_member else None
+
+    reader_kwargs = {"shp": shp, "dbf": dbf}
+    if shx is not None:
+        reader_kwargs["shx"] = shx
+    reader = shapefile.Reader(**reader_kwargs)
+    fields = [field[0] for field in reader.fields if field[0] != "DeletionFlag"]
+    records = []
+    missing_geometry = 0
+    geometry_types: set[str] = set()
+    for index, shape_record in enumerate(reader.iterShapeRecords(), start=1):
+        record = {field: value for field, value in zip(fields, shape_record.record)}
+        geometry = shape_record.shape.__geo_interface__
+        geometry_types.add(str(geometry.get("type", "")))
+        lon, lat = geometry_centroid(geometry)
+        record.setdefault("stop_id", str(record.get("stop_id") or record.get("id") or index))
+        record.setdefault("stop_name", record.get("name") or record.get("stop_name") or f"Shapefile stop {index}")
+        if lon is None or lat is None:
+            missing_geometry += 1
+        else:
+            record.setdefault("stop_lon", lon)
+            record.setdefault("stop_lat", lat)
+        record["geometry_type"] = str(geometry.get("type", ""))
+        records.append(record)
+    if not records:
+        raise ValueError("Shapefile did not contain any records")
+    return pd.DataFrame(records), {
+        "geometry_types": "; ".join(sorted(geometry_types)),
+        "features": len(records),
+        "missing_geometry": missing_geometry,
+    }
+
+
+def fetch_api_bytes(url: str) -> bytes:
+    request = urllib.request.Request(
+        url.strip(),
+        headers={"User-Agent": "Shade-GIS/0.1 (+https://github.com/)"},
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            return response.read()
+    except urllib.error.URLError as error:
+        raise RuntimeError(f"Could not fetch API URL: {error}") from error
+
+
+def parse_api_response(contents: bytes, url: str, requested_format: str) -> tuple[pd.DataFrame, dict[str, Any]]:
+    if requested_format == "CSV":
+        return read_csv_bytes(contents), {"source_url": url}
+    if requested_format == "GeoJSON":
+        raw, metadata = parse_geojson_bytes(contents)
+        metadata["source_url"] = url
+        return raw, metadata
+    try:
+        raw, metadata = parse_geojson_bytes(contents)
+        metadata["source_url"] = url
+        metadata["detected_format"] = "GeoJSON"
+        return raw, metadata
+    except Exception:
+        raw = read_csv_bytes(contents)
+        return raw, {"source_url": url, "detected_format": "CSV"}
 
 
 def find_gtfs_member(archive: zipfile.ZipFile, filename: str) -> str | None:
@@ -424,6 +644,85 @@ def apply_field_mapping(raw: pd.DataFrame, mapping: dict[str, str]) -> pd.DataFr
         if field not in mapped.columns:
             mapped[field] = ""
     return mapped
+
+
+def clean_import_key(value: str) -> str:
+    return re.sub(r"[^a-zA-Z0-9_]+", "_", value).strip("_").lower() or "import"
+
+
+def import_stop_dataset(
+    raw: pd.DataFrame,
+    mapping: dict[str, str],
+    *,
+    project: dict[str, Any],
+    taxonomy: list[dict[str, Any]],
+    source_name: str,
+    import_format: str,
+    metadata: dict[str, Any] | None = None,
+) -> pd.DataFrame:
+    prepared = prepare_stop_dataset(apply_field_mapping(raw, mapping), project, taxonomy)
+    st.session_state["stops"] = prepared
+    if source_name:
+        project["source_name"] = source_name
+    if metadata and metadata.get("source_url"):
+        project["source_url"] = str(metadata["source_url"])
+    log_entry = {
+        "source": source_name,
+        "format": import_format,
+        "rows": len(prepared),
+        "imported_at": timestamp_with_timezone(),
+    }
+    if metadata:
+        log_entry.update(metadata)
+    st.session_state["import_log"].append(log_entry)
+    return prepared
+
+
+def render_mapped_import_controls(
+    raw: pd.DataFrame,
+    *,
+    source_name: str,
+    import_format: str,
+    project: dict[str, Any],
+    taxonomy: list[dict[str, Any]],
+    metadata: dict[str, Any] | None = None,
+    key_prefix: str,
+    button_label: str,
+) -> None:
+    metadata = metadata or {}
+    st.dataframe(raw.head(25), use_container_width=True)
+    if {"stop_lat", "stop_lon"}.issubset(raw.columns):
+        missing_coordinates = raw[["stop_lat", "stop_lon"]].isna().any(axis=1).sum()
+        st.caption(f"Geometry validation: {len(raw):,} records, {int(missing_coordinates):,} missing coordinates.")
+    elif {"geometry_type", "stop_lat", "stop_lon"}.issubset(raw.columns):
+        st.caption(f"Geometry validation: {len(raw):,} records from {metadata.get('geometry_types', 'spatial')} geometries.")
+
+    choices = [""] + list(raw.columns)
+    st.markdown("#### Field Mapping")
+    mapping: dict[str, str] = {}
+    fields = REQUIRED_STOP_FIELDS + OPTIONAL_FIELDS
+    grid = st.columns(4)
+    for index, field in enumerate(fields):
+        suggested = suggest_source_column(field, list(raw.columns))
+        default_index = choices.index(suggested) if suggested in choices else 0
+        with grid[index % 4]:
+            mapping[field] = st.selectbox(
+                field,
+                choices,
+                index=default_index,
+                key=f"{key_prefix}_map_{field}",
+            )
+    if st.button(button_label, type="primary", key=f"{key_prefix}_use"):
+        prepared = import_stop_dataset(
+            raw,
+            mapping,
+            project=project,
+            taxonomy=taxonomy,
+            source_name=source_name,
+            import_format=import_format,
+            metadata=metadata,
+        )
+        st.success(f"Imported {len(prepared):,} mapped stops.")
 
 
 def prepare_stop_dataset(raw: pd.DataFrame, project: dict[str, Any], taxonomy: list[dict[str, Any]]) -> pd.DataFrame:
@@ -1687,48 +1986,131 @@ def render_data_page() -> None:
         project["description"] = st.text_area("Description", project["description"], height=118)
 
     st.subheader("Upload Or Map A Dataset")
-    uploaded = st.file_uploader("Upload a GTFS .zip, stops.txt, or bus-stop CSV", type=["zip", "txt", "csv"])
-    if uploaded is not None:
-        contents = uploaded.getvalue()
-        try:
-            if uploaded.name.lower().endswith(".zip"):
-                raw, metadata = parse_gtfs_zip(contents)
-                st.dataframe(raw.head(25), use_container_width=True)
-                if st.button("Use uploaded GTFS stops", type="primary"):
-                    prepared = prepare_stop_dataset(raw, project, taxonomy)
-                    st.session_state["stops"] = prepared
-                    project["source_name"] = uploaded.name
-                    st.session_state["import_log"].append(
-                        {"source": uploaded.name, "format": "GTFS", "rows": len(prepared), **metadata}
+    file_tab, api_tab, manual_tab = st.tabs(["File Upload", "API URL", "Manual Entry"])
+    with file_tab:
+        uploaded = st.file_uploader(
+            "Upload GTFS, CSV, GeoJSON, or a zipped Shapefile",
+            type=["zip", "txt", "csv", "geojson", "json"],
+        )
+        if uploaded is not None:
+            contents = uploaded.getvalue()
+            filename = uploaded.name
+            key_prefix = f"file_{clean_import_key(filename)}"
+            try:
+                if filename.lower().endswith(".zip"):
+                    zip_format = detect_zip_import_format(contents)
+                    if zip_format == "GTFS":
+                        raw, metadata = parse_gtfs_zip(contents)
+                        st.dataframe(raw.head(25), use_container_width=True)
+                        if st.button("Use uploaded GTFS stops", type="primary", key=f"{key_prefix}_gtfs"):
+                            mapping = {field: field for field in REQUIRED_STOP_FIELDS + OPTIONAL_FIELDS if field in raw.columns}
+                            metadata.update({"original_filename": filename})
+                            prepared = import_stop_dataset(
+                                raw,
+                                mapping,
+                                project=project,
+                                taxonomy=taxonomy,
+                                source_name=filename,
+                                import_format="GTFS",
+                                metadata=metadata,
+                            )
+                            st.success(f"Imported {len(prepared):,} mapped stops.")
+                    else:
+                        raw, metadata = parse_shapefile_zip(contents)
+                        metadata.update({"original_filename": filename})
+                        render_mapped_import_controls(
+                            raw,
+                            source_name=filename,
+                            import_format="Shapefile",
+                            project=project,
+                            taxonomy=taxonomy,
+                            metadata=metadata,
+                            key_prefix=key_prefix,
+                            button_label="Use mapped Shapefile",
+                        )
+                elif filename.lower().endswith((".geojson", ".json")):
+                    raw, metadata = parse_geojson_bytes(contents)
+                    metadata.update({"original_filename": filename})
+                    render_mapped_import_controls(
+                        raw,
+                        source_name=filename,
+                        import_format="GeoJSON",
+                        project=project,
+                        taxonomy=taxonomy,
+                        metadata=metadata,
+                        key_prefix=key_prefix,
+                        button_label="Use mapped GeoJSON",
                     )
-                    st.success(f"Imported {len(prepared):,} mapped stops.")
+                else:
+                    raw = read_csv_bytes(contents)
+                    render_mapped_import_controls(
+                        raw,
+                        source_name=filename,
+                        import_format="CSV",
+                        project=project,
+                        taxonomy=taxonomy,
+                        metadata={"original_filename": filename},
+                        key_prefix=key_prefix,
+                        button_label="Use mapped CSV",
+                    )
+            except Exception as error:
+                st.error(f"Could not import this file: {error}")
+
+    with api_tab:
+        api_url = st.text_input("Dataset API or file URL", key="api_import_url")
+        api_format = st.selectbox("Response format", ["Auto detect", "CSV", "GeoJSON"], key="api_import_format")
+        if st.button("Fetch API dataset", key="fetch_api_dataset"):
+            if not api_url.strip():
+                st.warning("Enter a URL before fetching.")
             else:
-                raw = read_csv_bytes(contents)
-                st.dataframe(raw.head(25), use_container_width=True)
-                choices = [""] + list(raw.columns)
-                st.markdown("#### Field Mapping")
-                mapping: dict[str, str] = {}
-                fields = REQUIRED_STOP_FIELDS + OPTIONAL_FIELDS
-                grid = st.columns(4)
-                for index, field in enumerate(fields):
-                    default_index = choices.index(field) if field in choices else 0
-                    with grid[index % 4]:
-                        mapping[field] = st.selectbox(field, choices, index=default_index, key=f"map_{field}")
-                if st.button("Use mapped CSV", type="primary"):
-                    prepared = prepare_stop_dataset(apply_field_mapping(raw, mapping), project, taxonomy)
-                    st.session_state["stops"] = prepared
-                    project["source_name"] = uploaded.name
-                    st.session_state["import_log"].append(
-                        {
-                            "source": uploaded.name,
-                            "format": "CSV",
-                            "rows": len(prepared),
-                            "imported_at": timestamp_with_timezone(),
-                        }
-                    )
-                    st.success(f"Imported {len(prepared):,} mapped stops.")
-        except Exception as error:
-            st.error(f"Could not import this file: {error}")
+                try:
+                    contents = fetch_api_bytes(api_url)
+                    requested = "Auto" if api_format == "Auto detect" else api_format
+                    raw, metadata = parse_api_response(contents, api_url, requested)
+                    st.session_state["api_import_raw"] = raw
+                    st.session_state["api_import_metadata"] = metadata
+                    st.session_state["api_import_source"] = api_url
+                    st.success(f"Fetched {len(raw):,} records.")
+                except Exception as error:
+                    st.error(f"Could not fetch this API dataset: {error}")
+        api_raw = st.session_state.get("api_import_raw")
+        if isinstance(api_raw, pd.DataFrame):
+            api_metadata = st.session_state.get("api_import_metadata", {})
+            detected = api_metadata.get("detected_format") or api_format.replace("Auto detect", "API")
+            render_mapped_import_controls(
+                api_raw,
+                source_name=st.session_state.get("api_import_source", api_url),
+                import_format=str(detected),
+                project=project,
+                taxonomy=taxonomy,
+                metadata=api_metadata,
+                key_prefix="api_import",
+                button_label="Use mapped API dataset",
+            )
+
+    with manual_tab:
+        st.caption("Add one stop per row. Rows without a stop ID or valid coordinates are ignored on import.")
+        manual_template = pd.DataFrame([{column: "" for column in MANUAL_ENTRY_COLUMNS}])
+        manual_rows = st.data_editor(
+            manual_template,
+            num_rows="dynamic",
+            use_container_width=True,
+            hide_index=True,
+            key="manual_import_rows",
+        )
+        manual_source = st.text_input("Manual import source label", "Manual entry", key="manual_import_source")
+        if st.button("Use manual entries", type="primary", key="use_manual_entries"):
+            mapping = {field: field for field in REQUIRED_STOP_FIELDS + OPTIONAL_FIELDS if field in manual_rows.columns}
+            prepared = import_stop_dataset(
+                manual_rows,
+                mapping,
+                project=project,
+                taxonomy=taxonomy,
+                source_name=manual_source,
+                import_format="Manual",
+                metadata={"entry_method": "manual"},
+            )
+            st.success(f"Imported {len(prepared):,} manually entered stops.")
 
     source_cols = st.columns(3)
     with source_cols[0]:

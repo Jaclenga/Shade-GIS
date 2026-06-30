@@ -6,8 +6,8 @@ The repository still includes the Tampa/HART stop and shade files as a starter p
 
 ## What it does
 
-- Starts with the bundled Tampa/HART dataset, or lets you upload a GTFS `.zip`, `stops.txt`, or custom bus-stop CSV.
-- Provides CSV field mapping for required stop fields: `stop_id`, `stop_name`, `stop_lat`, and `stop_lon`.
+- Starts with the bundled Tampa/HART dataset, or lets you import GTFS `.zip`, `stops.txt`, CSV, GeoJSON, zipped Shapefile, API-hosted CSV/GeoJSON, or manually entered stop records.
+- Provides field mapping for required stop fields: `stop_id`, `stop_name`, `stop_lat`, and `stop_lon`.
 - Extracts route labels from GTFS uploads when `stop_times.txt`, `trips.txt`, and `routes.txt` are present.
 - Tracks project metadata, source name, license, source URL, dataset version, methodology version, owners, and visibility.
 - Persists multiple builder projects in a local SQLite platform database by default, with a Postgres-ready schema for shared deployments.
@@ -20,7 +20,7 @@ The repository still includes the Tampa/HART stop and shade files as a starter p
 
 ## App Pages
 
-- `Data`: project setup, upload/import workflow, CSV field mapping, shade taxonomy, source metadata, and dataset health checks.
+- `Data`: project setup, file/API/manual import workflow, field mapping, shade taxonomy, source metadata, and dataset health checks.
 - `Visuals`: side-by-side map preview with expandable, scrollable controls for color fields, premade shade palettes, editable color swatches, marker shape/size/outline, base map style, dataset-backed overlay selection, up to 10 custom X/Y charts, dashboard metrics, public data table/map-hover columns, and priority formula weights.
 - `Methodology`: editable public rationale/about page with live preview.
 - `Preview`: the generated public-facing Streamlit app experience for the current project configuration, including a toggle to show or hide unlabeled bus stops.
@@ -38,6 +38,17 @@ Required stop fields:
 | `stop_lon` | Stop longitude in WGS84. |
 
 Optional fields recognized by the builder include `agency`, `routes`, `municipality`, `shading`, `shade_coverage`, `shade_sources`, `review_status`, `confidence`, `ridership`, `heat_vulnerability_index`, `heat_vulnerability_label`, `tree_canopy_pct`, and `lst_median`.
+
+Supported import paths:
+
+| Source | Notes |
+| --- | --- |
+| GTFS ZIP | Requires `stops.txt`; route labels are enriched when `stop_times.txt`, `trips.txt`, and `routes.txt` are present. |
+| CSV or `stops.txt` | Uses the field-mapping panel so agency-specific column names can be mapped into the platform schema. |
+| GeoJSON | Reads FeatureCollections, Features, and geometry objects; point coordinates are mapped into stop longitude/latitude. |
+| Zipped Shapefile | Upload a `.zip` containing at least `.shp` and `.dbf`; records are mapped through the same field-mapping panel. |
+| API URL | Fetches CSV or GeoJSON from a URL and stores the source URL in the import log. |
+| Manual entry | Provides an editable table for adding individual stops without a source file. |
 
 ## Platform Direction
 
@@ -132,7 +143,7 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-The app opens to the reusable builder and uses `stops.txt` plus `shading_data.csv` only as the default starter dataset. Uploading a GTFS zip or mapped CSV in the `Data` page replaces the active in-session dataset.
+The app opens to the reusable builder and uses `stops.txt` plus `shading_data.csv` only as the default starter dataset. Importing a GTFS zip, mapped file/API dataset, or manual entries in the `Data` page replaces the active in-session dataset.
 
 ## Verify heat data
 
