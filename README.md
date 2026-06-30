@@ -12,15 +12,17 @@ The repository still includes the Tampa/HART stop and shade files as a starter p
 - Tracks project metadata, source name, license, source URL, dataset version, methodology version, owners, and visibility.
 - Persists multiple builder projects in a local SQLite platform database by default, with a Postgres-ready schema for shared deployments.
 - Lets project teams edit the shade taxonomy, including category names, definitions, display colors, and sort order.
+- Provides a raw labeling page for expert, crowd, field-audit, imported, LLM-assisted, or manual shade submissions without overwriting prior labels.
 - Lets project teams choose map coloring, dataset-backed contextual overlays, up to 10 custom X/Y charts, dashboard summaries, public table and map-hover columns, and priority-score weights.
 - Provides an editable rationale/about page for methodology, data sources, contributors, grouped hanging-indent citations and bibliography, limitations, and release history.
 - Automatically includes the priority formula on the methodology page whenever `priority_score` is used by the configured visualizations.
-- Previews the public Streamlit app with a map, analytics, unlabeled-stop visibility toggle, methodology page, import log, and CSV/GeoJSON/config downloads.
-- Builds a GitHub-ready deployment bundle containing the rendered public Streamlit app, current stop data, configuration, dependencies, README, and optional GitHub CLI publish script.
+- Previews the public Streamlit app with a map, analytics, unlabeled-stop visibility toggle, methodology page, import log, and CSV/GeoJSON/config/raw-label downloads.
+- Builds a GitHub-ready deployment bundle containing the rendered public Streamlit app, current stop data, raw labels when present, configuration, dependencies, README, and optional GitHub CLI publish script.
 
 ## App Pages
 
 - `Data`: project setup, file/API/manual import workflow, field mapping, shade taxonomy, source metadata, and dataset health checks.
+- `Labels`: stop-level raw shade label collection, reviewer/source metadata, optional map-label application, label history, and raw-label CSV export.
 - `Visuals`: side-by-side map preview with expandable, scrollable controls for color fields, premade shade palettes, editable color swatches, marker shape/size/outline, base map style, dataset-backed overlay selection, up to 10 custom X/Y charts, dashboard metrics, public data table/map-hover columns, and priority formula weights.
 - `Methodology`: editable public rationale/about page with live preview.
 - `Preview`: the generated public-facing Streamlit app experience for the current project configuration, including a toggle to show or hide unlabeled bus stops.
@@ -52,7 +54,7 @@ Supported import paths:
 
 ## Platform Direction
 
-The current app is an MVP for the reusable platform described in the project issue. It establishes the project builder workflow, durable multi-project storage, public preview surface, and schema foundations for imagery, raw labels, review history, releases, richer GIS overlays, and API-backed publishing.
+The current app is an MVP for the reusable platform described in the project issue. It establishes the project builder workflow, durable multi-project storage, raw label collection, public preview surface, and schema foundations for imagery, review history, releases, richer GIS overlays, and API-backed publishing.
 
 See `docs/platform_schema.md` for the current project, stop, taxonomy, image, label, review, release, and export schema notes. The repository also includes `CITATION.cff` as a starter citation file for publication workflows.
 
@@ -176,12 +178,13 @@ The builder persists edits in a local SQLite platform database and exposes CSV, 
 streamlit run app.py
 ```
 
-On Windows, the default database is created at `%LOCALAPPDATA%\Shade-GIS\shade_study_builder.sqlite3` to avoid OneDrive file-locking issues. On other systems, it falls back to `platform_data/shade_study_builder.sqlite3`. Set `SHADE_GIS_DB_PATH` to use a different writable SQLite database file.
+On Windows, the default database is created at `%LOCALAPPDATA%\Shade-GIS\shade_study_builder.sqlite3` to avoid OneDrive file-locking issues. On other systems it first tries `platform_data/shade_study_builder.sqlite3`. Set `SHADE_GIS_DB_PATH` to use a different writable SQLite database file. If the configured or default database is readonly, the builder automatically falls back to a writable user or temp database and shows the active path in the `Data` page's Project Store.
 
 To publish a rendered study app, use the builder's `Deploy` page. It creates a ZIP bundle with:
 
 - `app.py`: standalone public Streamlit app rendered from the current builder state.
 - `shade_study_stops.csv`: exported stop dataset.
+- `shade_study_raw_labels.csv`: exported raw label submissions when labels have been collected.
 - `shade_study_config.json`: exported project metadata, methodology, taxonomy, visualization settings, and import log.
 - `requirements.txt`, `.streamlit/config.toml`, `README.md`, and `deploy_to_github.ps1`.
 

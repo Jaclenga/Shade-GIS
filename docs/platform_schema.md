@@ -10,6 +10,10 @@ other systems it falls back to `platform_data/shade_study_builder.sqlite3`. Set 
 to point the app at a different SQLite database file. The database stores multiple projects and
 treats Streamlit session state as a live editing cache, not the durable source of record.
 
+If the preferred SQLite file can be read but not written, the builder marks that path unusable for
+the current process and retries against a writable user or temp fallback database. The active path is
+shown in the `Data` page's Project Store controls.
+
 The canonical relational shape is:
 
 | Entity | Purpose |
@@ -103,6 +107,17 @@ The default reusable taxonomy is:
 
 Project teams can edit names, descriptions, colors, and sort order in the `Data` page.
 
+## Raw Shade Labels
+
+The `Labels` page writes every submitted assessment to `shade_labels` instead of replacing earlier
+labels. Each label records the stop ID, optional image reference, reviewer or contributor ID,
+reviewer role, source type, shade category, coverage, shade sources, confidence, notes, and
+timestamp. A reviewer can optionally apply a submitted label to the current stop fields used by the
+map and exports, but the raw label row is still retained either way.
+
+The page also exposes raw-label history, basic counts for labeled/unlabeled/conflicting stops, and
+a raw-label CSV download.
+
 Visualization settings store the selected map color field, premade and editable palettes for shade
 categories, review statuses, priority-score gradients, and other categorical columns, plus marker
 shape, size, opacity, outline, base map style, data-backed overlay selections, up to 10 custom X/Y chart
@@ -122,12 +137,14 @@ The `Preview` page exports:
 
 - Stops CSV.
 - Stops GeoJSON.
+- Raw labels CSV, when raw labels have been submitted.
 - Study configuration JSON containing project metadata, taxonomy, methodology copy, visualization settings, and import log.
 
 The `Deploy` page also exports a GitHub-ready ZIP bundle for the rendered public app. The bundle includes:
 
 - Standalone `app.py` for the public Streamlit experience.
 - `shade_study_stops.csv` with the active stop dataset and current priority scores.
+- `shade_study_raw_labels.csv` with raw label submissions, when labels have been collected.
 - `shade_study_config.json` with project metadata, taxonomy, methodology copy, visualization settings, and import log.
 - `requirements.txt`, `.streamlit/config.toml`, generated `README.md`, `.gitignore`, and optional `deploy_to_github.ps1` helper.
 
@@ -139,6 +156,7 @@ still `Needs Review` without changing the exported dataset.
 
 ## Review And Release Entities
 
-`images`, `shade_labels`, `review_history`, and `releases` are part of the durable schema even when
-the current Streamlit screens do not expose every field yet. This keeps image evidence, raw labels,
-review audit trails, and release metadata from being collapsed into a single exported CSV.
+`images`, `review_history`, and `releases` are part of the durable schema even when the current
+Streamlit screens do not expose every field yet. Raw label submission is now exposed through the
+`Labels` page, while image evidence, review audit trails, and release metadata remain ready for
+future workflow screens.

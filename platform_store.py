@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import sqlite3
+import tempfile
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -14,6 +15,9 @@ import pandas as pd
 
 
 APP_DIR = Path(__file__).parent
+_ACTIVE_DATABASE_PATH: Path | None = None
+_UNUSABLE_DATABASE_PATHS: set[Path] = set()
+_DATABASE_FALLBACK_REASON = ""
 
 
 def default_database_path() -> Path:
@@ -21,6 +25,102 @@ def default_database_path() -> Path:
     if local_app_data:
         return Path(local_app_data) / "Shade-GIS" / "shade_study_builder.sqlite3"
     return APP_DIR / "platform_data" / "shade_study_builder.sqlite3"
+
+
+def fallback_database_paths() -> list[Path]:
+    return [
+        Path.home() / ".shade-gis" / "shade_study_builder.sqlite3",
+        Path(tempfile.gettempdir()) / "Shade-GIS" / "shade_study_builder.sqlite3",
+    ]
+
+
+def candidate_database_paths() -> list[Path]:
+    candidates = []
+    configured = os.environ.get("SHADE_GIS_DB_PATH")
+    if configured:
+        candidates.append(Path(configured))
+    candidates.append(default_database_path())
+    candidates.extend(fallback_database_paths())
+
+    unique = []
+    seen: set[Path] = set()
+    for candidate in candidates:
+        resolved = candidate.expanduser().resolve()
+        if resolved not in seen:
+            seen.add(resolved)
+            unique.append(resolved)
+    return unique
+
+
+def is_readonly_database_error(error: BaseException) -> bool:
+    return "readonly database" in str(error).lower()
+
+
+def probe_database_writable(path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with sqlite3.connect(path) as conn:
+        conn.execute("PRAGMA foreign_keys = ON")
+        conn.executescript(SQLITE_SCHEMA)
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS storage_healthcheck (
+                id INTEGER PRIMARY KEY,
+                checked_at TEXT NOT NULL
+            )
+            """
+        )
+        conn.execute("INSERT INTO storage_healthcheck (checked_at) VALUES (?)", (utc_timestamp(),))
+        conn.execute(
+            """
+            DELETE FROM storage_healthcheck
+            WHERE id NOT IN (SELECT id FROM storage_healthcheck ORDER BY id DESC LIMIT 3)
+            """
+        )
+        conn.commit()
+
+
+def mark_database_path_unusable(path: Path, reason: BaseException | str) -> None:
+    global _ACTIVE_DATABASE_PATH, _DATABASE_FALLBACK_REASON
+    resolved = path.expanduser().resolve()
+    _UNUSABLE_DATABASE_PATHS.add(resolved)
+    if _ACTIVE_DATABASE_PATH == resolved:
+        _ACTIVE_DATABASE_PATH = None
+    _DATABASE_FALLBACK_REASON = str(reason)
+
+
+def choose_database_path() -> Path:
+    global _ACTIVE_DATABASE_PATH, _DATABASE_FALLBACK_REASON
+    if _ACTIVE_DATABASE_PATH and _ACTIVE_DATABASE_PATH not in _UNUSABLE_DATABASE_PATHS:
+        return _ACTIVE_DATABASE_PATH
+
+    last_error: BaseException | None = None
+    for candidate in candidate_database_paths():
+        if candidate in _UNUSABLE_DATABASE_PATHS:
+            continue
+        try:
+            probe_database_writable(candidate)
+        except (OSError, sqlite3.Error) as error:
+            last_error = error
+            _UNUSABLE_DATABASE_PATHS.add(candidate)
+            _DATABASE_FALLBACK_REASON = str(error)
+            continue
+        _ACTIVE_DATABASE_PATH = candidate
+        return candidate
+
+    if last_error:
+        raise sqlite3.OperationalError(f"No writable Shade-GIS database path is available: {last_error}") from last_error
+    raise sqlite3.OperationalError("No writable Shade-GIS database path is available")
+
+
+def database_status() -> dict[str, Any]:
+    active = database_path()
+    preferred = candidate_database_paths()[0]
+    return {
+        "active_path": str(active),
+        "preferred_path": str(preferred),
+        "using_fallback": active != preferred,
+        "fallback_reason": _DATABASE_FALLBACK_REASON,
+    }
 
 
 PROJECT_FIELDS = [
@@ -58,6 +158,23 @@ STOP_FIELDS = [
     "priority_score",
 ]
 
+LABEL_FIELDS = [
+    "id",
+    "project_id",
+    "stop_id",
+    "image_id",
+    "labeler_id",
+    "labeler_role",
+    "shade_category",
+    "shade_coverage",
+    "shade_sources",
+    "confidence",
+    "notes",
+    "source",
+    "metadata_json",
+    "created_at",
+]
+
 NUMERIC_STOP_FIELDS = {
     "stop_lat",
     "stop_lon",
@@ -75,7 +192,7 @@ def utc_timestamp() -> str:
 
 
 def database_path() -> Path:
-    return Path(os.environ.get("SHADE_GIS_DB_PATH") or default_database_path())
+    return choose_database_path()
 
 
 def connect(path: Path | None = None) -> sqlite3.Connection:
@@ -105,6 +222,116 @@ def list_projects(path: Path | None = None) -> list[dict[str, Any]]:
             """
         ).fetchall()
     return [dict(row) for row in rows]
+
+
+def list_shade_labels(
+    project_id: str,
+    stop_id: str | None = None,
+    path: Path | None = None,
+) -> pd.DataFrame:
+    init_database(path)
+    filters = ["project_id = ?"]
+    params: list[Any] = [project_id]
+    if stop_id:
+        filters.append("stop_id = ?")
+        params.append(stop_id)
+    where_clause = " AND ".join(filters)
+    with connect(path) as conn:
+        rows = conn.execute(
+            f"""
+            SELECT id, project_id, stop_id, image_id, labeler_id, labeler_role,
+                   shade_category, shade_coverage, shade_sources, confidence,
+                   notes, source, metadata_json, created_at
+            FROM shade_labels
+            WHERE {where_clause}
+            ORDER BY created_at DESC, id DESC
+            """,
+            params,
+        ).fetchall()
+    records = []
+    for row in rows:
+        record = {field: row[field] for field in LABEL_FIELDS}
+        metadata = json.loads(record.pop("metadata_json") or "{}")
+        for key, value in metadata.items():
+            record[f"metadata_{key}"] = value
+        records.append(record)
+    if not records:
+        return pd.DataFrame(columns=[field for field in LABEL_FIELDS if field != "metadata_json"])
+    return pd.DataFrame(records)
+
+
+def add_shade_label(
+    project_id: str,
+    label: dict[str, Any],
+    path: Path | None = None,
+) -> str:
+    db_path = Path(path) if path is not None else database_path()
+    for attempt in range(2):
+        try:
+            return _add_shade_label_once(project_id, label, db_path)
+        except sqlite3.OperationalError as error:
+            if path is None and attempt == 0 and is_readonly_database_error(error):
+                mark_database_path_unusable(db_path, error)
+                db_path = database_path()
+                continue
+            raise
+    raise sqlite3.OperationalError("Could not write shade label")
+
+
+def _add_shade_label_once(
+    project_id: str,
+    label: dict[str, Any],
+    path: Path,
+) -> str:
+    init_database(path)
+    label_id = str(uuid.uuid4())
+    now = utc_timestamp()
+    metadata = {
+        key: clean_scalar(value)
+        for key, value in label.items()
+        if key
+        not in {
+            "stop_id",
+            "image_id",
+            "labeler_id",
+            "labeler_role",
+            "shade_category",
+            "shade_coverage",
+            "shade_sources",
+            "confidence",
+            "notes",
+            "source",
+        }
+    }
+    with connect(path) as conn:
+        conn.execute(
+            """
+            INSERT INTO shade_labels (
+                id, project_id, stop_id, image_id, labeler_id, labeler_role,
+                shade_category, shade_coverage, shade_sources, confidence,
+                notes, source, metadata_json, created_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                label_id,
+                project_id,
+                clean_scalar(label.get("stop_id", "")),
+                clean_optional_text(label.get("image_id", "")),
+                clean_scalar(label.get("labeler_id", "")),
+                clean_scalar(label.get("labeler_role", "")),
+                clean_scalar(label.get("shade_category", "")),
+                clean_scalar(label.get("shade_coverage", "")),
+                clean_scalar(label.get("shade_sources", "")),
+                clean_number(label.get("confidence")),
+                clean_scalar(label.get("notes", "")),
+                clean_scalar(label.get("source", "manual")),
+                json.dumps(metadata, ensure_ascii=True),
+                now,
+            ),
+        )
+        conn.commit()
+    return label_id
 
 
 def create_project(
@@ -195,6 +422,29 @@ def save_project_bundle(
     stops: pd.DataFrame,
     import_log: list[dict[str, Any]],
     path: Path | None = None,
+) -> None:
+    db_path = Path(path) if path is not None else database_path()
+    for attempt in range(2):
+        try:
+            _save_project_bundle_once(project_id, project, taxonomy, methodology, visualization, stops, import_log, db_path)
+            return
+        except sqlite3.OperationalError as error:
+            if path is None and attempt == 0 and is_readonly_database_error(error):
+                mark_database_path_unusable(db_path, error)
+                db_path = database_path()
+                continue
+            raise
+
+
+def _save_project_bundle_once(
+    project_id: str,
+    project: dict[str, Any],
+    taxonomy: list[dict[str, Any]],
+    methodology: dict[str, Any],
+    visualization: dict[str, Any],
+    stops: pd.DataFrame,
+    import_log: list[dict[str, Any]],
+    path: Path,
 ) -> None:
     init_database(path)
     now = utc_timestamp()
@@ -378,6 +628,14 @@ def clean_scalar(value: Any) -> Any:
     if isinstance(value, (dict, list, tuple)):
         return json.dumps(value, ensure_ascii=True)
     return value
+
+
+def clean_optional_text(value: Any) -> str | None:
+    value = clean_scalar(value)
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
 
 
 def clean_number(value: Any) -> float | None:
