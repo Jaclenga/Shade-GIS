@@ -155,6 +155,7 @@ DEFAULT_VISUALIZATION = {
     "field_color_maps": {},
     "metric_cards": ["Shade distribution", "Review status", "Agreement metrics", "Priority stops"],
     "overlays": [],
+    "gis_overlays": [],
     "priority_weights": {
         "ridership": 0.5,
         "low_shade": 0.5,
@@ -185,6 +186,8 @@ NUMERIC_MAP_FILTERS = [
     "tree_canopy_pct",
     "priority_score",
 ]
+GIS_OVERLAY_CATEGORIES = ["Transportation", "Environmental", "Demographic", "Destinations", "Other"]
+GIS_OVERLAY_CATEGORIES = ["Transportation", "Environmental", "Demographic", "Destinations", "Other"]
 
 MAP_STYLES = {
     "Light": pdk.map_styles.CARTO_LIGHT,
@@ -531,6 +534,56 @@ def parse_geojson_bytes(contents: bytes) -> tuple[pd.DataFrame, dict[str, Any]]:
     }
 
 
+def json_safe_value(value: Any) -> Any:
+    if value is None:
+        return None
+    try:
+        if pd.isna(value):
+            return None
+    except (TypeError, ValueError):
+        pass
+    if isinstance(value, (str, int, float, bool)):
+        return value
+    if isinstance(value, (datetime, Path)):
+        return str(value)
+    return str(value)
+
+
+def clean_geojson_feature(feature: dict[str, Any]) -> dict[str, Any] | None:
+    geometry = feature.get("geometry")
+    if not isinstance(geometry, dict) or not geometry_coordinate_pairs(geometry):
+        return None
+    properties = feature.get("properties") or {}
+    if not isinstance(properties, dict):
+        properties = {}
+    cleaned = {
+        "type": "Feature",
+        "properties": {str(key): json_safe_value(value) for key, value in properties.items()},
+        "geometry": geometry,
+    }
+    if feature.get("id") is not None:
+        cleaned["id"] = json_safe_value(feature.get("id"))
+    return cleaned
+
+
+def parse_geojson_overlay_bytes(contents: bytes) -> tuple[dict[str, Any], dict[str, Any]]:
+    payload = json.loads(contents.decode("utf-8-sig"))
+    features = []
+    geometry_types: set[str] = set()
+    for feature in geojson_features(payload):
+        cleaned = clean_geojson_feature(feature)
+        if cleaned is None:
+            continue
+        geometry_types.add(str(cleaned["geometry"].get("type", "")))
+        features.append(cleaned)
+    if not features:
+        raise ValueError("GIS overlay did not contain any renderable geometries")
+    return {"type": "FeatureCollection", "features": features}, {
+        "geometry_types": "; ".join(sorted(geometry_types)),
+        "features": len(features),
+    }
+
+
 def zip_member_names(contents: bytes) -> list[str]:
     with zipfile.ZipFile(io.BytesIO(contents)) as archive:
         return archive.namelist()
@@ -590,6 +643,48 @@ def parse_shapefile_zip(contents: bytes) -> tuple[pd.DataFrame, dict[str, Any]]:
         "geometry_types": "; ".join(sorted(geometry_types)),
         "features": len(records),
         "missing_geometry": missing_geometry,
+    }
+
+
+def parse_shapefile_overlay_zip(contents: bytes) -> tuple[dict[str, Any], dict[str, Any]]:
+    try:
+        import shapefile  # type: ignore[import-not-found]
+    except ImportError as error:
+        raise RuntimeError("Install pyshp to import zipped Shapefiles: pip install pyshp") from error
+
+    with zipfile.ZipFile(io.BytesIO(contents)) as archive:
+        members = {member.lower(): member for member in archive.namelist()}
+        shp_member = next((member for member in members.values() if member.lower().endswith(".shp")), None)
+        dbf_member = next((member for member in members.values() if member.lower().endswith(".dbf")), None)
+        shx_member = next((member for member in members.values() if member.lower().endswith(".shx")), None)
+        if not shp_member or not dbf_member:
+            raise ValueError("Shapefile ZIP must include at least .shp and .dbf files")
+        shp = io.BytesIO(archive.read(shp_member))
+        dbf = io.BytesIO(archive.read(dbf_member))
+        shx = io.BytesIO(archive.read(shx_member)) if shx_member else None
+
+    reader_kwargs = {"shp": shp, "dbf": dbf}
+    if shx is not None:
+        reader_kwargs["shx"] = shx
+    reader = shapefile.Reader(**reader_kwargs)
+    fields = [field[0] for field in reader.fields if field[0] != "DeletionFlag"]
+    features = []
+    geometry_types: set[str] = set()
+    for shape_record in reader.iterShapeRecords():
+        geometry = shape_record.shape.__geo_interface__
+        if not geometry_coordinate_pairs(geometry):
+            continue
+        geometry_types.add(str(geometry.get("type", "")))
+        properties = {
+            str(field): json_safe_value(value)
+            for field, value in zip(fields, shape_record.record)
+        }
+        features.append({"type": "Feature", "properties": properties, "geometry": geometry})
+    if not features:
+        raise ValueError("Shapefile overlay did not contain any renderable geometries")
+    return {"type": "FeatureCollection", "features": features}, {
+        "geometry_types": "; ".join(sorted(geometry_types)),
+        "features": len(features),
     }
 
 
@@ -889,6 +984,8 @@ def ensure_visualization_defaults() -> None:
     for key, color in DEFAULT_VISUALIZATION["priority_colors"].items():
         priority_colors.setdefault(key, color)
 
+    clean_gis_overlays(visualization)
+
 
 def create_seed_project() -> str:
     project = DEFAULT_PROJECT.copy()
@@ -1074,6 +1171,68 @@ def get_available_metric_cards(df: pd.DataFrame) -> list[str]:
 
 def clean_selected_options(selected: list[str], options: list[str]) -> list[str]:
     return [item for item in selected if item in options]
+
+
+def clean_gis_overlays(visualization: dict[str, Any]) -> list[dict[str, Any]]:
+    overlays = []
+    for index, overlay in enumerate(visualization.get("gis_overlays") or []):
+        if not isinstance(overlay, dict):
+            continue
+        geojson = overlay.get("geojson")
+        if not isinstance(geojson, dict) or str(geojson.get("type", "")).lower() != "featurecollection":
+            continue
+        features = geojson.get("features")
+        if not isinstance(features, list) or not features:
+            continue
+        cleaned = overlay.copy()
+        cleaned.setdefault("id", f"gis_overlay_{index + 1}")
+        cleaned.setdefault("name", f"GIS overlay {index + 1}")
+        cleaned.setdefault("category", "Other")
+        cleaned.setdefault("color", COLOR_PALETTE[index % len(COLOR_PALETTE)])
+        cleaned.setdefault("opacity", 0.35)
+        cleaned.setdefault("line_width", 2)
+        cleaned.setdefault("visible", True)
+        cleaned["color"] = normalize_hex_color(cleaned.get("color", COLOR_PALETTE[index % len(COLOR_PALETTE)]))
+        cleaned["opacity"] = max(0.05, min(1.0, float(cleaned.get("opacity", 0.35) or 0.35)))
+        cleaned["line_width"] = max(1, min(12, int(cleaned.get("line_width", 2) or 2)))
+        overlays.append(cleaned)
+    visualization["gis_overlays"] = overlays
+    return overlays
+
+
+def rgba_from_hex(value: str, opacity: float) -> list[int]:
+    rgb = hex_to_rgb(normalize_hex_color(value))
+    alpha = int(max(0.05, min(1.0, float(opacity))) * 255)
+    return [rgb[0], rgb[1], rgb[2], alpha]
+
+
+def build_gis_overlay_layers(visualization: dict[str, Any]) -> list[pdk.Layer]:
+    layers = []
+    for index, overlay in enumerate(clean_gis_overlays(visualization)):
+        if not overlay.get("visible", True):
+            continue
+        color = rgba_from_hex(str(overlay.get("color", COLOR_PALETTE[index % len(COLOR_PALETTE)])), overlay.get("opacity", 0.35))
+        line_color = rgba_from_hex(str(overlay.get("color", COLOR_PALETTE[index % len(COLOR_PALETTE)])), min(1.0, float(overlay.get("opacity", 0.35)) + 0.25))
+        layers.append(
+            pdk.Layer(
+                "GeoJsonLayer",
+                data=overlay["geojson"],
+                id=f"gis_overlay_{index}",
+                pickable=True,
+                stroked=True,
+                filled=True,
+                point_type="circle",
+                get_fill_color=color,
+                get_line_color=line_color,
+                get_line_width=int(overlay.get("line_width", 2)),
+                line_width_min_pixels=1,
+                get_point_radius=35,
+                point_radius_units="meters",
+                point_radius_min_pixels=4,
+                auto_highlight=True,
+            )
+        )
+    return layers
 
 
 def get_chart_column_options(df: pd.DataFrame) -> list[str]:
@@ -1382,7 +1541,7 @@ def build_deck_chart(df: pd.DataFrame, taxonomy: list[dict[str, Any]], visualiza
         )
     return pdk.Deck(
         initial_view_state=calculate_view_state(map_df),
-        layers=[layer],
+        layers=[*build_gis_overlay_layers(visualization), layer],
         map_style=MAP_STYLES.get(visualization.get("map_style", "Light"), pdk.map_styles.CARTO_LIGHT),
         tooltip={"text": build_tooltip_text(map_df, visualization)},
     )
@@ -1548,6 +1707,68 @@ def get_selected_display_columns(df: pd.DataFrame, visualization: dict[str, Any]
     return columns or [column for column in DEFAULT_DISPLAY_COLUMNS if column in df.columns] or list(df.columns[:8])
 
 
+def clean_gis_overlays(visualization: dict[str, Any]) -> list[dict[str, Any]]:
+    overlays = []
+    for index, overlay in enumerate(visualization.get("gis_overlays") or []):
+        if not isinstance(overlay, dict):
+            continue
+        geojson = overlay.get("geojson")
+        if not isinstance(geojson, dict) or str(geojson.get("type", "")).lower() != "featurecollection":
+            continue
+        features = geojson.get("features")
+        if not isinstance(features, list) or not features:
+            continue
+        cleaned = overlay.copy()
+        cleaned.setdefault("id", f"gis_overlay_{index + 1}")
+        cleaned.setdefault("name", f"GIS overlay {index + 1}")
+        cleaned.setdefault("category", "Other")
+        cleaned.setdefault("color", DEFAULT_PALETTE[index % len(DEFAULT_PALETTE)])
+        cleaned.setdefault("opacity", 0.35)
+        cleaned.setdefault("line_width", 2)
+        cleaned.setdefault("visible", True)
+        cleaned["color"] = normalize_hex_color(cleaned.get("color", DEFAULT_PALETTE[index % len(DEFAULT_PALETTE)]))
+        cleaned["opacity"] = max(0.05, min(1.0, float(cleaned.get("opacity", 0.35) or 0.35)))
+        cleaned["line_width"] = max(1, min(12, int(cleaned.get("line_width", 2) or 2)))
+        overlays.append(cleaned)
+    visualization["gis_overlays"] = overlays
+    return overlays
+
+
+def rgba_from_hex(value: str, opacity: float) -> list[int]:
+    rgb = hex_to_rgb(normalize_hex_color(value))
+    alpha = int(max(0.05, min(1.0, float(opacity))) * 255)
+    return [rgb[0], rgb[1], rgb[2], alpha]
+
+
+def build_gis_overlay_layers(visualization: dict[str, Any]) -> list[pdk.Layer]:
+    layers = []
+    for index, overlay in enumerate(clean_gis_overlays(visualization)):
+        if not overlay.get("visible", True):
+            continue
+        color = rgba_from_hex(str(overlay.get("color", DEFAULT_PALETTE[index % len(DEFAULT_PALETTE)])), overlay.get("opacity", 0.35))
+        line_color = rgba_from_hex(str(overlay.get("color", DEFAULT_PALETTE[index % len(DEFAULT_PALETTE)])), min(1.0, float(overlay.get("opacity", 0.35)) + 0.25))
+        layers.append(
+            pdk.Layer(
+                "GeoJsonLayer",
+                data=overlay["geojson"],
+                id=f"gis_overlay_{index}",
+                pickable=True,
+                stroked=True,
+                filled=True,
+                point_type="circle",
+                get_fill_color=color,
+                get_line_color=line_color,
+                get_line_width=int(overlay.get("line_width", 2)),
+                line_width_min_pixels=1,
+                get_point_radius=35,
+                point_radius_units="meters",
+                point_radius_min_pixels=4,
+                auto_highlight=True,
+            )
+        )
+    return layers
+
+
 def color_lookup(df: pd.DataFrame, taxonomy: list[dict[str, Any]], visualization: dict[str, Any]) -> tuple[str, dict[str, list[int]]]:
     label = visualization.get("color_by", "Shade category")
     field = COLOR_MODE_FIELDS.get(label, label)
@@ -1662,7 +1883,7 @@ def build_deck_chart(df: pd.DataFrame, taxonomy: list[dict[str, Any]], visualiza
         )
     return pdk.Deck(
         initial_view_state=calculate_view_state(map_df),
-        layers=[layer],
+        layers=[*build_gis_overlay_layers(visualization), layer],
         map_style=MAP_STYLES.get(visualization.get("map_style", "Light"), pdk.map_styles.CARTO_LIGHT),
         tooltip={"text": build_tooltip_text(map_df, visualization)},
     )
@@ -2299,7 +2520,7 @@ This repository was generated by Shade Study Builder. It contains a public Strea
 - `app.py`: public Streamlit app.
 - `shade_study_stops.csv`: published stop dataset.
 - `shade_study_raw_labels.csv`: raw submitted labels, included when labels have been collected.
-- `shade_study_config.json`: project metadata, methodology, taxonomy, visualization settings, and import log.
+- `shade_study_config.json`: project metadata, methodology, taxonomy, visualization settings, uploaded GIS overlays, and import log.
 - `requirements.txt`: Python dependencies for Streamlit deployment.
 
 ## Publish To GitHub
@@ -3147,6 +3368,148 @@ def render_palette_controls(
             )
 
 
+def gis_overlay_id(name: str, index: int) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", str(name or "gis-overlay").lower()).strip("-")
+    return f"{slug or 'gis-overlay'}-{index + 1}"
+
+
+def parse_uploaded_gis_overlay(contents: bytes, filename: str) -> tuple[str, dict[str, Any], dict[str, Any]]:
+    suffix = Path(filename).suffix.lower()
+    if suffix == ".zip":
+        geojson, metadata = parse_shapefile_overlay_zip(contents)
+        return "Shapefile", geojson, metadata
+    geojson, metadata = parse_geojson_overlay_bytes(contents)
+    return "GeoJSON", geojson, metadata
+
+
+def append_import_log(entry: dict[str, Any]) -> None:
+    import_log = st.session_state.setdefault("import_log", [])
+    import_log.append(entry)
+
+
+def render_gis_overlay_controls(visualization: dict[str, Any]) -> None:
+    st.subheader("GIS Overlays")
+    overlays = clean_gis_overlays(visualization)
+    uploaded = st.file_uploader(
+        "Upload GeoJSON or zipped Shapefile overlay",
+        type=["geojson", "json", "zip"],
+        key="gis_overlay_upload",
+        help="Use this for real map layers such as routes, shelters, canopy, NDVI, Census geographies, or destinations.",
+    )
+    overlay_cols = st.columns([1.2, 1, 1])
+    overlay_name = overlay_cols[0].text_input("Overlay name", key="gis_overlay_name", placeholder="Tree canopy")
+    overlay_category = overlay_cols[1].selectbox("Overlay category", GIS_OVERLAY_CATEGORIES, key="gis_overlay_category")
+    overlay_color = overlay_cols[2].color_picker("Overlay color", "#2563eb", key="gis_overlay_color")
+    source_cols = st.columns([1, 1])
+    overlay_source = source_cols[0].text_input("Source", key="gis_overlay_source", placeholder="Agency, dataset, or URL")
+    overlay_license = source_cols[1].text_input("License", key="gis_overlay_license", placeholder="Optional")
+    style_cols = st.columns([1, 1, 1])
+    overlay_opacity = style_cols[0].slider("Overlay opacity", 0.05, 1.0, 0.35, 0.05, key="gis_overlay_opacity")
+    overlay_line_width = style_cols[1].slider("Line width", 1, 12, 2, 1, key="gis_overlay_line_width")
+    overlay_visible = style_cols[2].checkbox("Visible by default", value=True, key="gis_overlay_visible")
+
+    if st.button("Add GIS overlay", type="primary", disabled=uploaded is None):
+        if uploaded is None:
+            st.warning("Upload a GeoJSON file or zipped Shapefile first.")
+        else:
+            try:
+                overlay_format, geojson, metadata = parse_uploaded_gis_overlay(uploaded.getvalue(), uploaded.name)
+                name = overlay_name.strip() or Path(uploaded.name).stem.replace("_", " ").title()
+                overlay = {
+                    "id": gis_overlay_id(name, len(overlays)),
+                    "name": name,
+                    "category": overlay_category,
+                    "source": overlay_source.strip(),
+                    "license": overlay_license.strip(),
+                    "filename": uploaded.name,
+                    "format": overlay_format,
+                    "color": normalize_hex_color(overlay_color),
+                    "opacity": overlay_opacity,
+                    "line_width": overlay_line_width,
+                    "visible": overlay_visible,
+                    "metadata": metadata,
+                    "imported_at": timestamp_with_timezone(),
+                    "geojson": geojson,
+                }
+                overlays.append(overlay)
+                visualization["gis_overlays"] = overlays
+                append_import_log(
+                    {
+                        "source": name,
+                        "format": f"GIS overlay: {overlay_format}",
+                        "rows": int(metadata.get("features", 0)),
+                        "imported_at": overlay["imported_at"],
+                        "original_filename": uploaded.name,
+                        "metadata": {
+                            "category": overlay_category,
+                            "geometry_types": metadata.get("geometry_types", ""),
+                            "source": overlay_source.strip(),
+                            "license": overlay_license.strip(),
+                        },
+                    }
+                )
+                st.success(f"Added {name} with {metadata.get('features', 0)} feature(s).")
+                st.rerun()
+            except Exception as error:
+                st.error(f"Could not import GIS overlay: {error}")
+
+    if not overlays:
+        st.caption("No uploaded GIS overlays yet.")
+        return
+
+    delete_index: int | None = None
+    for index, overlay in enumerate(overlays):
+        label = f"{overlay.get('name', f'GIS overlay {index + 1}')} ({overlay.get('category', 'Other')})"
+        with st.expander(label, expanded=False):
+            edit_cols = st.columns([1, 1, 1])
+            overlay["visible"] = edit_cols[0].checkbox("Visible", value=bool(overlay.get("visible", True)), key=f"gis_overlay_visible_{index}")
+            overlay["color"] = edit_cols[1].color_picker(
+                "Color",
+                normalize_hex_color(overlay.get("color", COLOR_PALETTE[index % len(COLOR_PALETTE)])),
+                key=f"gis_overlay_color_{index}",
+            )
+            overlay["opacity"] = edit_cols[2].slider(
+                "Opacity",
+                0.05,
+                1.0,
+                float(overlay.get("opacity", 0.35)),
+                0.05,
+                key=f"gis_overlay_opacity_{index}",
+            )
+            overlay["line_width"] = st.slider(
+                "Line width",
+                1,
+                12,
+                int(overlay.get("line_width", 2)),
+                1,
+                key=f"gis_overlay_width_{index}",
+            )
+            overlay["name"] = st.text_input("Name", str(overlay.get("name", "")), key=f"gis_overlay_name_{index}")
+            category = str(overlay.get("category", "Other"))
+            if category not in GIS_OVERLAY_CATEGORIES:
+                category = "Other"
+            overlay["category"] = st.selectbox(
+                "Category",
+                GIS_OVERLAY_CATEGORIES,
+                index=GIS_OVERLAY_CATEGORIES.index(category),
+                key=f"gis_overlay_category_{index}",
+            )
+            meta = overlay.get("metadata", {})
+            st.caption(
+                f"{overlay.get('format', 'GIS')} | {meta.get('features', 0)} feature(s) | "
+                f"{meta.get('geometry_types', 'Unknown geometry')}"
+            )
+            if st.button("Remove overlay", key=f"remove_gis_overlay_{index}"):
+                delete_index = index
+
+    if delete_index is not None:
+        overlays.pop(delete_index)
+        visualization["gis_overlays"] = overlays
+        st.rerun()
+    else:
+        visualization["gis_overlays"] = overlays
+
+
 def render_visuals_page() -> None:
     st.title("Metrics And Visualizations")
     visualization = st.session_state["visualization"]
@@ -3211,11 +3574,11 @@ def render_visuals_page() -> None:
                 visualization["overlays"] = clean_selected_options(visualization.get("overlays", []), overlay_options)
                 if overlay_options:
                     visualization["overlays"] = st.multiselect(
-                        "Context layers to include",
+                        "Dataset-backed context fields",
                         overlay_options,
                         default=visualization["overlays"],
                         help=(
-                            "Context layers are optional map/data overlays from fields in the active dataset, "
+                            "These options expose contextual fields that are already attached to stop rows, "
                             "such as routes, ridership, shelters, heat vulnerability, or canopy. They only appear "
                             "when those columns have usable values: at least one non-null cell with text or data "
                             "after blank spaces are trimmed."
@@ -3224,6 +3587,9 @@ def render_visuals_page() -> None:
                 else:
                     visualization["overlays"] = []
                     st.caption("No optional context layers are available in the active dataset.")
+
+                st.divider()
+                render_gis_overlay_controls(visualization)
 
                 metric_options = get_available_metric_cards(stops)
                 visualization["metric_cards"] = clean_selected_options(

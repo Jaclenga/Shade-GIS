@@ -130,11 +130,16 @@ current stop fields.
 
 Visualization settings store the selected map color field, premade and editable palettes for shade
 categories, review statuses, priority-score gradients, and other categorical columns, plus marker
-shape, size, opacity, outline, base map style, data-backed overlay selections, up to 10 custom X/Y chart
-settings, dashboard cards, public data table/map-hover columns, and priority weights. Optional
-context layers such as heat vulnerability or tree canopy are exposed only when the active dataset
-contains usable values for those fields. The builder presents those settings in an expandable,
-scrollable panel beside the live map preview.
+shape, size, opacity, outline, base map style, uploaded GIS overlays, data-backed context field
+selections, up to 10 custom X/Y chart settings, dashboard cards, public data table/map-hover
+columns, and priority weights. Optional context fields such as heat vulnerability or tree canopy are
+exposed only when the active dataset contains usable values for those fields.
+
+Uploaded GIS overlays live under `visualization.gis_overlays`. Each overlay stores a name,
+category, source, license, original filename, format, style settings, import timestamp, summary
+metadata, and a GeoJSON FeatureCollection. GeoJSON files are preserved as GeoJSON, while zipped
+Shapefiles are converted to GeoJSON features for rendering and export. These overlays render as
+PyDeck `GeoJsonLayer`s in the builder preview and generated public app.
 
 When `priority_score` is used by any configured visualization, the public methodology page
 automatically includes the active priority formula. If `priority_score` is excluded from map
