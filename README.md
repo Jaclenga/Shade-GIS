@@ -1,10 +1,10 @@
-# Shade Study Builder
+# Shade-GIS Study Builder
 
 [![Tests](https://github.com/Jaclenga/Shade-GIS/actions/workflows/tests.yml/badge.svg)](https://github.com/Jaclenga/Shade-GIS/actions/workflows/tests.yml)
 
 Streamlit platform for preparing reusable, city-wide bus stop shade studies from GTFS or CSV stop datasets. The app helps researchers, transit agencies, and municipalities configure project metadata, upload or map transit data, choose shade taxonomy and visualization settings, edit public methodology copy, and preview the resulting public Streamlit app.
 
-The repository still includes the Tampa/HART stop and shade files as a starter project, but the app is no longer hard-coded as a Tampa-only viewer.
+The repository includes the Tampa/HART stop and shade files as a starter project.
 
 ## Project Practices
 
