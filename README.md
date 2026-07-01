@@ -170,7 +170,7 @@ Additional reference:
 ## Run locally
 
 ```bash
-pip install -r requirements.txt
+pip install -r requirements/requirements.txt
 streamlit run app.py
 ```
 
@@ -200,19 +200,19 @@ The script exits with status `0` when all checks pass, `1` when data errors are 
 Install the standard dependencies, then run the non-UI platform test suite:
 
 ```bash
-pip install -r requirements-test.txt
+pip install -r requirements/requirements-test.txt
 pytest -q
 ```
 
 The pytest suite uses temporary SQLite databases and small fixtures to verify project storage, imports, labels, review audit history, exports, priority scoring, and module syntax without touching the local builder database.
-`requirements.txt` is kept to runtime dependencies only; test-only packages live in `requirements-test.txt` and `requirements-ui.txt`.
+`requirements/requirements.txt` is kept to runtime dependencies only; test-only packages live in `requirements/requirements-test.txt` and `requirements/requirements-ui.txt`.
 
 Browser UI tests are available as an opt-in Playwright suite. They start `streamlit run app.py`
 against an isolated temporary SQLite database, wait for `/_stcore/health`, and click through the
 main builder pages.
 
 ```bash
-pip install -r requirements-ui.txt
+pip install -r requirements/requirements-ui.txt
 python -m playwright install chromium
 pytest -q -m ui
 ```
@@ -224,7 +224,7 @@ Normal `pytest` runs exclude tests marked `ui`; GitHub Actions runs the UI suite
 The builder itself is ready for a basic Streamlit deployment using:
 
 - main file: `app.py`
-- Python dependencies: `requirements.txt`
+- Python dependencies: `requirements.txt` at the repo root, which delegates to `requirements/requirements.txt`
 
 The builder persists edits in a local SQLite platform database and exposes CSV, GeoJSON, and configuration downloads from the `Preview` page. Streamlit session state is only the live editing cache for the active browser session.
 
@@ -263,7 +263,7 @@ docker-compose up -d
 2. Install the optional database dependencies:
 
 ```bash
-pip install -r requirements-db.txt
+pip install -r requirements/requirements-db.txt
 ```
 
 3. Initialize the schema and seed project stops:

@@ -25,7 +25,7 @@ consistent with the platform direction.
 ## Development setup
 
 ```bash
-pip install -r requirements-test.txt
+pip install -r requirements/requirements-test.txt
 streamlit run app.py
 pytest -q
 ```
@@ -33,7 +33,7 @@ pytest -q
 For browser coverage:
 
 ```bash
-pip install -r requirements-ui.txt
+pip install -r requirements/requirements-ui.txt
 python -m playwright install chromium
 pytest -q -m ui
 ```

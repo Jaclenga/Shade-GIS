@@ -1,0 +1,90 @@
+from builder_app import *
+
+def render_preview_page() -> None:
+    project = st.session_state["project"]
+    methodology = st.session_state["methodology"]
+    visualization = st.session_state["visualization"]
+    taxonomy = st.session_state["taxonomy"]
+    stops = st.session_state["stops"]
+    stops["priority_score"] = calculate_priority_scores(stops, visualization["priority_weights"])
+    raw_labels = active_raw_labels()
+    config = study_config_payload()
+
+    st.title(project["name"])
+    st.markdown(f"### {methodology['summary']}")
+    st.caption(f"{project['agency']} | {project['region']} | dataset v{project['dataset_version']}")
+
+    if stops.empty:
+        st.warning("Import a stop dataset before previewing the public app.")
+        return
+
+    filters = published_app.current_map_filters(stops, "preview")
+    visible_stops = published_app.filter_map_stops(
+        published_app.filter_unlabeled_stops(stops, filters["show_unlabeled"]),
+        filters["search_query"],
+        filters["selected_routes"],
+        filters,
+    )
+
+    published_app.render_metric_cards(visible_stops)
+    tabs = st.tabs(["Map", "Analytics", "Methodology", "Exports"])
+    with tabs[0]:
+        if visible_stops.empty:
+            st.info("No stops match the current visibility settings.")
+        else:
+            map_cols = st.columns([2, 1])
+            with map_cols[0]:
+                map_selection = st.pydeck_chart(
+                    published_app.build_deck_chart(visible_stops, taxonomy, visualization),
+                    use_container_width=True,
+                    on_select="rerun",
+                    selection_mode="single-object",
+                    key="preview_stops_map",
+                )
+                selected_stop_id = published_app.selected_stop_id_from_map_selection(map_selection, visible_stops)
+                if selected_stop_id:
+                    st.session_state["preview_selected_stop_id"] = selected_stop_id
+            with map_cols[1]:
+                with st.container(height=published_app.STOP_DETAIL_PANEL_HEIGHT, border=False):
+                    published_app.render_stop_detail_workflow(visible_stops, visualization, "preview")
+        st.caption(f"{len(visible_stops):,} of {len(stops):,} stops match the active map filters.")
+        published_app.render_map_filter_controls(stops, "preview")
+        if visualization.get("show_legend", True):
+            legend = pd.DataFrame(taxonomy).sort_values("sort_order")
+            st.dataframe(legend.loc[:, ["name", "description", "color"]], use_container_width=True, hide_index=True)
+    with tabs[1]:
+        published_app.render_issue_analytics_dashboard(visible_stops, visualization, raw_labels)
+        published_app.render_custom_charts(visible_stops, visualization)
+    with tabs[2]:
+        published_app.render_methodology(config)
+    with tabs[3]:
+        if visualization.get("show_downloads", True):
+            st.download_button(
+                "Download stops CSV",
+                data=stops.to_csv(index=False).encode("utf-8"),
+                file_name="shade_study_stops.csv",
+                mime="text/csv",
+            )
+            st.download_button(
+                "Download stops GeoJSON",
+                data=published_app.dataframe_to_geojson(stops).encode("utf-8"),
+                file_name="shade_study_stops.geojson",
+                mime="application/geo+json",
+            )
+            st.download_button(
+                "Download study configuration",
+                data=json.dumps(config, indent=2, default=str).encode("utf-8"),
+                file_name="shade_study_config.json",
+                mime="application/json",
+            )
+            if not raw_labels.empty:
+                st.download_button(
+                    "Download raw labels CSV",
+                    data=raw_labels.to_csv(index=False).encode("utf-8"),
+                    file_name="shade_study_raw_labels.csv",
+                    mime="text/csv",
+                )
+        st.dataframe(pd.DataFrame(st.session_state["import_log"]), use_container_width=True, hide_index=True)
+
+
+
