@@ -196,6 +196,18 @@ pytest -q
 
 The pytest suite uses temporary SQLite databases and small fixtures to verify project storage, imports, labels, review audit history, exports, priority scoring, and module syntax without touching the local builder database.
 
+Browser UI tests are available as an opt-in Playwright suite. They start `streamlit run app.py`
+against an isolated temporary SQLite database, wait for `/_stcore/health`, and click through the
+main builder pages.
+
+```bash
+pip install -r requirements-ui.txt
+python -m playwright install chromium
+pytest -q -m ui
+```
+
+Normal `pytest` runs exclude tests marked `ui`; GitHub Actions runs the UI suite in a separate job.
+
 ## Deploy
 
 The builder itself is ready for a basic Streamlit deployment using:
