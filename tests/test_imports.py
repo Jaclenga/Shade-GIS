@@ -11,9 +11,12 @@ from builder_app import (
     import_stop_dataset,
     parse_geojson_bytes,
     parse_geojson_overlay_bytes,
+    parse_api_response,
     parse_gtfs_zip,
     prepare_stop_dataset,
     read_csv_bytes,
+    validate_api_url,
+    validate_zip_bytes,
 )
 
 
@@ -92,3 +95,49 @@ def test_bad_csv_missing_coordinates_drops_rows(project, taxonomy):
 
     assert prepared.empty
 
+
+def test_api_url_guard_blocks_private_and_credentialed_urls(monkeypatch):
+    monkeypatch.delenv("SHADE_GIS_ALLOW_PRIVATE_API_URLS", raising=False)
+    monkeypatch.delenv("SHADE_GIS_ALLOWED_API_HOSTS", raising=False)
+
+    with pytest.raises(ValueError, match="http or https"):
+        validate_api_url("ftp://example.org/stops.csv")
+    with pytest.raises(ValueError, match="credentials"):
+        validate_api_url("https://user:pass@example.org/stops.csv")
+    with pytest.raises(ValueError, match="Private or localhost"):
+        validate_api_url("http://127.0.0.1/stops.csv")
+
+
+def test_api_url_guard_supports_deployment_allowlist(monkeypatch):
+    monkeypatch.setenv("SHADE_GIS_ALLOW_PRIVATE_API_URLS", "1")
+    monkeypatch.setenv("SHADE_GIS_ALLOWED_API_HOSTS", "transit.example.org")
+
+    assert validate_api_url("https://data.transit.example.org/stops.csv") == "https://data.transit.example.org/stops.csv"
+    with pytest.raises(ValueError, match="not in SHADE_GIS_ALLOWED_API_HOSTS"):
+        validate_api_url("https://other.example.org/stops.csv")
+
+
+def test_import_size_limits_are_enforced(monkeypatch):
+    monkeypatch.setenv("SHADE_GIS_MAX_UPLOAD_BYTES", "16")
+    monkeypatch.setenv("SHADE_GIS_MAX_API_BYTES", "16")
+
+    with pytest.raises(ValueError, match="CSV upload"):
+        read_csv_bytes(b"stop_id,stop_name\n1001,This row is too large\n")
+    with pytest.raises(ValueError, match="API response"):
+        parse_api_response(b"stop_id,stop_name\n1001,This row is too large\n", "https://example.org/stops.csv", "CSV")
+
+
+def test_zip_guard_limits_members_and_expanded_size(monkeypatch):
+    monkeypatch.setenv("SHADE_GIS_MAX_ZIP_MEMBERS", "1")
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("stops.txt", "stop_id,stop_name,stop_lat,stop_lon\n")
+        archive.writestr("routes.txt", "route_id,route_short_name\n")
+
+    with pytest.raises(ValueError, match="contains 2 files"):
+        validate_zip_bytes(buffer.getvalue(), "test ZIP")
+
+    monkeypatch.setenv("SHADE_GIS_MAX_ZIP_MEMBERS", "10")
+    monkeypatch.setenv("SHADE_GIS_MAX_ZIP_UNCOMPRESSED_BYTES", "8")
+    with pytest.raises(ValueError, match="expands to"):
+        validate_zip_bytes(buffer.getvalue(), "test ZIP")

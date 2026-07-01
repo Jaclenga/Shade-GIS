@@ -65,6 +65,14 @@ Supported import paths:
 | API URL | Fetches CSV or GeoJSON from a URL, then uses the same field-mapping panel. |
 | Manual entry | Provides an editable table for adding individual stop records. |
 
+Import guardrails are enforced before parsing so open-source deployments have safe defaults without
+removing local flexibility. File and overlay uploads default to 50 MB; API responses default to
+15 MB; ZIP uploads default to 256 members, 80 MB per member, and 150 MB total uncompressed size.
+API URLs must use `http` or `https`, cannot include embedded credentials, and cannot target
+localhost/private-network addresses unless `SHADE_GIS_ALLOW_PRIVATE_API_URLS=1` is set. Operators
+can set `SHADE_GIS_ALLOWED_API_HOSTS` to a comma-separated host allowlist and can tune byte/member
+limits with the `SHADE_GIS_MAX_*` environment variables documented in `README.md`.
+
 Required fields:
 
 | Field | Purpose |

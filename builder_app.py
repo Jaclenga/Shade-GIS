@@ -1,7 +1,10 @@
 import io
+import ipaddress
 import json
 import math
+import os
 import re
+import socket
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -36,6 +39,12 @@ SHADE_DATA_PATH = APP_DIR / "shading_data.csv"
 APP_TITLE = "Shade Study Builder"
 VISUAL_MAP_HEIGHT = 500
 METHODS_PREVIEW_HEIGHT = 1220
+DEFAULT_MAX_UPLOAD_BYTES = 50 * 1024 * 1024
+DEFAULT_MAX_API_BYTES = 15 * 1024 * 1024
+DEFAULT_MAX_ZIP_MEMBERS = 256
+DEFAULT_MAX_ZIP_MEMBER_BYTES = 80 * 1024 * 1024
+DEFAULT_MAX_ZIP_UNCOMPRESSED_BYTES = 150 * 1024 * 1024
+API_FETCH_TIMEOUT_SECONDS = 30
 
 
 def timestamp_with_timezone() -> str:
@@ -464,7 +473,161 @@ def normalize_review_status(value: Any) -> str:
     return text if text in REVIEW_STATUS_COLORS else "Needs Review"
 
 
-def read_csv_bytes(contents: bytes) -> pd.DataFrame:
+def env_int(name: str, default: int) -> int:
+    try:
+        value = int(os.environ.get(name, ""))
+    except ValueError:
+        return default
+    return value if value > 0 else default
+
+
+def env_flag(name: str) -> bool:
+    return os.environ.get(name, "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def max_upload_bytes() -> int:
+    return env_int("SHADE_GIS_MAX_UPLOAD_BYTES", DEFAULT_MAX_UPLOAD_BYTES)
+
+
+def max_api_bytes() -> int:
+    return env_int("SHADE_GIS_MAX_API_BYTES", DEFAULT_MAX_API_BYTES)
+
+
+def max_zip_members() -> int:
+    return env_int("SHADE_GIS_MAX_ZIP_MEMBERS", DEFAULT_MAX_ZIP_MEMBERS)
+
+
+def max_zip_member_bytes() -> int:
+    return env_int("SHADE_GIS_MAX_ZIP_MEMBER_BYTES", DEFAULT_MAX_ZIP_MEMBER_BYTES)
+
+
+def max_zip_uncompressed_bytes() -> int:
+    return env_int("SHADE_GIS_MAX_ZIP_UNCOMPRESSED_BYTES", DEFAULT_MAX_ZIP_UNCOMPRESSED_BYTES)
+
+
+def format_bytes(value: int) -> str:
+    if value >= 1024 * 1024:
+        return f"{value / (1024 * 1024):.1f} MB"
+    if value >= 1024:
+        return f"{value / 1024:.1f} KB"
+    return f"{value} bytes"
+
+
+def validate_bytes_size(contents: bytes, limit: int, label: str) -> None:
+    if len(contents) > limit:
+        raise ValueError(f"{label} is {format_bytes(len(contents))}; the limit is {format_bytes(limit)}")
+
+
+def allowed_api_hosts() -> list[str]:
+    return [
+        host.strip().lower().rstrip(".")
+        for host in os.environ.get("SHADE_GIS_ALLOWED_API_HOSTS", "").split(",")
+        if host.strip()
+    ]
+
+
+def api_host_matches(host: str, allowed_host: str) -> bool:
+    allowed_host = allowed_host.lstrip(".")
+    return host == allowed_host or host.endswith(f".{allowed_host}")
+
+
+def is_private_network_address(value: str) -> bool:
+    address = ipaddress.ip_address(value)
+    return (
+        address.is_private
+        or address.is_loopback
+        or address.is_link_local
+        or address.is_multicast
+        or address.is_reserved
+        or address.is_unspecified
+    )
+
+
+def validate_api_url(url: str) -> str:
+    clean_url = url.strip()
+    parsed = urllib.parse.urlparse(clean_url)
+    if parsed.scheme not in {"http", "https"}:
+        raise ValueError("API URL must use http or https")
+    if parsed.username or parsed.password:
+        raise ValueError("API URL must not include embedded credentials")
+    if not parsed.hostname:
+        raise ValueError("API URL must include a host")
+
+    host = parsed.hostname.lower().rstrip(".")
+    allowed_hosts = allowed_api_hosts()
+    if allowed_hosts and not any(api_host_matches(host, allowed_host) for allowed_host in allowed_hosts):
+        raise ValueError("API URL host is not in SHADE_GIS_ALLOWED_API_HOSTS")
+
+    if not env_flag("SHADE_GIS_ALLOW_PRIVATE_API_URLS"):
+        if host == "localhost" or host.endswith(".localhost"):
+            raise ValueError("Private or localhost API URLs are disabled by default")
+        try:
+            if is_private_network_address(host):
+                raise ValueError("Private or localhost API URLs are disabled by default")
+        except ValueError as error:
+            if "disabled by default" in str(error):
+                raise
+        try:
+            addresses = {
+                result[4][0]
+                for result in socket.getaddrinfo(host, parsed.port or (443 if parsed.scheme == "https" else 80))
+            }
+        except socket.gaierror as error:
+            raise ValueError(f"Could not resolve API URL host: {host}") from error
+        for address in addresses:
+            try:
+                if is_private_network_address(address):
+                    raise ValueError("Private or localhost API URLs are disabled by default")
+            except ValueError as error:
+                if "disabled by default" in str(error):
+                    raise
+
+    return clean_url
+
+
+def read_limited_response(response: Any, limit: int) -> bytes:
+    content_length = response.headers.get("Content-Length")
+    if content_length:
+        try:
+            declared_size = int(content_length)
+        except ValueError:
+            declared_size = 0
+        if declared_size > limit:
+            raise ValueError(f"API response declares {format_bytes(declared_size)}; the limit is {format_bytes(limit)}")
+
+    buffer = io.BytesIO()
+    while True:
+        chunk = response.read(64 * 1024)
+        if not chunk:
+            break
+        buffer.write(chunk)
+        if buffer.tell() > limit:
+            raise ValueError(f"API response exceeded the {format_bytes(limit)} limit")
+    return buffer.getvalue()
+
+
+def validate_zip_bytes(contents: bytes, label: str = "ZIP upload") -> None:
+    validate_bytes_size(contents, max_upload_bytes(), label)
+    with zipfile.ZipFile(io.BytesIO(contents)) as archive:
+        members = archive.infolist()
+        if len(members) > max_zip_members():
+            raise ValueError(f"{label} contains {len(members)} files; the limit is {max_zip_members()}")
+        total_uncompressed = sum(member.file_size for member in members)
+        if total_uncompressed > max_zip_uncompressed_bytes():
+            raise ValueError(
+                f"{label} expands to {format_bytes(total_uncompressed)}; "
+                f"the limit is {format_bytes(max_zip_uncompressed_bytes())}"
+            )
+        for member in members:
+            if member.file_size > max_zip_member_bytes():
+                raise ValueError(
+                    f"{label} member {member.filename!r} expands to {format_bytes(member.file_size)}; "
+                    f"the per-file limit is {format_bytes(max_zip_member_bytes())}"
+                )
+
+
+def read_csv_bytes(contents: bytes, *, limit: int | None = None, label: str = "CSV upload") -> pd.DataFrame:
+    validate_bytes_size(contents, limit or max_upload_bytes(), label)
     return pd.read_csv(io.BytesIO(contents), dtype=str)
 
 
@@ -534,7 +697,13 @@ def geojson_features(payload: dict[str, Any]) -> list[dict[str, Any]]:
     raise ValueError("GeoJSON must be a FeatureCollection, Feature, or geometry object")
 
 
-def parse_geojson_bytes(contents: bytes) -> tuple[pd.DataFrame, dict[str, Any]]:
+def parse_geojson_bytes(
+    contents: bytes,
+    *,
+    limit: int | None = None,
+    label: str = "GeoJSON upload",
+) -> tuple[pd.DataFrame, dict[str, Any]]:
+    validate_bytes_size(contents, limit or max_upload_bytes(), label)
     payload = json.loads(contents.decode("utf-8-sig"))
     features = geojson_features(payload)
     records: list[dict[str, Any]] = []
@@ -599,6 +768,7 @@ def clean_geojson_feature(feature: dict[str, Any]) -> dict[str, Any] | None:
 
 
 def parse_geojson_overlay_bytes(contents: bytes) -> tuple[dict[str, Any], dict[str, Any]]:
+    validate_bytes_size(contents, max_upload_bytes(), "GeoJSON overlay upload")
     payload = json.loads(contents.decode("utf-8-sig"))
     features = []
     geometry_types: set[str] = set()
@@ -617,6 +787,7 @@ def parse_geojson_overlay_bytes(contents: bytes) -> tuple[dict[str, Any], dict[s
 
 
 def zip_member_names(contents: bytes) -> list[str]:
+    validate_zip_bytes(contents)
     with zipfile.ZipFile(io.BytesIO(contents)) as archive:
         return archive.namelist()
 
@@ -631,6 +802,7 @@ def detect_zip_import_format(contents: bytes) -> str:
 
 
 def parse_shapefile_zip(contents: bytes) -> tuple[pd.DataFrame, dict[str, Any]]:
+    validate_zip_bytes(contents, "Shapefile ZIP upload")
     try:
         import shapefile  # type: ignore[import-not-found]
     except ImportError as error:
@@ -679,6 +851,7 @@ def parse_shapefile_zip(contents: bytes) -> tuple[pd.DataFrame, dict[str, Any]]:
 
 
 def parse_shapefile_overlay_zip(contents: bytes) -> tuple[dict[str, Any], dict[str, Any]]:
+    validate_zip_bytes(contents, "Shapefile overlay ZIP upload")
     try:
         import shapefile  # type: ignore[import-not-found]
     except ImportError as error:
@@ -721,31 +894,33 @@ def parse_shapefile_overlay_zip(contents: bytes) -> tuple[dict[str, Any], dict[s
 
 
 def fetch_api_bytes(url: str) -> bytes:
+    clean_url = validate_api_url(url)
     request = urllib.request.Request(
-        url.strip(),
+        clean_url,
         headers={"User-Agent": "Shade-GIS/0.1 (+https://github.com/)"},
     )
     try:
-        with urllib.request.urlopen(request, timeout=30) as response:
-            return response.read()
-    except urllib.error.URLError as error:
+        with urllib.request.urlopen(request, timeout=API_FETCH_TIMEOUT_SECONDS) as response:
+            return read_limited_response(response, max_api_bytes())
+    except (urllib.error.URLError, ValueError) as error:
         raise RuntimeError(f"Could not fetch API URL: {error}") from error
 
 
 def parse_api_response(contents: bytes, url: str, requested_format: str) -> tuple[pd.DataFrame, dict[str, Any]]:
+    validate_bytes_size(contents, max_api_bytes(), "API response")
     if requested_format == "CSV":
-        return read_csv_bytes(contents), {"source_url": url}
+        return read_csv_bytes(contents, limit=max_api_bytes(), label="API CSV response"), {"source_url": url}
     if requested_format == "GeoJSON":
-        raw, metadata = parse_geojson_bytes(contents)
+        raw, metadata = parse_geojson_bytes(contents, limit=max_api_bytes(), label="API GeoJSON response")
         metadata["source_url"] = url
         return raw, metadata
     try:
-        raw, metadata = parse_geojson_bytes(contents)
+        raw, metadata = parse_geojson_bytes(contents, limit=max_api_bytes(), label="API GeoJSON response")
         metadata["source_url"] = url
         metadata["detected_format"] = "GeoJSON"
         return raw, metadata
     except Exception:
-        raw = read_csv_bytes(contents)
+        raw = read_csv_bytes(contents, limit=max_api_bytes(), label="API CSV response")
         return raw, {"source_url": url, "detected_format": "CSV"}
 
 
@@ -772,6 +947,7 @@ def read_gtfs_table(
 
 
 def parse_gtfs_zip(contents: bytes) -> tuple[pd.DataFrame, dict[str, Any]]:
+    validate_zip_bytes(contents, "GTFS ZIP upload")
     with zipfile.ZipFile(io.BytesIO(contents)) as archive:
         stops = read_gtfs_table(archive, "stops.txt")
         if stops is None:
@@ -2607,7 +2783,14 @@ def render_data_page() -> None:
             "Upload GTFS, CSV, GeoJSON, or a zipped Shapefile",
             type=["zip", "txt", "csv", "geojson", "json"],
         )
+        st.caption(
+            f"Upload limit: {format_bytes(max_upload_bytes())}; ZIPs may contain up to "
+            f"{max_zip_members()} files and expand to {format_bytes(max_zip_uncompressed_bytes())}."
+        )
         if uploaded is not None:
+            if getattr(uploaded, "size", 0) > max_upload_bytes():
+                st.error(f"This upload is larger than the {format_bytes(max_upload_bytes())} limit.")
+                return
             contents = uploaded.getvalue()
             filename = uploaded.name
             key_prefix = f"file_{clean_import_key(filename)}"
@@ -2674,6 +2857,10 @@ def render_data_page() -> None:
     with api_tab:
         api_url = st.text_input("Dataset API or file URL", key="api_import_url")
         api_format = st.selectbox("Response format", ["Auto detect", "CSV", "GeoJSON"], key="api_import_format")
+        st.caption(
+            f"API imports accept HTTP(S) CSV or GeoJSON responses up to {format_bytes(max_api_bytes())}. "
+            "Private network URLs are blocked unless enabled by deployment settings."
+        )
         if st.button("Fetch API dataset", key="fetch_api_dataset"):
             if not api_url.strip():
                 st.warning("Enter a URL before fetching.")
@@ -3029,6 +3216,10 @@ def render_gis_overlay_controls(visualization: dict[str, Any]) -> None:
         key="gis_overlay_upload",
         help="Use this for real map layers such as routes, shelters, canopy, NDVI, Census geographies, or destinations.",
     )
+    st.caption(
+        f"Overlay upload limit: {format_bytes(max_upload_bytes())}; ZIPs may expand to "
+        f"{format_bytes(max_zip_uncompressed_bytes())}."
+    )
     overlay_cols = st.columns([1.2, 1, 1])
     overlay_name = overlay_cols[0].text_input("Overlay name", key="gis_overlay_name", placeholder="Tree canopy")
     overlay_category = overlay_cols[1].selectbox("Overlay category", GIS_OVERLAY_CATEGORIES, key="gis_overlay_category")
@@ -3044,6 +3235,8 @@ def render_gis_overlay_controls(visualization: dict[str, Any]) -> None:
     if st.button("Add GIS overlay", type="primary", disabled=uploaded is None):
         if uploaded is None:
             st.warning("Upload a GeoJSON file or zipped Shapefile first.")
+        elif getattr(uploaded, "size", 0) > max_upload_bytes():
+            st.error(f"This overlay is larger than the {format_bytes(max_upload_bytes())} limit.")
         else:
             try:
                 overlay_format, geojson, metadata = parse_uploaded_gis_overlay(uploaded.getvalue(), uploaded.name)

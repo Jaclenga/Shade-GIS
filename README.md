@@ -60,6 +60,17 @@ The `Visuals` page also accepts GeoJSON and zipped Shapefile uploads as standalo
 Those layers are stored in the project visualization configuration with source/license metadata,
 style settings, and an import-log entry, then rendered in the builder preview and exported public app.
 
+## Import Guardrails
+
+The builder is intended for open-source use, so import safety is configurable rather than tied to one hosted environment. By default:
+- File and overlay uploads are limited to 50 MB.
+- API responses are limited to 15 MB and must use `http` or `https`.
+- API URLs with embedded credentials are rejected.
+- Localhost, private-network, link-local, multicast, reserved, and unspecified API targets are blocked to reduce server-side request risks in public deployments.
+- ZIP uploads are inspected before parsing and limited to 256 members, 80 MB per member, and 150 MB total uncompressed size.
+
+Deployment operators can adjust those defaults with `SHADE_GIS_MAX_UPLOAD_BYTES`, `SHADE_GIS_MAX_API_BYTES`, `SHADE_GIS_MAX_ZIP_MEMBERS`, `SHADE_GIS_MAX_ZIP_MEMBER_BYTES`, and `SHADE_GIS_MAX_ZIP_UNCOMPRESSED_BYTES`. Set `SHADE_GIS_ALLOWED_API_HOSTS` to a comma-separated host allowlist for stricter public deployments, or set `SHADE_GIS_ALLOW_PRIVATE_API_URLS=1` when intentionally running against private/local data services.
+
 ## Platform Direction
 
 The current app is an MVP for the reusable platform described in the project issue. It establishes the project builder workflow, durable multi-project storage, raw label collection, admin review workflow, public preview surface, and schema foundations for imagery, releases, richer GIS overlays, and API-backed publishing.
