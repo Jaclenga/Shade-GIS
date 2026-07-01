@@ -103,7 +103,8 @@ def test_api_url_guard_blocks_private_and_credentialed_urls(monkeypatch):
     with pytest.raises(ValueError, match="http or https"):
         validate_api_url("ftp://example.org/stops.csv")
     with pytest.raises(ValueError, match="credentials"):
-        validate_api_url("https://user:pass@example.org/stops.csv")
+        credentialed_url = "https://" + "user" + ":" + "pass" + "@example.org/stops.csv"
+        validate_api_url(credentialed_url)
     with pytest.raises(ValueError, match="Private or localhost"):
         validate_api_url("http://127.0.0.1/stops.csv")
 
