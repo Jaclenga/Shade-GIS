@@ -154,6 +154,7 @@ streamlit run app.py
 ```
 
 The app opens to the reusable builder and uses `stops.txt` plus `shading_data.csv` only as the default starter dataset. Importing a GTFS zip, mapped file/API dataset, or manual entries in the `Data` page replaces the active in-session dataset.
+`app.py` is intentionally only a small compatibility entrypoint; the builder implementation lives in `builder_app.py`.
 
 ## Verify heat data
 
