@@ -153,7 +153,18 @@ DEFAULT_VISUALIZATION = {
         "high": "#ef4444",
     },
     "field_color_maps": {},
-    "metric_cards": ["Shade distribution", "Review status", "Agreement metrics", "Priority stops"],
+    "metric_cards": [
+        "Shade distribution",
+        "Stops without shade",
+        "Stops requiring review",
+        "Review status",
+        "Agreement metrics",
+        "Shade by route",
+        "Shade by neighborhood",
+        "Shade vs ridership",
+        "Shade vs heat vulnerability",
+        "Priority stops",
+    ],
     "overlays": [],
     "gis_overlays": [],
     "priority_weights": {
@@ -242,10 +253,12 @@ OVERLAY_REQUIREMENTS = {
 METRIC_REQUIREMENTS = {
     "Shade distribution": ["shading"],
     "Stops without shade": ["shading"],
+    "Stops requiring review": ["shading"],
     "Review status": ["review_status"],
     "Agreement metrics": [],
     "Shade by route": ["routes", "shading"],
     "Shade by neighborhood": ["municipality", "shading"],
+    "Shade vs ridership": ["ridership", "shading"],
     "Shade vs heat vulnerability": ["heat_vulnerability_index", "shading"],
     "Priority stops": ["priority_score"],
 }
@@ -973,8 +986,9 @@ def ensure_visualization_defaults() -> None:
     for key, value in DEFAULT_VISUALIZATION.items():
         visualization.setdefault(key, json.loads(json.dumps(value)))
     metric_cards = visualization.setdefault("metric_cards", [])
-    if "Agreement metrics" not in metric_cards:
-        metric_cards.append("Agreement metrics")
+    for label in DEFAULT_VISUALIZATION["metric_cards"]:
+        if label not in metric_cards:
+            metric_cards.append(label)
 
     review_colors = visualization.setdefault("review_status_colors", {})
     for status, color in REVIEW_STATUS_COLORS.items():
@@ -1173,6 +1187,12 @@ def clean_selected_options(selected: list[str], options: list[str]) -> list[str]
     return [item for item in selected if item in options]
 
 
+def selected_dashboard_sections(df: pd.DataFrame, visualization: dict[str, Any]) -> list[str]:
+    available = get_available_metric_cards(df)
+    selected = clean_selected_options(visualization.get("metric_cards", []), available)
+    return selected or available
+
+
 def clean_gis_overlays(visualization: dict[str, Any]) -> list[dict[str, Any]]:
     overlays = []
     for index, overlay in enumerate(visualization.get("gis_overlays") or []):
@@ -1335,6 +1355,153 @@ def render_custom_charts(df: pd.DataFrame, visualization: dict[str, Any]) -> Non
         title = str(chart.get("title", "")).strip() or f"Custom chart {index + 1}"
         st.markdown(f"#### {title}")
         render_custom_chart(df, chart)
+
+
+def normalized_category_series(df: pd.DataFrame, column: str) -> pd.Series:
+    return df[column].fillna("(blank)").astype(str).str.strip().replace("", "(blank)")
+
+
+def count_by_field(df: pd.DataFrame, column: str, count_name: str = "stops") -> pd.DataFrame:
+    if df.empty or column not in df.columns:
+        return pd.DataFrame(columns=[column, count_name])
+    working = df.copy()
+    working[column] = normalized_category_series(working, column)
+    return working.groupby(column, dropna=False).size().reset_index(name=count_name).sort_values(count_name, ascending=False)
+
+
+def split_routes_table(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty or "routes" not in df.columns:
+        return pd.DataFrame()
+    rows = []
+    for _, row in df.iterrows():
+        routes = split_route_values(row.get("routes"))
+        if not routes:
+            continue
+        for route in routes:
+            rows.append(
+                {
+                    "route": route,
+                    "shading": str(row.get("shading", "Unknown") or "Unknown"),
+                    "stop_id": row.get("stop_id", ""),
+                }
+            )
+    return pd.DataFrame(rows)
+
+
+def render_grouped_shade_dashboard(df: pd.DataFrame, group_column: str, title: str, top_n: int = 25) -> None:
+    if df.empty or group_column not in df.columns or "shading" not in df.columns:
+        return
+    working = df.loc[:, [group_column, "shading"]].copy()
+    working[group_column] = normalized_category_series(working, group_column)
+    working["shading"] = normalized_category_series(working, "shading")
+    grouped = working.groupby([group_column, "shading"], dropna=False).size().reset_index(name="stops")
+    if grouped.empty:
+        return
+    top_groups = grouped.groupby(group_column)["stops"].sum().sort_values(ascending=False).head(top_n).index
+    grouped = grouped[grouped[group_column].isin(top_groups)]
+    pivot = grouped.pivot_table(index=group_column, columns="shading", values="stops", fill_value=0, aggfunc="sum")
+    st.markdown(f"#### {title}")
+    st.bar_chart(pivot)
+    st.dataframe(grouped.sort_values(["stops", group_column], ascending=[False, True]), use_container_width=True, hide_index=True)
+
+
+def render_route_shade_dashboard(df: pd.DataFrame) -> None:
+    routes = split_routes_table(df)
+    if routes.empty or "shading" not in routes.columns:
+        return
+    grouped = routes.groupby(["route", "shading"], dropna=False).size().reset_index(name="stops")
+    top_routes = grouped.groupby("route")["stops"].sum().sort_values(ascending=False).head(25).index
+    grouped = grouped[grouped["route"].isin(top_routes)]
+    pivot = grouped.pivot_table(index="route", columns="shading", values="stops", fill_value=0, aggfunc="sum")
+    st.markdown("#### Shade By Route")
+    st.bar_chart(pivot)
+    st.dataframe(grouped.sort_values(["stops", "route"], ascending=[False, True]), use_container_width=True, hide_index=True)
+
+
+def numeric_by_shade_summary(df: pd.DataFrame, numeric_column: str, value_label: str) -> pd.DataFrame:
+    if df.empty or numeric_column not in df.columns or "shading" not in df.columns:
+        return pd.DataFrame()
+    working = df.loc[:, ["shading", numeric_column]].copy()
+    working["shading"] = normalized_category_series(working, "shading")
+    working[numeric_column] = pd.to_numeric(working[numeric_column], errors="coerce")
+    working = working.dropna(subset=[numeric_column])
+    if working.empty:
+        return pd.DataFrame()
+    return (
+        working.groupby("shading", dropna=False)[numeric_column]
+        .agg(**{f"Mean {value_label}": "mean", f"Median {value_label}": "median", "Stops": "count"})
+        .reset_index()
+        .sort_values(f"Mean {value_label}", ascending=False)
+    )
+
+
+def render_numeric_by_shade_dashboard(df: pd.DataFrame, numeric_column: str, value_label: str, title: str) -> None:
+    summary = numeric_by_shade_summary(df, numeric_column, value_label)
+    if summary.empty:
+        return
+    st.markdown(f"#### {title}")
+    st.bar_chart(summary, x="shading", y=f"Mean {value_label}")
+    st.dataframe(summary, use_container_width=True, hide_index=True)
+
+
+def render_issue_analytics_dashboard(
+    df: pd.DataFrame,
+    visualization: dict[str, Any],
+    raw_labels: pd.DataFrame,
+) -> None:
+    selected = selected_dashboard_sections(df, visualization)
+    if df.empty:
+        st.info("No stops match the active filters.")
+        return
+
+    st.markdown("#### Summary Statistics")
+    render_metric_cards(df)
+
+    summary_cols = st.columns(2)
+    if "Shade distribution" in selected and "shading" in df.columns:
+        with summary_cols[0]:
+            st.markdown("#### Shade Distribution")
+            shade_counts = count_by_field(df, "shading")
+            st.bar_chart(shade_counts, x="shading", y="stops")
+            st.dataframe(shade_counts, use_container_width=True, hide_index=True)
+    if "Review status" in selected and "review_status" in df.columns:
+        with summary_cols[1]:
+            st.markdown("#### Review Status")
+            review_counts = count_by_field(df, "review_status")
+            st.bar_chart(review_counts, x="review_status", y="stops")
+            st.dataframe(review_counts, use_container_width=True, hide_index=True)
+
+    queue_rows = []
+    if "Stops without shade" in selected and "shading" in df.columns:
+        no_shade = df[normalized_category_series(df, "shading").eq("No Shade")]
+        queue_rows.append({"Queue": "Stops without shade", "Stops": len(no_shade)})
+    if "Stops requiring review" in selected and "shading" in df.columns:
+        needs_review = df[normalized_category_series(df, "shading").eq("Needs Review")]
+        queue_rows.append({"Queue": "Stops requiring review", "Stops": len(needs_review)})
+    if queue_rows:
+        st.markdown("#### Action Queues")
+        st.dataframe(pd.DataFrame(queue_rows), use_container_width=True, hide_index=True)
+
+    if "Agreement metrics" in selected:
+        render_agreement_metrics(raw_labels, df)
+    if "Shade by route" in selected:
+        render_route_shade_dashboard(df)
+    if "Shade by neighborhood" in selected:
+        render_grouped_shade_dashboard(df, "municipality", "Shade By Neighborhood")
+    if "Shade vs ridership" in selected:
+        render_numeric_by_shade_dashboard(df, "ridership", "Ridership", "Shade Vs Ridership")
+    if "Shade vs heat vulnerability" in selected:
+        render_numeric_by_shade_dashboard(
+            df,
+            "heat_vulnerability_index",
+            "Heat Vulnerability",
+            "Shade Vs Heat Vulnerability",
+        )
+    if "Priority stops" in selected and "priority_score" in df.columns:
+        st.markdown("#### Highest Priority Stops")
+        priority = df.sort_values("priority_score", ascending=False).head(20)
+        columns = get_selected_display_columns(priority, visualization)
+        st.dataframe(priority.loc[:, columns], use_container_width=True, hide_index=True)
 
 
 def priority_score_used_in_visualization(visualization: dict[str, Any]) -> bool:
@@ -1655,6 +1822,18 @@ NUMERIC_MAP_FILTERS = [
     "tree_canopy_pct",
     "priority_score",
 ]
+METRIC_REQUIREMENTS = {
+    "Shade distribution": ["shading"],
+    "Stops without shade": ["shading"],
+    "Stops requiring review": ["shading"],
+    "Review status": ["review_status"],
+    "Agreement metrics": [],
+    "Shade by route": ["routes", "shading"],
+    "Shade by neighborhood": ["municipality", "shading"],
+    "Shade vs ridership": ["ridership", "shading"],
+    "Shade vs heat vulnerability": ["heat_vulnerability_index", "shading"],
+    "Priority stops": ["priority_score"],
+}
 
 
 def load_study() -> tuple[dict[str, Any], pd.DataFrame, pd.DataFrame]:
@@ -2233,6 +2412,148 @@ def render_custom_charts(df: pd.DataFrame, visualization: dict[str, Any]) -> Non
                 st.bar_chart(data, x=x_field, y=y_field)
 
 
+def has_column_data(df: pd.DataFrame, column: str) -> bool:
+    if column not in df.columns:
+        return False
+    values = df[column].dropna().astype(str).str.strip()
+    return bool(values.ne("").any())
+
+
+def available_dashboard_sections(df: pd.DataFrame) -> list[str]:
+    sections = []
+    for label, columns in METRIC_REQUIREMENTS.items():
+        if all(has_column_data(df, column) for column in columns):
+            sections.append(label)
+    return sections
+
+
+def selected_dashboard_sections(df: pd.DataFrame, visualization: dict[str, Any]) -> list[str]:
+    available = available_dashboard_sections(df)
+    selected = [label for label in visualization.get("metric_cards", []) if label in available]
+    return selected or available
+
+
+def normalized_category_series(df: pd.DataFrame, column: str) -> pd.Series:
+    return df[column].fillna("(blank)").astype(str).str.strip().replace("", "(blank)")
+
+
+def count_by_field(df: pd.DataFrame, column: str, count_name: str = "stops") -> pd.DataFrame:
+    if df.empty or column not in df.columns:
+        return pd.DataFrame(columns=[column, count_name])
+    working = df.copy()
+    working[column] = normalized_category_series(working, column)
+    return working.groupby(column, dropna=False).size().reset_index(name=count_name).sort_values(count_name, ascending=False)
+
+
+def split_routes_table(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty or "routes" not in df.columns:
+        return pd.DataFrame()
+    rows = []
+    for _, row in df.iterrows():
+        for route in split_route_values(row.get("routes")):
+            rows.append({"route": route, "shading": str(row.get("shading", "Unknown") or "Unknown")})
+    return pd.DataFrame(rows)
+
+
+def render_route_shade_dashboard(df: pd.DataFrame) -> None:
+    routes = split_routes_table(df)
+    if routes.empty:
+        return
+    grouped = routes.groupby(["route", "shading"], dropna=False).size().reset_index(name="stops")
+    top_routes = grouped.groupby("route")["stops"].sum().sort_values(ascending=False).head(25).index
+    grouped = grouped[grouped["route"].isin(top_routes)]
+    pivot = grouped.pivot_table(index="route", columns="shading", values="stops", fill_value=0, aggfunc="sum")
+    st.markdown("#### Shade By Route")
+    st.bar_chart(pivot)
+    st.dataframe(grouped.sort_values(["stops", "route"], ascending=[False, True]), use_container_width=True, hide_index=True)
+
+
+def render_grouped_shade_dashboard(df: pd.DataFrame, group_column: str, title: str) -> None:
+    if df.empty or group_column not in df.columns or "shading" not in df.columns:
+        return
+    working = df.loc[:, [group_column, "shading"]].copy()
+    working[group_column] = normalized_category_series(working, group_column)
+    working["shading"] = normalized_category_series(working, "shading")
+    grouped = working.groupby([group_column, "shading"], dropna=False).size().reset_index(name="stops")
+    top_groups = grouped.groupby(group_column)["stops"].sum().sort_values(ascending=False).head(25).index
+    grouped = grouped[grouped[group_column].isin(top_groups)]
+    if grouped.empty:
+        return
+    pivot = grouped.pivot_table(index=group_column, columns="shading", values="stops", fill_value=0, aggfunc="sum")
+    st.markdown(f"#### {title}")
+    st.bar_chart(pivot)
+    st.dataframe(grouped.sort_values(["stops", group_column], ascending=[False, True]), use_container_width=True, hide_index=True)
+
+
+def render_numeric_by_shade_dashboard(df: pd.DataFrame, numeric_column: str, value_label: str, title: str) -> None:
+    if df.empty or numeric_column not in df.columns or "shading" not in df.columns:
+        return
+    working = df.loc[:, ["shading", numeric_column]].copy()
+    working["shading"] = normalized_category_series(working, "shading")
+    working[numeric_column] = pd.to_numeric(working[numeric_column], errors="coerce")
+    working = working.dropna(subset=[numeric_column])
+    if working.empty:
+        return
+    summary = (
+        working.groupby("shading", dropna=False)[numeric_column]
+        .agg(**{f"Mean {value_label}": "mean", f"Median {value_label}": "median", "Stops": "count"})
+        .reset_index()
+        .sort_values(f"Mean {value_label}", ascending=False)
+    )
+    st.markdown(f"#### {title}")
+    st.bar_chart(summary, x="shading", y=f"Mean {value_label}")
+    st.dataframe(summary, use_container_width=True, hide_index=True)
+
+
+def render_issue_analytics_dashboard(df: pd.DataFrame, visualization: dict[str, Any], raw_labels: pd.DataFrame) -> None:
+    selected = selected_dashboard_sections(df, visualization)
+    if df.empty:
+        st.info("No stops match the active filters.")
+        return
+
+    st.markdown("#### Summary Statistics")
+    render_metric_cards(df)
+
+    summary_cols = st.columns(2)
+    if "Shade distribution" in selected and "shading" in df.columns:
+        with summary_cols[0]:
+            st.markdown("#### Shade Distribution")
+            shade_counts = count_by_field(df, "shading")
+            st.bar_chart(shade_counts, x="shading", y="stops")
+            st.dataframe(shade_counts, use_container_width=True, hide_index=True)
+    if "Review status" in selected and "review_status" in df.columns:
+        with summary_cols[1]:
+            st.markdown("#### Review Status")
+            review_counts = count_by_field(df, "review_status")
+            st.bar_chart(review_counts, x="review_status", y="stops")
+            st.dataframe(review_counts, use_container_width=True, hide_index=True)
+
+    queue_rows = []
+    if "Stops without shade" in selected and "shading" in df.columns:
+        queue_rows.append({"Queue": "Stops without shade", "Stops": int(normalized_category_series(df, "shading").eq("No Shade").sum())})
+    if "Stops requiring review" in selected and "shading" in df.columns:
+        queue_rows.append({"Queue": "Stops requiring review", "Stops": int(normalized_category_series(df, "shading").eq("Needs Review").sum())})
+    if queue_rows:
+        st.markdown("#### Action Queues")
+        st.dataframe(pd.DataFrame(queue_rows), use_container_width=True, hide_index=True)
+
+    if "Agreement metrics" in selected:
+        render_agreement_metrics(raw_labels)
+    if "Shade by route" in selected:
+        render_route_shade_dashboard(df)
+    if "Shade by neighborhood" in selected:
+        render_grouped_shade_dashboard(df, "municipality", "Shade By Neighborhood")
+    if "Shade vs ridership" in selected:
+        render_numeric_by_shade_dashboard(df, "ridership", "Ridership", "Shade Vs Ridership")
+    if "Shade vs heat vulnerability" in selected:
+        render_numeric_by_shade_dashboard(df, "heat_vulnerability_index", "Heat Vulnerability", "Shade Vs Heat Vulnerability")
+    if "Priority stops" in selected and "priority_score" in df.columns:
+        st.markdown("#### Highest Priority Stops")
+        priority = df.sort_values("priority_score", ascending=False).head(20)
+        columns = get_selected_display_columns(priority, visualization)
+        st.dataframe(priority.loc[:, columns], use_container_width=True, hide_index=True)
+
+
 def render_methodology(config: dict[str, Any]) -> None:
     project = config.get("project", {})
     methodology = config.get("methodology", {})
@@ -2473,26 +2794,8 @@ def main() -> None:
             columns = [column for column in ["name", "description", "color"] if column in legend.columns]
             st.dataframe(legend.loc[:, columns], use_container_width=True, hide_index=True)
     with tabs[1]:
+        render_issue_analytics_dashboard(visible_stops, visualization, raw_labels)
         render_custom_charts(visible_stops, visualization)
-        selected = visualization.get("metric_cards", [])
-        summary_cols = st.columns([1, 1])
-        if "Shade distribution" in selected and "shading" in visible_stops.columns:
-            with summary_cols[0]:
-                st.markdown("#### Shade Distribution")
-                counts = visible_stops["shading"].value_counts().rename_axis("shade_category").reset_index(name="stops")
-                st.bar_chart(counts, x="shade_category", y="stops")
-        if "Review status" in selected and "review_status" in visible_stops.columns:
-            with summary_cols[1]:
-                st.markdown("#### Review Status")
-                counts = visible_stops["review_status"].value_counts().rename_axis("review_status").reset_index(name="stops")
-                st.bar_chart(counts, x="review_status", y="stops")
-        if "Agreement metrics" in selected:
-            render_agreement_metrics(raw_labels)
-        if "Priority stops" in selected:
-            st.markdown("#### Highest Priority Stops")
-            priority = visible_stops.sort_values("priority_score", ascending=False).head(20)
-            columns = get_selected_display_columns(priority, visualization)
-            st.dataframe(priority.loc[:, columns], use_container_width=True, hide_index=True)
     with tabs[2]:
         render_methodology(config)
     with tabs[3]:
@@ -4141,40 +4444,8 @@ def render_preview_page() -> None:
             legend = pd.DataFrame(taxonomy).sort_values("sort_order")
             st.dataframe(legend.loc[:, ["name", "description", "color"]], use_container_width=True, hide_index=True)
     with tabs[1]:
+        render_issue_analytics_dashboard(visible_stops, visualization, active_raw_labels())
         render_custom_charts(visible_stops, visualization)
-
-        selected_metrics = clean_selected_options(
-            visualization.get("metric_cards", []), get_available_metric_cards(visible_stops)
-        )
-        summary_cols = st.columns([1, 1])
-        if "Shade distribution" in selected_metrics and "shading" in visible_stops.columns:
-            with summary_cols[0]:
-                st.markdown("#### Shade Distribution")
-                shade_counts = (
-                    visible_stops["shading"].value_counts().rename_axis("shade_category").reset_index(name="stops")
-                )
-                st.bar_chart(shade_counts, x="shade_category", y="stops")
-        if "Review status" in selected_metrics and "review_status" in visible_stops.columns:
-            with summary_cols[1]:
-                st.markdown("#### Review Status")
-                review_counts = (
-                    visible_stops["review_status"]
-                    .value_counts()
-                    .rename_axis("review_status")
-                    .reset_index(name="stops")
-                )
-                st.bar_chart(review_counts, x="review_status", y="stops")
-        if "Agreement metrics" in selected_metrics:
-            render_agreement_metrics(active_raw_labels(), visible_stops)
-        if "Priority stops" in selected_metrics:
-            st.markdown("#### Highest Priority Stops")
-            priority = visible_stops.sort_values("priority_score", ascending=False).head(20)
-            display_columns = get_selected_display_columns(priority, visualization)
-            st.dataframe(
-                priority.loc[:, display_columns],
-                use_container_width=True,
-                hide_index=True,
-            )
     with tabs[2]:
         render_builder_about_page(
             project=project,

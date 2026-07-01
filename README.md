@@ -17,16 +17,16 @@ The repository still includes the Tampa/HART stop and shade files as a starter p
 - Lets project teams choose map coloring, upload/render real GIS overlays from GeoJSON or zipped Shapefile layers, select dataset-backed contextual fields, configure up to 10 custom X/Y charts, dashboard summaries, public table and map-hover columns, and priority-score weights.
 - Provides an editable rationale/about page for methodology, data sources, contributors, grouped hanging-indent citations and bibliography, limitations, and release history.
 - Automatically includes the priority formula on the methodology page whenever `priority_score` is used by the configured visualizations.
-- Previews the public Streamlit app with broad map filters for stop search, routes, shade category, review status, confidence, ridership, heat vulnerability, tree canopy, priority, and destinations, plus click-to-select stop details, analytics, methodology, import log, and CSV/GeoJSON/config/raw-label downloads.
+- Previews the public Streamlit app with broad map filters for stop search, routes, shade category, review status, confidence, ridership, heat vulnerability, tree canopy, priority, and destinations, plus click-to-select stop details, an advanced analytics dashboard, methodology, import log, and CSV/GeoJSON/config/raw-label downloads.
 - Builds a GitHub-ready deployment bundle containing the rendered public Streamlit app, current stop data, raw labels when present, configuration, dependencies, README, and optional GitHub CLI publish script.
 
 ## App Pages
 
 - `Data`: project setup, file/API/manual import workflow, field mapping, shade taxonomy, source metadata, and dataset health checks.
 - `Labels`: stop-level raw shade label collection, reviewer/source metadata, optional map-label application, label history, majority/agreement metrics, reliability statistics, and raw-label CSV export.
-- `Visuals`: side-by-side map preview with expandable, scrollable controls for color fields, premade shade palettes, editable color swatches, marker shape/size/outline, base map style, uploaded GeoJSON/zipped Shapefile GIS overlays, dataset-backed context fields, up to 10 custom X/Y charts, dashboard metrics, public data table/map-hover columns, and priority formula weights.
+- `Visuals`: side-by-side map preview with expandable, scrollable controls for color fields, premade shade palettes, editable color swatches, marker shape/size/outline, base map style, uploaded GeoJSON/zipped Shapefile GIS overlays, dataset-backed context fields, up to 10 custom X/Y charts, advanced dashboard sections, public data table/map-hover columns, and priority formula weights.
 - `Methodology`: editable public rationale/about page with live preview.
-- `Preview`: the generated public-facing Streamlit app experience for the current project configuration, including broad map filters, click-to-select stop details, and a toggle to show or hide unlabeled bus stops.
+- `Preview`: the generated public-facing Streamlit app experience for the current project configuration, including broad map filters, click-to-select stop details, advanced analytics, and a toggle to show or hide unlabeled bus stops.
 - `Deploy`: GitHub publishing workspace with a repository-name helper, new-repository link, downloadable Streamlit app bundle, and PowerShell `gh` CLI publish command.
 
 ## Supported Input Schema

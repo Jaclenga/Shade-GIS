@@ -131,9 +131,9 @@ current stop fields.
 Visualization settings store the selected map color field, premade and editable palettes for shade
 categories, review statuses, priority-score gradients, and other categorical columns, plus marker
 shape, size, opacity, outline, base map style, uploaded GIS overlays, data-backed context field
-selections, up to 10 custom X/Y chart settings, dashboard cards, public data table/map-hover
-columns, and priority weights. Optional context fields such as heat vulnerability or tree canopy are
-exposed only when the active dataset contains usable values for those fields.
+selections, up to 10 custom X/Y chart settings, advanced dashboard sections, public data
+table/map-hover columns, and priority weights. Optional context fields such as heat vulnerability
+or tree canopy are exposed only when the active dataset contains usable values for those fields.
 
 Uploaded GIS overlays live under `visualization.gis_overlays`. Each overlay stores a name,
 category, source, license, original filename, format, style settings, import timestamp, summary
@@ -145,6 +145,11 @@ When `priority_score` is used by any configured visualization, the public method
 automatically includes the active priority formula. If `priority_score` is excluded from map
 coloring, custom charts, dashboard summaries, public tables, and map-hover fields, the formula is
 left out.
+
+The Analytics tab renders the dashboard sections described in the platform issue when supporting
+fields are available: summary statistics, shade distribution, stops without shade, stops requiring
+review, agreement statistics, shade by route, shade by neighborhood, shade vs. ridership, shade vs.
+heat vulnerability, and highest-priority stops. Custom charts remain available below the dashboard.
 
 ## Preview Exports
 
