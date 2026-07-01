@@ -2,12 +2,17 @@ from __future__ import annotations
 
 import copy
 import gc
+import sys
 import time
 import uuid
 from pathlib import Path
 
 import pandas as pd
 import pytest
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 from builder_app import DEFAULT_METHODOLOGY, DEFAULT_PROJECT, DEFAULT_TAXONOMY, DEFAULT_VISUALIZATION
 
