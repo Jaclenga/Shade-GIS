@@ -91,6 +91,7 @@ Optional fields:
 | `heat_vulnerability_label` | Human-readable heat vulnerability category. |
 | `tree_canopy_pct` | Nearby tree canopy share from 0 to 1. |
 | `lst_median` | Median land surface temperature or equivalent heat metric. |
+| `nearby_destinations` | Destination or nearby-place labels used for public map filtering. |
 
 ## Shade Taxonomy
 
@@ -160,9 +161,11 @@ The `Deploy` page also exports a GitHub-ready ZIP bundle for the rendered public
 Import log `imported_at` values are stored as timezone-aware local timestamps with a UTC offset.
 File imports also record the original filename when available; API imports record the source URL.
 
-The public preview also includes user-facing map controls to search by stop name, stop ID, or route,
-filter to one or more route labels, click markers to select a stop, inspect a stop-detail panel, and
-show or hide stops whose shade label is still `Needs Review` without changing the exported dataset.
+The public preview also includes user-facing map controls to search by stop name or stop ID, filter
+routes, shade categories, review statuses, confidence, ridership, heat vulnerability, tree canopy,
+priority score, and nearby destinations when those fields exist, click markers to select a stop,
+inspect a stop-detail panel, and show or hide stops whose shade label is still `Needs Review`
+without changing the exported dataset.
 
 ## Review And Release Entities
 

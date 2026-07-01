@@ -176,6 +176,15 @@ REVIEW_STATUS_COLORS = {
 }
 
 MARKER_SHAPES = ["Circle", "Pin", "Square", "Diamond", "Triangle"]
+DESTINATION_FILTER_COLUMNS = ["nearby_destinations", "destinations", "destination"]
+CATEGORICAL_MAP_FILTERS = ["shading", "review_status", "heat_vulnerability_label"]
+NUMERIC_MAP_FILTERS = [
+    "confidence",
+    "ridership",
+    "heat_vulnerability_index",
+    "tree_canopy_pct",
+    "priority_score",
+]
 
 MAP_STYLES = {
     "Light": pdk.map_styles.CARTO_LIGHT,
@@ -209,6 +218,7 @@ FIELD_LABELS = {
     "heat_vulnerability_label": "Heat vulnerability label",
     "tree_canopy_pct": "Tree canopy percent",
     "lst_median": "Land surface temperature",
+    "nearby_destinations": "Nearby destinations",
     "priority_score": "Priority score",
 }
 
@@ -306,6 +316,7 @@ OPTIONAL_FIELDS = [
     "heat_vulnerability_label",
     "tree_canopy_pct",
     "lst_median",
+    "nearby_destinations",
 ]
 
 MANUAL_ENTRY_COLUMNS = REQUIRED_STOP_FIELDS + [
@@ -335,6 +346,7 @@ FIELD_ALIASES = {
     "heat_vulnerability_label": ["heat_vulnerability_label", "hvi_label"],
     "tree_canopy_pct": ["tree_canopy_pct", "canopy", "tree_canopy"],
     "lst_median": ["lst_median", "lst", "land_surface_temperature"],
+    "nearby_destinations": ["nearby_destinations", "destinations", "destination", "nearby_places", "places"],
 }
 
 LABEL_SOURCE_OPTIONS = [
@@ -1465,6 +1477,25 @@ DEFAULT_PALETTE = [
     "#2563eb", "#16a34a", "#dc2626", "#9333ea", "#d97706",
     "#0891b2", "#be123c", "#4d7c0f", "#7c3aed", "#0f766e",
 ]
+FILTER_FIELD_LABELS = {
+    "shading": "Shade category",
+    "review_status": "Review status",
+    "confidence": "Confidence",
+    "ridership": "Ridership",
+    "heat_vulnerability_index": "Heat vulnerability index",
+    "heat_vulnerability_label": "Heat vulnerability label",
+    "tree_canopy_pct": "Tree canopy percent",
+    "priority_score": "Priority score",
+}
+DESTINATION_FILTER_COLUMNS = ["nearby_destinations", "destinations", "destination"]
+CATEGORICAL_MAP_FILTERS = ["shading", "review_status", "heat_vulnerability_label"]
+NUMERIC_MAP_FILTERS = [
+    "confidence",
+    "ridership",
+    "heat_vulnerability_index",
+    "tree_canopy_pct",
+    "priority_score",
+]
 
 
 def load_study() -> tuple[dict[str, Any], pd.DataFrame, pd.DataFrame]:
@@ -1659,8 +1690,131 @@ def route_filter_options(df: pd.DataFrame) -> list[str]:
     return sorted(routes, key=lambda route: (len(route), route.lower()))
 
 
-def filter_map_stops(df: pd.DataFrame, search_query: str, selected_routes: list[str]) -> pd.DataFrame:
+def filter_label(column: str) -> str:
+    return FILTER_FIELD_LABELS.get(column, column.replace("_", " ").title())
+
+
+def categorical_filter_options(df: pd.DataFrame, column: str) -> list[str]:
+    if column not in df.columns:
+        return []
+    values = df[column].dropna().astype(str).str.strip()
+    values = values[(values != "") & (values.str.lower() != "nan")]
+    return sorted(values.unique().tolist())
+
+
+def numeric_filter_bounds(df: pd.DataFrame, column: str) -> tuple[float, float] | None:
+    if column not in df.columns:
+        return None
+    values = pd.to_numeric(df[column], errors="coerce").dropna()
+    values = values[values.apply(math.isfinite)]
+    if values.empty:
+        return None
+    low = float(values.min())
+    high = float(values.max())
+    if math.isclose(low, high):
+        return None
+    return low, high
+
+
+def destination_columns(df: pd.DataFrame) -> list[str]:
+    return [column for column in DESTINATION_FILTER_COLUMNS if column in df.columns]
+
+
+def current_map_filters(df: pd.DataFrame, key_prefix: str) -> dict[str, Any]:
+    filters: dict[str, Any] = {
+        "show_unlabeled": bool(st.session_state.get(f"{key_prefix}_show_unlabeled_stops", True)),
+        "search_query": str(st.session_state.get(f"{key_prefix}_stop_search", "") or ""),
+        "selected_routes": [
+            route
+            for route in st.session_state.get(f"{key_prefix}_route_filter", [])
+            if route in route_filter_options(df)
+        ],
+        "categorical": {},
+        "numeric": {},
+        "destination_query": str(st.session_state.get(f"{key_prefix}_destination_filter", "") or ""),
+    }
+    for column in CATEGORICAL_MAP_FILTERS:
+        options = categorical_filter_options(df, column)
+        selected = st.session_state.get(f"{key_prefix}_{column}_filter", [])
+        filters["categorical"][column] = [value for value in selected if value in options]
+    for column in NUMERIC_MAP_FILTERS:
+        bounds = numeric_filter_bounds(df, column)
+        if bounds is None:
+            continue
+        selected = st.session_state.get(f"{key_prefix}_{column}_range", bounds)
+        filters["numeric"][column] = {"selected": selected, "bounds": bounds}
+    return filters
+
+
+def render_map_filter_controls(df: pd.DataFrame, key_prefix: str) -> dict[str, Any]:
+    with st.expander("Map filters", expanded=True):
+        primary_cols = st.columns([1, 2, 2])
+        primary_cols[0].toggle(
+            "Show unlabeled bus stops",
+            value=True,
+            key=f"{key_prefix}_show_unlabeled_stops",
+        )
+        primary_cols[1].text_input(
+            "Search stop name or ID",
+            placeholder="Stop name or ID",
+            key=f"{key_prefix}_stop_search",
+        )
+        primary_cols[2].multiselect(
+            "Filter routes",
+            route_filter_options(df),
+            key=f"{key_prefix}_route_filter",
+        )
+
+        categorical_columns = [
+            column for column in CATEGORICAL_MAP_FILTERS if categorical_filter_options(df, column)
+        ]
+        if categorical_columns:
+            category_cols = st.columns(len(categorical_columns))
+            for index, column in enumerate(categorical_columns):
+                category_cols[index].multiselect(
+                    filter_label(column),
+                    categorical_filter_options(df, column),
+                    key=f"{key_prefix}_{column}_filter",
+                )
+
+        numeric_columns = [
+            column for column in NUMERIC_MAP_FILTERS if numeric_filter_bounds(df, column) is not None
+        ]
+        if numeric_columns:
+            numeric_cols = st.columns(min(3, len(numeric_columns)))
+            for index, column in enumerate(numeric_columns):
+                bounds = numeric_filter_bounds(df, column)
+                if bounds is None:
+                    continue
+                low, high = bounds
+                step = max((high - low) / 100.0, 0.01)
+                numeric_cols[index % len(numeric_cols)].slider(
+                    filter_label(column),
+                    min_value=low,
+                    max_value=high,
+                    value=(low, high),
+                    step=step,
+                    key=f"{key_prefix}_{column}_range",
+                )
+
+        if destination_columns(df):
+            st.text_input(
+                "Filter destinations",
+                placeholder="Destination or nearby place",
+                key=f"{key_prefix}_destination_filter",
+            )
+    return current_map_filters(df, key_prefix)
+
+
+def filter_map_stops(
+    df: pd.DataFrame,
+    search_query: str = "",
+    selected_routes: list[str] | None = None,
+    filters: dict[str, Any] | None = None,
+) -> pd.DataFrame:
     filtered = df.copy()
+    selected_routes = selected_routes or []
+    filters = filters or {}
     query = str(search_query or "").strip().lower()
     if query:
         searchable_columns = [column for column in ["stop_id", "stop_name", "routes"] if column in filtered.columns]
@@ -1671,6 +1825,33 @@ def filter_map_stops(df: pd.DataFrame, search_query: str, selected_routes: list[
         wanted = set(selected_routes)
         route_mask = filtered["routes"].apply(lambda value: bool(wanted.intersection(split_route_values(value))))
         filtered = filtered[route_mask]
+    for column, selected in filters.get("categorical", {}).items():
+        if selected and column in filtered.columns:
+            values = filtered[column].fillna("").astype(str).str.strip()
+            filtered = filtered[values.isin(set(selected))]
+    for column, config in filters.get("numeric", {}).items():
+        if column not in filtered.columns:
+            continue
+        selected = config.get("selected")
+        bounds = config.get("bounds")
+        if not selected or not bounds:
+            continue
+        low, high = float(selected[0]), float(selected[1])
+        bound_low, bound_high = float(bounds[0]), float(bounds[1])
+        if math.isclose(low, bound_low) and math.isclose(high, bound_high):
+            continue
+        values = pd.to_numeric(filtered[column], errors="coerce")
+        filtered = filtered[values.between(low, high, inclusive="both")]
+    destination_query = str(filters.get("destination_query", "") or "").strip().lower()
+    if destination_query and destination_columns(filtered):
+        destination_blob = (
+            filtered[destination_columns(filtered)]
+            .fillna("")
+            .astype(str)
+            .agg(" ".join, axis=1)
+            .str.lower()
+        )
+        filtered = filtered[destination_blob.str.contains(re.escape(destination_query), na=False)]
     return filtered.copy()
 
 
@@ -2035,13 +2216,13 @@ def main() -> None:
     st.markdown(f"### {methodology.get('summary', '')}")
     st.caption(f"{project.get('agency', '')} | {project.get('region', '')} | dataset v{project.get('dataset_version', 'draft')}")
 
-    route_options = route_filter_options(stops)
-    control_cols = st.columns([1, 2, 2])
-    show_unlabeled = control_cols[0].toggle("Show unlabeled bus stops", value=True)
-    search_query = control_cols[1].text_input("Search stops", placeholder="Stop name, ID, or route")
-    selected_routes = control_cols[2].multiselect("Filter routes", route_options)
-    visible_stops = filter_map_stops(filter_unlabeled_stops(stops, show_unlabeled), search_query, selected_routes)
-    st.caption(f"{len(visible_stops):,} of {len(stops):,} stops match the active map filters.")
+    filters = current_map_filters(stops, "published")
+    visible_stops = filter_map_stops(
+        filter_unlabeled_stops(stops, filters["show_unlabeled"]),
+        filters["search_query"],
+        filters["selected_routes"],
+        filters,
+    )
     render_metric_cards(visible_stops)
 
     tabs = st.tabs(["Map", "Analytics", "Methodology", "Downloads"])
@@ -2064,6 +2245,8 @@ def main() -> None:
             with map_cols[1]:
                 with st.container(height=STOP_DETAIL_PANEL_HEIGHT, border=False):
                     render_stop_detail_workflow(visible_stops, visualization, "published")
+        st.caption(f"{len(visible_stops):,} of {len(stops):,} stops match the active map filters.")
+        render_map_filter_controls(stops, "published")
         if visualization.get("show_legend", True) and taxonomy:
             legend = pd.DataFrame(taxonomy)
             columns = [column for column in ["name", "description", "color"] if column in legend.columns]
@@ -3286,8 +3469,127 @@ def route_filter_options(df: pd.DataFrame) -> list[str]:
     return sorted(routes, key=lambda route: (len(route), route.lower()))
 
 
-def filter_map_stops(df: pd.DataFrame, search_query: str, selected_routes: list[str]) -> pd.DataFrame:
+def categorical_filter_options(df: pd.DataFrame, column: str) -> list[str]:
+    if column not in df.columns:
+        return []
+    values = df[column].dropna().astype(str).str.strip()
+    values = values[(values != "") & (values.str.lower() != "nan")]
+    return sorted(values.unique().tolist())
+
+
+def numeric_filter_bounds(df: pd.DataFrame, column: str) -> tuple[float, float] | None:
+    if column not in df.columns:
+        return None
+    values = pd.to_numeric(df[column], errors="coerce").dropna()
+    values = values[values.apply(math.isfinite)]
+    if values.empty:
+        return None
+    low = float(values.min())
+    high = float(values.max())
+    if math.isclose(low, high):
+        return None
+    return low, high
+
+
+def destination_columns(df: pd.DataFrame) -> list[str]:
+    return [column for column in DESTINATION_FILTER_COLUMNS if column in df.columns]
+
+
+def current_map_filters(df: pd.DataFrame, key_prefix: str) -> dict[str, Any]:
+    filters: dict[str, Any] = {
+        "show_unlabeled": bool(st.session_state.get(f"{key_prefix}_show_unlabeled_stops", True)),
+        "search_query": str(st.session_state.get(f"{key_prefix}_stop_search", "") or ""),
+        "selected_routes": [
+            route
+            for route in st.session_state.get(f"{key_prefix}_route_filter", [])
+            if route in route_filter_options(df)
+        ],
+        "categorical": {},
+        "numeric": {},
+        "destination_query": str(st.session_state.get(f"{key_prefix}_destination_filter", "") or ""),
+    }
+    for column in CATEGORICAL_MAP_FILTERS:
+        options = categorical_filter_options(df, column)
+        selected = st.session_state.get(f"{key_prefix}_{column}_filter", [])
+        filters["categorical"][column] = [value for value in selected if value in options]
+    for column in NUMERIC_MAP_FILTERS:
+        bounds = numeric_filter_bounds(df, column)
+        if bounds is None:
+            continue
+        selected = st.session_state.get(f"{key_prefix}_{column}_range", bounds)
+        filters["numeric"][column] = {"selected": selected, "bounds": bounds}
+    return filters
+
+
+def render_map_filter_controls(df: pd.DataFrame, key_prefix: str) -> dict[str, Any]:
+    with st.expander("Map filters", expanded=True):
+        primary_cols = st.columns([1, 2, 2])
+        primary_cols[0].toggle(
+            "Show unlabeled bus stops",
+            value=True,
+            key=f"{key_prefix}_show_unlabeled_stops",
+        )
+        primary_cols[1].text_input(
+            "Search stop name or ID",
+            placeholder="Stop name or ID",
+            key=f"{key_prefix}_stop_search",
+        )
+        primary_cols[2].multiselect(
+            "Filter routes",
+            route_filter_options(df),
+            key=f"{key_prefix}_route_filter",
+        )
+
+        categorical_columns = [
+            column for column in CATEGORICAL_MAP_FILTERS if categorical_filter_options(df, column)
+        ]
+        if categorical_columns:
+            category_cols = st.columns(len(categorical_columns))
+            for index, column in enumerate(categorical_columns):
+                category_cols[index].multiselect(
+                    display_label(column),
+                    categorical_filter_options(df, column),
+                    key=f"{key_prefix}_{column}_filter",
+                )
+
+        numeric_columns = [
+            column for column in NUMERIC_MAP_FILTERS if numeric_filter_bounds(df, column) is not None
+        ]
+        if numeric_columns:
+            numeric_cols = st.columns(min(3, len(numeric_columns)))
+            for index, column in enumerate(numeric_columns):
+                bounds = numeric_filter_bounds(df, column)
+                if bounds is None:
+                    continue
+                low, high = bounds
+                step = max((high - low) / 100.0, 0.01)
+                numeric_cols[index % len(numeric_cols)].slider(
+                    display_label(column),
+                    min_value=low,
+                    max_value=high,
+                    value=(low, high),
+                    step=step,
+                    key=f"{key_prefix}_{column}_range",
+                )
+
+        if destination_columns(df):
+            st.text_input(
+                "Filter destinations",
+                placeholder="Destination or nearby place",
+                key=f"{key_prefix}_destination_filter",
+            )
+    return current_map_filters(df, key_prefix)
+
+
+def filter_map_stops(
+    df: pd.DataFrame,
+    search_query: str = "",
+    selected_routes: list[str] | None = None,
+    filters: dict[str, Any] | None = None,
+) -> pd.DataFrame:
     filtered = df.copy()
+    selected_routes = selected_routes or []
+    filters = filters or {}
     query = str(search_query or "").strip().lower()
     if query:
         searchable_columns = [column for column in ["stop_id", "stop_name", "routes"] if column in filtered.columns]
@@ -3298,6 +3600,33 @@ def filter_map_stops(df: pd.DataFrame, search_query: str, selected_routes: list[
         wanted = set(selected_routes)
         route_mask = filtered["routes"].apply(lambda value: bool(wanted.intersection(split_route_values(value))))
         filtered = filtered[route_mask]
+    for column, selected in filters.get("categorical", {}).items():
+        if selected and column in filtered.columns:
+            values = filtered[column].fillna("").astype(str).str.strip()
+            filtered = filtered[values.isin(set(selected))]
+    for column, config in filters.get("numeric", {}).items():
+        if column not in filtered.columns:
+            continue
+        selected = config.get("selected")
+        bounds = config.get("bounds")
+        if not selected or not bounds:
+            continue
+        low, high = float(selected[0]), float(selected[1])
+        bound_low, bound_high = float(bounds[0]), float(bounds[1])
+        if math.isclose(low, bound_low) and math.isclose(high, bound_high):
+            continue
+        values = pd.to_numeric(filtered[column], errors="coerce")
+        filtered = filtered[values.between(low, high, inclusive="both")]
+    destination_query = str(filters.get("destination_query", "") or "").strip().lower()
+    if destination_query and destination_columns(filtered):
+        destination_blob = (
+            filtered[destination_columns(filtered)]
+            .fillna("")
+            .astype(str)
+            .agg(" ".join, axis=1)
+            .str.lower()
+        )
+        filtered = filtered[destination_blob.str.contains(re.escape(destination_query), na=False)]
     return filtered.copy()
 
 
@@ -3411,25 +3740,13 @@ def render_preview_page() -> None:
         st.warning("Import a stop dataset before previewing the public app.")
         return
 
-    route_options = route_filter_options(stops)
-    control_cols = st.columns([1, 2, 2])
-    show_unlabeled = control_cols[0].toggle(
-        "Show unlabeled bus stops",
-        value=True,
-        key="preview_show_unlabeled_stops",
+    filters = current_map_filters(stops, "preview")
+    visible_stops = filter_map_stops(
+        filter_unlabeled_stops(stops, filters["show_unlabeled"]),
+        filters["search_query"],
+        filters["selected_routes"],
+        filters,
     )
-    search_query = control_cols[1].text_input(
-        "Search stops",
-        placeholder="Stop name, ID, or route",
-        key="preview_stop_search",
-    )
-    selected_routes = control_cols[2].multiselect(
-        "Filter routes",
-        route_options,
-        key="preview_route_filter",
-    )
-    visible_stops = filter_map_stops(filter_unlabeled_stops(stops, show_unlabeled), search_query, selected_routes)
-    st.caption(f"{len(visible_stops):,} of {len(stops):,} stops match the active map filters.")
 
     render_metric_cards(visible_stops)
     tabs = st.tabs(["Map", "Analytics", "Methodology", "Exports"])
@@ -3452,6 +3769,8 @@ def render_preview_page() -> None:
             with map_cols[1]:
                 with st.container(height=VISUAL_MAP_HEIGHT, border=False):
                     render_stop_detail_workflow(visible_stops, visualization, "preview")
+        st.caption(f"{len(visible_stops):,} of {len(stops):,} stops match the active map filters.")
+        render_map_filter_controls(stops, "preview")
         if visualization.get("show_legend", True):
             legend = pd.DataFrame(taxonomy).sort_values("sort_order")
             st.dataframe(legend.loc[:, ["name", "description", "color"]], use_container_width=True, hide_index=True)
