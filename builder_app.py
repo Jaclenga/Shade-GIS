@@ -3204,7 +3204,11 @@ def review_queue_table(stops: pd.DataFrame, labels: pd.DataFrame) -> pd.DataFram
 
     priority_rank = {status: index for index, status in enumerate(["Disputed", "Needs Review", "Unlabeled"])}
     queue["queue_rank"] = queue["review_status"].map(priority_rank).fillna(10)
-    priority_score = pd.to_numeric(queue.get("priority_score", 0), errors="coerce").fillna(0)
+    if "priority_score" in queue.columns:
+        priority_score = pd.to_numeric(queue["priority_score"], errors="coerce").fillna(0)
+    else:
+        priority_score = pd.Series(0.0, index=queue.index)
+        queue["priority_score"] = priority_score
     agreement_gap = 100 - pd.to_numeric(queue["agreement_pct"], errors="coerce").fillna(100)
     queue["queue_score"] = (
         (10 - queue["queue_rank"]).clip(lower=0) * 100

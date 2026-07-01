@@ -1,5 +1,7 @@
 # Shade Study Builder
 
+[![Tests](https://github.com/Jaclenga/Shade-GIS/actions/workflows/tests.yml/badge.svg)](https://github.com/Jaclenga/Shade-GIS/actions/workflows/tests.yml)
+
 Streamlit platform for preparing reusable, city-wide bus stop shade studies from GTFS or CSV stop datasets. The app helps researchers, transit agencies, and municipalities configure project metadata, upload or map transit data, choose shade taxonomy and visualization settings, edit public methodology copy, and preview the resulting public Streamlit app.
 
 The repository still includes the Tampa/HART stop and shade files as a starter project, but the app is no longer hard-coded as a Tampa-only viewer.
@@ -170,6 +172,17 @@ python scripts/verify_heat_data.py --live
 ```
 
 The script exits with status `0` when all checks pass, `1` when data errors are found, and `2` when inputs or the live source cannot be read. Warnings, such as GTFS stops outside the county layer, do not by themselves fail verification.
+
+## Running tests
+
+Install the standard dependencies, then run the non-UI platform test suite:
+
+```bash
+pip install -r requirements.txt
+pytest -q
+```
+
+The pytest suite uses temporary SQLite databases and small fixtures to verify project storage, imports, labels, review audit history, exports, priority scoring, and module syntax without touching the local builder database.
 
 ## Deploy
 

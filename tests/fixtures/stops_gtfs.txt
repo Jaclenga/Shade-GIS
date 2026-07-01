@@ -1,0 +1,3 @@
+stop_id,stop_name,stop_lat,stop_lon
+2001,GTFS Main,27.9601,-82.4601
+2002,GTFS Central,27.9610,-82.4610

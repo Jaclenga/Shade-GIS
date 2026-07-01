@@ -1,0 +1,4 @@
+stop_id,stop_name,lat,lon,route,ridership,heat_vulnerability_index,tree_canopy_pct,nearby_destinations
+1001,Main St & 1st Ave,27.9506,-82.4572,10,120,0.9,0.1,Hospital
+1002,Central Ave,27.9510,-82.4590,10,80,0.3,0.6,School
+1002,Duplicate Central,27.9520,-82.4600,20,55,0.4,0.5,Park

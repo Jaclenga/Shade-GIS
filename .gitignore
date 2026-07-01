@@ -4,3 +4,7 @@ __pycache__/
 *.pyc
 platform_data/
 *.sqlite3
+.pytest_cache/
+.pytest_tmp/
+.test_dbs/
+pytest-cache-files-*/

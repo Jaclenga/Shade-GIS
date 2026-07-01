@@ -1,0 +1,29 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "stop_id": "3001",
+        "stop_name": "GeoJSON Main",
+        "routes": "30"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-82.4701, 27.9701]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "stop_id": "3002",
+        "stop_name": "GeoJSON Central",
+        "routes": "31"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-82.4710, 27.9710]
+      }
+    }
+  ]
+}
