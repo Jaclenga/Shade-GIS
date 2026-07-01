@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import copy
-import gc
+import os
+import shutil
 import sys
-import time
 import uuid
 from pathlib import Path
 
@@ -19,18 +19,12 @@ from builder_app import DEFAULT_METHODOLOGY, DEFAULT_PROJECT, DEFAULT_TAXONOMY, 
 
 @pytest.fixture
 def db_path() -> Path:
-    directory = Path(".test_dbs")
-    directory.mkdir(exist_ok=True)
-    path = directory / f"shade-gis-test-{uuid.uuid4().hex}.sqlite3"
-    yield path
-    for candidate in [path, path.with_name(f"{path.name}-journal")]:
-        for _attempt in range(3):
-            try:
-                gc.collect()
-                candidate.unlink(missing_ok=True)
-                break
-            except PermissionError:
-                time.sleep(0.1)
+    directory = Path(os.environ.get("TEMP", ".")) / "shade_gis_pytest_manual" / uuid.uuid4().hex
+    directory.mkdir(parents=True, exist_ok=True)
+    try:
+        yield directory / "shade-gis-test.sqlite3"
+    finally:
+        shutil.rmtree(directory, ignore_errors=True)
 
 
 @pytest.fixture

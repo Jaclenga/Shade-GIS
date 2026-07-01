@@ -175,7 +175,9 @@ The `Preview` page exports:
 - Raw labels CSV, when raw labels have been submitted.
 - Study configuration JSON containing project metadata, taxonomy, methodology copy, visualization settings, and import log.
 
-The `Deploy` page also exports a GitHub-ready ZIP bundle for the rendered public app. The bundle includes:
+The `Deploy` page also exports a GitHub-ready ZIP bundle for the rendered public app. The public
+Streamlit source is maintained in `published_app.py`, which the builder preview imports and the
+deploy bundle copies as its standalone `app.py`. The bundle includes:
 
 - Standalone `app.py` for the public Streamlit experience.
 - `shade_study_stops.csv` with the active stop dataset and current priority scores.

@@ -21,7 +21,7 @@ The repository still includes the Tampa/HART stop and shade files as a starter p
 - Provides an editable rationale/about page for methodology, data sources, contributors, grouped hanging-indent citations and bibliography, limitations, and release history.
 - Automatically includes the priority formula on the methodology page whenever `priority_score` is used by the configured visualizations.
 - Previews the public Streamlit app with broad map filters for stop search, routes, shade category, review status, confidence, ridership, heat vulnerability, tree canopy, priority, and destinations, plus click-to-select stop details, an advanced analytics dashboard, methodology, import log, and CSV/GeoJSON/config/raw-label downloads.
-- Builds a GitHub-ready deployment bundle containing the rendered public Streamlit app, current stop data, raw labels when present, configuration, dependencies, README, and optional GitHub CLI publish script.
+- Builds a GitHub-ready deployment bundle from the tested `published_app.py` public-app module, plus current stop data, raw labels when present, configuration, dependencies, README, and optional GitHub CLI publish script.
 
 ## App Pages
 
@@ -201,7 +201,7 @@ On Windows, the default database is created at `%LOCALAPPDATA%\Shade-GIS\shade_s
 
 To publish a rendered study app, use the builder's `Deploy` page. It creates a ZIP bundle with:
 
-- `app.py`: standalone public Streamlit app rendered from the current builder state.
+- `app.py`: standalone public Streamlit app copied from the repo's tested `published_app.py` module.
 - `shade_study_stops.csv`: exported stop dataset.
 - `shade_study_raw_labels.csv`: exported raw label submissions when labels have been collected.
 - `shade_study_config.json`: exported project metadata, methodology, taxonomy, visualization settings, and import log.
