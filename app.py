@@ -5,7 +5,5 @@ Keep this file intentionally small: deployment targets still point at
 """
 
 from builder_app import main
-
-
 if __name__ == "__main__":
     main()

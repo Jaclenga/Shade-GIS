@@ -190,11 +190,12 @@ The script exits with status `0` when all checks pass, `1` when data errors are 
 Install the standard dependencies, then run the non-UI platform test suite:
 
 ```bash
-pip install -r requirements.txt
+pip install -r requirements-test.txt
 pytest -q
 ```
 
 The pytest suite uses temporary SQLite databases and small fixtures to verify project storage, imports, labels, review audit history, exports, priority scoring, and module syntax without touching the local builder database.
+`requirements.txt` is kept to runtime dependencies only; test-only packages live in `requirements-test.txt` and `requirements-ui.txt`.
 
 Browser UI tests are available as an opt-in Playwright suite. They start `streamlit run app.py`
 against an isolated temporary SQLite database, wait for `/_stcore/health`, and click through the
