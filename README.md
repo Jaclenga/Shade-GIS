@@ -6,6 +6,16 @@ Streamlit platform for preparing reusable, city-wide bus stop shade studies from
 
 The repository still includes the Tampa/HART stop and shade files as a starter project, but the app is no longer hard-coded as a Tampa-only viewer.
 
+## Project Practices
+
+- Tests and CI: the repository includes a pytest suite under `tests/` and a
+  GitHub Actions workflow in `.github/workflows/tests.yml` that runs both the
+  standard test suite and Playwright UI coverage.
+- Contributor guide: see [CONTRIBUTING.md](CONTRIBUTING.md).
+- Support expectations: see [SUPPORT.md](SUPPORT.md).
+- Governance expectations: see [GOVERNANCE.md](GOVERNANCE.md).
+- Release history: see [CHANGELOG.md](CHANGELOG.md).
+
 ## What it does
 
 - Starts with the bundled Tampa/HART dataset, or lets you import GTFS `.zip`, `stops.txt`, CSV, GeoJSON, zipped Shapefile, API-hosted CSV/GeoJSON, or manually entered stop records.
