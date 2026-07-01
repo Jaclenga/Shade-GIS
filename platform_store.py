@@ -228,6 +228,19 @@ LABEL_FIELDS = [
     "created_at",
 ]
 
+REVIEW_HISTORY_FIELDS = [
+    "id",
+    "project_id",
+    "stop_id",
+    "actor_id",
+    "action",
+    "from_status",
+    "to_status",
+    "notes",
+    "metadata_json",
+    "created_at",
+]
+
 NUMERIC_STOP_FIELDS = {
     "stop_lat",
     "stop_lon",
@@ -385,6 +398,106 @@ def _add_shade_label_once(
         )
         conn.commit()
     return label_id
+
+
+def list_review_history(
+    project_id: str,
+    stop_id: str | None = None,
+    path: Path | None = None,
+) -> pd.DataFrame:
+    init_database(path)
+    filters = ["project_id = ?"]
+    params: list[Any] = [project_id]
+    if stop_id:
+        filters.append("stop_id = ?")
+        params.append(stop_id)
+    where_clause = " AND ".join(filters)
+    with connect(path) as conn:
+        rows = conn.execute(
+            f"""
+            SELECT id, project_id, stop_id, actor_id, action, from_status,
+                   to_status, notes, metadata_json, created_at
+            FROM review_history
+            WHERE {where_clause}
+            ORDER BY created_at DESC, id DESC
+            """,
+            params,
+        ).fetchall()
+    records = []
+    for row in rows:
+        record = {field: row[field] for field in REVIEW_HISTORY_FIELDS}
+        metadata = json.loads(record.pop("metadata_json") or "{}")
+        for key, value in metadata.items():
+            record[f"metadata_{key}"] = value
+        records.append(record)
+    if not records:
+        return pd.DataFrame(columns=[field for field in REVIEW_HISTORY_FIELDS if field != "metadata_json"])
+    return pd.DataFrame(records)
+
+
+def add_review_event(
+    project_id: str,
+    event: dict[str, Any],
+    path: Path | None = None,
+) -> str:
+    db_path = Path(path) if path is not None else database_path()
+    for attempt in range(2):
+        try:
+            return _add_review_event_once(project_id, event, db_path)
+        except sqlite3.OperationalError as error:
+            if path is None and attempt == 0 and is_readonly_database_error(error):
+                mark_database_path_unusable(db_path, error)
+                db_path = database_path()
+                continue
+            raise
+    raise sqlite3.OperationalError("Could not write review event")
+
+
+def _add_review_event_once(
+    project_id: str,
+    event: dict[str, Any],
+    path: Path,
+) -> str:
+    init_database(path)
+    event_id = str(uuid.uuid4())
+    now = utc_timestamp()
+    metadata = {
+        key: clean_scalar(value)
+        for key, value in event.items()
+        if key
+        not in {
+            "stop_id",
+            "actor_id",
+            "action",
+            "from_status",
+            "to_status",
+            "notes",
+        }
+    }
+    with connect(path) as conn:
+        conn.execute(
+            """
+            INSERT INTO review_history (
+                id, project_id, stop_id, actor_id, action, from_status,
+                to_status, notes, metadata_json, created_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                event_id,
+                project_id,
+                clean_scalar(event.get("stop_id", "")),
+                clean_scalar(event.get("actor_id", "")),
+                clean_scalar(event.get("action", "")),
+                clean_scalar(event.get("from_status", "")),
+                clean_scalar(event.get("to_status", "")),
+                clean_scalar(event.get("notes", "")),
+                json.dumps(metadata, ensure_ascii=True),
+                now,
+            ),
+        )
+        conn.commit()
+    return event_id
 
 
 def create_project(

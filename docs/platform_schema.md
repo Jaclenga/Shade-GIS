@@ -128,6 +128,21 @@ Reviewer-based metrics use `labeler_id` when present; otherwise they fall back t
 role/source combination. These metrics summarize reliability and do not overwrite raw labels or
 current stop fields.
 
+## Review Workflow
+
+The `Labels` page includes an admin review queue built from current stop statuses, raw-label counts,
+agreement percentages, disagreement flags, and priority scores. Project teams can filter the queue
+to stops that are unlabeled, disputed, or need review; search by stop ID/name/route; and isolate
+stops with conflicting raw labels.
+
+For each queued stop, an admin can accept the current label, enter an expert override, mark a stop
+as disputed, resolve a dispute, or archive the stop. The decision form writes the final shade
+category, coverage, source list, confidence, and review status back to the stop dataset used by maps
+and exports. It also appends a `review_history` audit event with the actor, role, action, previous
+and final statuses, previous and final labels, decision notes, agreement context, and timestamp.
+Applying a raw label directly to the map label also records an audit event, so map-facing label
+changes remain traceable.
+
 Visualization settings store the selected map color field, premade and editable palettes for shade
 categories, review statuses, priority-score gradients, and other categorical columns, plus marker
 shape, size, opacity, outline, base map style, uploaded GIS overlays, data-backed context field
@@ -179,7 +194,6 @@ without changing the exported dataset.
 
 ## Review And Release Entities
 
-`images`, `review_history`, and `releases` are part of the durable schema even when the current
-Streamlit screens do not expose every field yet. Raw label submission is now exposed through the
-`Labels` page, while image evidence, review audit trails, and release metadata remain ready for
-future workflow screens.
+`images` and `releases` remain durable schema foundations for richer evidence and publication
+workflows. Raw label submission, admin review decisions, dispute resolution, expert overrides, and
+review audit trails are exposed through the `Labels` page.
