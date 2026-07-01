@@ -1430,6 +1430,7 @@ def published_app_source() -> str:
     return r'''import base64
 import json
 import math
+import re
 from pathlib import Path
 from typing import Any
 
@@ -1443,6 +1444,7 @@ CONFIG_PATH = APP_DIR / "shade_study_config.json"
 DATA_PATH = APP_DIR / "shade_study_stops.csv"
 RAW_LABELS_PATH = APP_DIR / "shade_study_raw_labels.csv"
 RECORD_COUNT_FIELD = "Record count"
+STOP_DETAIL_PANEL_HEIGHT = 500
 
 MAP_STYLES = {
     "Light": pdk.map_styles.CARTO_LIGHT,
@@ -1594,6 +1596,7 @@ def build_deck_chart(df: pd.DataFrame, taxonomy: list[dict[str, Any]], visualiza
         layer = pdk.Layer(
             "ScatterplotLayer",
             data=map_df,
+            id="stops_layer",
             get_position="[stop_lon, stop_lat]",
             get_fill_color="marker_color",
             get_radius=marker_size,
@@ -1616,6 +1619,7 @@ def build_deck_chart(df: pd.DataFrame, taxonomy: list[dict[str, Any]], visualiza
         layer = pdk.Layer(
             "IconLayer",
             data=map_df,
+            id="stops_layer",
             get_icon="icon_data",
             get_position="[stop_lon, stop_lat]",
             get_size="icon_size",
@@ -1637,6 +1641,136 @@ def filter_unlabeled_stops(df: pd.DataFrame, show_unlabeled: bool) -> pd.DataFra
     if show_unlabeled or "shading" not in df.columns:
         return df
     return df[df["shading"] != "Needs Review"].copy()
+
+
+def split_route_values(value: Any) -> list[str]:
+    text = str(value or "").strip()
+    if not text or text.lower() in {"nan", "none"}:
+        return []
+    return [route.strip() for route in re.split(r"[;,|]+", text) if route.strip()]
+
+
+def route_filter_options(df: pd.DataFrame) -> list[str]:
+    if "routes" not in df.columns:
+        return []
+    routes: set[str] = set()
+    for value in df["routes"].dropna():
+        routes.update(split_route_values(value))
+    return sorted(routes, key=lambda route: (len(route), route.lower()))
+
+
+def filter_map_stops(df: pd.DataFrame, search_query: str, selected_routes: list[str]) -> pd.DataFrame:
+    filtered = df.copy()
+    query = str(search_query or "").strip().lower()
+    if query:
+        searchable_columns = [column for column in ["stop_id", "stop_name", "routes"] if column in filtered.columns]
+        if searchable_columns:
+            search_blob = filtered[searchable_columns].fillna("").astype(str).agg(" ".join, axis=1).str.lower()
+            filtered = filtered[search_blob.str.contains(re.escape(query), na=False)]
+    if selected_routes and "routes" in filtered.columns:
+        wanted = set(selected_routes)
+        route_mask = filtered["routes"].apply(lambda value: bool(wanted.intersection(split_route_values(value))))
+        filtered = filtered[route_mask]
+    return filtered.copy()
+
+
+def selected_stop_id_from_map_selection(selection_event: Any, df: pd.DataFrame) -> str | None:
+    if selection_event is None:
+        return None
+    selection = getattr(selection_event, "selection", None)
+    if selection is None and isinstance(selection_event, dict):
+        selection = selection_event.get("selection")
+    if selection is None:
+        return None
+
+    objects = getattr(selection, "objects", None)
+    if objects is None and isinstance(selection, dict):
+        objects = selection.get("objects")
+    if isinstance(objects, dict):
+        layer_objects = objects.get("stops_layer")
+        if layer_objects:
+            stop_id = layer_objects[0].get("stop_id")
+            if stop_id is not None:
+                return str(stop_id)
+
+    indices = getattr(selection, "indices", None)
+    if indices is None and isinstance(selection, dict):
+        indices = selection.get("indices")
+    if isinstance(indices, dict):
+        layer_indices = indices.get("stops_layer")
+        if layer_indices:
+            index = int(layer_indices[0])
+            if 0 <= index < len(df):
+                return str(df.iloc[index].get("stop_id", ""))
+    return None
+
+
+def stop_picker_label(row: pd.Series) -> str:
+    stop_id = str(row.get("stop_id", "")).strip()
+    stop_name = str(row.get("stop_name", "")).strip() or "Unnamed stop"
+    routes = str(row.get("routes", "")).strip()
+    suffix = f" | routes {routes}" if routes else ""
+    return f"{stop_name} ({stop_id}){suffix}"
+
+
+def render_stop_detail_workflow(df: pd.DataFrame, visualization: dict[str, Any], key_prefix: str) -> None:
+    if df.empty:
+        st.info("No stop is available for the active map filters.")
+        return
+
+    options = df.reset_index(drop=True)
+    stop_ids = options["stop_id"].astype(str).tolist() if "stop_id" in options.columns else []
+    selected_key = f"{key_prefix}_selected_stop_id"
+    selected_stop_id = str(st.session_state.get(selected_key, "") or "")
+    if selected_stop_id not in stop_ids and stop_ids:
+        selected_stop_id = stop_ids[0]
+        st.session_state[selected_key] = selected_stop_id
+
+    selected_index = stop_ids.index(selected_stop_id) if selected_stop_id in stop_ids else 0
+    picker_key = f"{key_prefix}_stop_picker"
+    current_picker = st.session_state.get(picker_key)
+    if (
+        not isinstance(current_picker, int)
+        or current_picker < 0
+        or current_picker >= len(options)
+        or stop_ids[int(current_picker)] != selected_stop_id
+    ):
+        st.session_state[picker_key] = selected_index
+    picked_index = st.selectbox(
+        "Selected stop",
+        range(len(options)),
+        index=selected_index,
+        format_func=lambda index: stop_picker_label(options.iloc[int(index)]),
+        key=picker_key,
+    )
+    selected_stop = options.iloc[int(picked_index)]
+    st.session_state[selected_key] = str(selected_stop.get("stop_id", ""))
+    st.markdown(f"**{stop_picker_label(selected_stop)}**")
+
+    st.markdown("#### Stop Details")
+    priority = pd.to_numeric(pd.Series([selected_stop.get("priority_score")]), errors="coerce").iloc[0]
+    summary_rows = [
+        ("Shade", str(selected_stop.get("shading", "Unknown") or "Unknown")),
+        ("Review", str(selected_stop.get("review_status", "Unknown") or "Unknown")),
+        ("Priority", "N/A" if pd.isna(priority) else f"{float(priority):.2f}"),
+    ]
+    for label, value in summary_rows:
+        st.markdown(f"**{label}**  \n{value}")
+
+    detail_columns = []
+    for column in get_selected_display_columns(options, visualization) + [
+        "shade_coverage",
+        "shade_sources",
+        "routes",
+        "stop_lat",
+        "stop_lon",
+    ]:
+        if column in options.columns and column not in detail_columns:
+            detail_columns.append(column)
+    detail_rows = [{"Field": column.replace("_", " ").title(), "Value": selected_stop.get(column, "")} for column in detail_columns]
+    for row in detail_rows:
+        value = str(row["Value"] if pd.notna(row["Value"]) else "")
+        st.markdown(f"**{row['Field']}**  \n{value}")
 
 
 def render_metric_cards(df: pd.DataFrame) -> None:
@@ -1901,8 +2035,13 @@ def main() -> None:
     st.markdown(f"### {methodology.get('summary', '')}")
     st.caption(f"{project.get('agency', '')} | {project.get('region', '')} | dataset v{project.get('dataset_version', 'draft')}")
 
-    show_unlabeled = st.toggle("Show unlabeled bus stops", value=True)
-    visible_stops = filter_unlabeled_stops(stops, show_unlabeled)
+    route_options = route_filter_options(stops)
+    control_cols = st.columns([1, 2, 2])
+    show_unlabeled = control_cols[0].toggle("Show unlabeled bus stops", value=True)
+    search_query = control_cols[1].text_input("Search stops", placeholder="Stop name, ID, or route")
+    selected_routes = control_cols[2].multiselect("Filter routes", route_options)
+    visible_stops = filter_map_stops(filter_unlabeled_stops(stops, show_unlabeled), search_query, selected_routes)
+    st.caption(f"{len(visible_stops):,} of {len(stops):,} stops match the active map filters.")
     render_metric_cards(visible_stops)
 
     tabs = st.tabs(["Map", "Analytics", "Methodology", "Downloads"])
@@ -1910,7 +2049,21 @@ def main() -> None:
         if visible_stops.empty:
             st.info("No stops match the current visibility settings.")
         else:
-            st.pydeck_chart(build_deck_chart(visible_stops, taxonomy, visualization), use_container_width=True)
+            map_cols = st.columns([2, 1])
+            with map_cols[0]:
+                map_selection = st.pydeck_chart(
+                    build_deck_chart(visible_stops, taxonomy, visualization),
+                    use_container_width=True,
+                    on_select="rerun",
+                    selection_mode="single-object",
+                    key="published_stops_map",
+                )
+                selected_stop_id = selected_stop_id_from_map_selection(map_selection, visible_stops)
+                if selected_stop_id:
+                    st.session_state["published_selected_stop_id"] = selected_stop_id
+            with map_cols[1]:
+                with st.container(height=STOP_DETAIL_PANEL_HEIGHT, border=False):
+                    render_stop_detail_workflow(visible_stops, visualization, "published")
         if visualization.get("show_legend", True) and taxonomy:
             legend = pd.DataFrame(taxonomy)
             columns = [column for column in ["name", "description", "color"] if column in legend.columns]
@@ -3117,6 +3270,131 @@ def filter_unlabeled_stops(df: pd.DataFrame, show_unlabeled: bool) -> pd.DataFra
     return df[df["shading"] != "Needs Review"].copy()
 
 
+def split_route_values(value: Any) -> list[str]:
+    text = str(value or "").strip()
+    if not text or text.lower() in {"nan", "none"}:
+        return []
+    return [route.strip() for route in re.split(r"[;,|]+", text) if route.strip()]
+
+
+def route_filter_options(df: pd.DataFrame) -> list[str]:
+    if "routes" not in df.columns:
+        return []
+    routes: set[str] = set()
+    for value in df["routes"].dropna():
+        routes.update(split_route_values(value))
+    return sorted(routes, key=lambda route: (len(route), route.lower()))
+
+
+def filter_map_stops(df: pd.DataFrame, search_query: str, selected_routes: list[str]) -> pd.DataFrame:
+    filtered = df.copy()
+    query = str(search_query or "").strip().lower()
+    if query:
+        searchable_columns = [column for column in ["stop_id", "stop_name", "routes"] if column in filtered.columns]
+        if searchable_columns:
+            search_blob = filtered[searchable_columns].fillna("").astype(str).agg(" ".join, axis=1).str.lower()
+            filtered = filtered[search_blob.str.contains(re.escape(query), na=False)]
+    if selected_routes and "routes" in filtered.columns:
+        wanted = set(selected_routes)
+        route_mask = filtered["routes"].apply(lambda value: bool(wanted.intersection(split_route_values(value))))
+        filtered = filtered[route_mask]
+    return filtered.copy()
+
+
+def selected_stop_id_from_map_selection(selection_event: Any, df: pd.DataFrame) -> str | None:
+    if selection_event is None:
+        return None
+    selection = getattr(selection_event, "selection", None)
+    if selection is None and isinstance(selection_event, dict):
+        selection = selection_event.get("selection")
+    if selection is None:
+        return None
+
+    objects = getattr(selection, "objects", None)
+    if objects is None and isinstance(selection, dict):
+        objects = selection.get("objects")
+    if isinstance(objects, dict):
+        layer_objects = objects.get("stops_layer")
+        if layer_objects:
+            stop_id = layer_objects[0].get("stop_id")
+            if stop_id is not None:
+                return str(stop_id)
+
+    indices = getattr(selection, "indices", None)
+    if indices is None and isinstance(selection, dict):
+        indices = selection.get("indices")
+    if isinstance(indices, dict):
+        layer_indices = indices.get("stops_layer")
+        if layer_indices:
+            index = int(layer_indices[0])
+            if 0 <= index < len(df):
+                return str(df.iloc[index].get("stop_id", ""))
+    return None
+
+
+def render_stop_detail_workflow(df: pd.DataFrame, visualization: dict[str, Any], key_prefix: str) -> None:
+    if df.empty:
+        st.info("No stop is available for the active map filters.")
+        return
+
+    options = df.reset_index(drop=True)
+    stop_ids = options["stop_id"].astype(str).tolist() if "stop_id" in options.columns else []
+    selected_key = f"{key_prefix}_selected_stop_id"
+    selected_stop_id = str(st.session_state.get(selected_key, "") or "")
+    if selected_stop_id not in stop_ids and stop_ids:
+        selected_stop_id = stop_ids[0]
+        st.session_state[selected_key] = selected_stop_id
+
+    selected_index = stop_ids.index(selected_stop_id) if selected_stop_id in stop_ids else 0
+    picker_key = f"{key_prefix}_stop_picker"
+    current_picker = st.session_state.get(picker_key)
+    if (
+        not isinstance(current_picker, int)
+        or current_picker < 0
+        or current_picker >= len(options)
+        or stop_ids[int(current_picker)] != selected_stop_id
+    ):
+        st.session_state[picker_key] = selected_index
+    picked_index = st.selectbox(
+        "Selected stop",
+        range(len(options)),
+        index=selected_index,
+        format_func=lambda index: stop_picker_label(options.iloc[int(index)]),
+        key=picker_key,
+    )
+    selected_stop = options.iloc[int(picked_index)]
+    st.session_state[selected_key] = str(selected_stop.get("stop_id", ""))
+    st.markdown(f"**{stop_picker_label(selected_stop)}**")
+
+    st.markdown("#### Stop Details")
+    priority = pd.to_numeric(pd.Series([selected_stop.get("priority_score")]), errors="coerce").iloc[0]
+    summary_rows = [
+        ("Shade", str(selected_stop.get("shading", "Unknown") or "Unknown")),
+        ("Review", str(selected_stop.get("review_status", "Unknown") or "Unknown")),
+        ("Priority", "N/A" if pd.isna(priority) else f"{float(priority):.2f}"),
+    ]
+    for label, value in summary_rows:
+        st.markdown(f"**{label}**  \n{value}")
+
+    detail_columns = []
+    for column in get_selected_display_columns(options, visualization) + [
+        "shade_coverage",
+        "shade_sources",
+        "routes",
+        "stop_lat",
+        "stop_lon",
+    ]:
+        if column in options.columns and column not in detail_columns:
+            detail_columns.append(column)
+    detail_rows = [
+        {"Field": display_label(column), "Value": selected_stop.get(column, "")}
+        for column in detail_columns
+    ]
+    for row in detail_rows:
+        value = str(row["Value"] if pd.notna(row["Value"]) else "")
+        st.markdown(f"**{row['Field']}**  \n{value}")
+
+
 def render_preview_page() -> None:
     project = st.session_state["project"]
     methodology = st.session_state["methodology"]
@@ -3133,8 +3411,25 @@ def render_preview_page() -> None:
         st.warning("Import a stop dataset before previewing the public app.")
         return
 
-    show_unlabeled = st.toggle("Show unlabeled bus stops", value=True, key="preview_show_unlabeled_stops")
-    visible_stops = filter_unlabeled_stops(stops, show_unlabeled)
+    route_options = route_filter_options(stops)
+    control_cols = st.columns([1, 2, 2])
+    show_unlabeled = control_cols[0].toggle(
+        "Show unlabeled bus stops",
+        value=True,
+        key="preview_show_unlabeled_stops",
+    )
+    search_query = control_cols[1].text_input(
+        "Search stops",
+        placeholder="Stop name, ID, or route",
+        key="preview_stop_search",
+    )
+    selected_routes = control_cols[2].multiselect(
+        "Filter routes",
+        route_options,
+        key="preview_route_filter",
+    )
+    visible_stops = filter_map_stops(filter_unlabeled_stops(stops, show_unlabeled), search_query, selected_routes)
+    st.caption(f"{len(visible_stops):,} of {len(stops):,} stops match the active map filters.")
 
     render_metric_cards(visible_stops)
     tabs = st.tabs(["Map", "Analytics", "Methodology", "Exports"])
@@ -3142,7 +3437,21 @@ def render_preview_page() -> None:
         if visible_stops.empty:
             st.info("No stops match the current visibility settings.")
         else:
-            st.pydeck_chart(build_deck_chart(visible_stops, taxonomy, visualization), use_container_width=True)
+            map_cols = st.columns([2, 1])
+            with map_cols[0]:
+                map_selection = st.pydeck_chart(
+                    build_deck_chart(visible_stops, taxonomy, visualization),
+                    use_container_width=True,
+                    on_select="rerun",
+                    selection_mode="single-object",
+                    key="preview_stops_map",
+                )
+                selected_stop_id = selected_stop_id_from_map_selection(map_selection, visible_stops)
+                if selected_stop_id:
+                    st.session_state["preview_selected_stop_id"] = selected_stop_id
+            with map_cols[1]:
+                with st.container(height=VISUAL_MAP_HEIGHT, border=False):
+                    render_stop_detail_workflow(visible_stops, visualization, "preview")
         if visualization.get("show_legend", True):
             legend = pd.DataFrame(taxonomy).sort_values("sort_order")
             st.dataframe(legend.loc[:, ["name", "description", "color"]], use_container_width=True, hide_index=True)

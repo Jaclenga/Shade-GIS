@@ -160,8 +160,9 @@ The `Deploy` page also exports a GitHub-ready ZIP bundle for the rendered public
 Import log `imported_at` values are stored as timezone-aware local timestamps with a UTC offset.
 File imports also record the original filename when available; API imports record the source URL.
 
-The public preview also includes a user-facing toggle to show or hide stops whose shade label is
-still `Needs Review` without changing the exported dataset.
+The public preview also includes user-facing map controls to search by stop name, stop ID, or route,
+filter to one or more route labels, click markers to select a stop, inspect a stop-detail panel, and
+show or hide stops whose shade label is still `Needs Review` without changing the exported dataset.
 
 ## Review And Release Entities
 
