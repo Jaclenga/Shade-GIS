@@ -608,14 +608,66 @@ def render_stop_detail_workflow(df: pd.DataFrame, visualization: dict[str, Any],
 
 
 def render_metric_cards(df: pd.DataFrame) -> None:
-    no_shade = int((df.get("shading", pd.Series(dtype=str)) == "No Shade").sum()) if not df.empty else 0
-    needs_review = int((df.get("shading", pd.Series(dtype=str)) == "Needs Review").sum()) if not df.empty else 0
-    accepted = int((df.get("review_status", pd.Series(dtype=str)) == "Accepted").sum()) if not df.empty else 0
+    metrics = summary_metric_cards(df)
     cols = st.columns(4)
-    cols[0].metric("Stops", f"{len(df):,}")
-    cols[1].metric("No shade", f"{no_shade:,}")
-    cols[2].metric("Needs review", f"{needs_review:,}")
-    cols[3].metric("Accepted", f"{accepted:,}")
+    for col, metric in zip(cols, metrics):
+        col.metric(
+            metric["label"],
+            metric["value"],
+            delta=metric["delta"],
+            delta_color="off",
+            help=metric["help"],
+        )
+
+
+def format_summary_percent(numerator: int, denominator: int) -> str:
+    if denominator <= 0:
+        return "0.0%"
+    return f"{(numerator / denominator) * 100:.1f}%"
+
+
+def summary_metric_cards(df: pd.DataFrame) -> list[dict[str, str]]:
+    total = len(df)
+    if {"stop_lat", "stop_lon"}.issubset(df.columns):
+        coordinates = df.loc[:, ["stop_lat", "stop_lon"]].apply(pd.to_numeric, errors="coerce")
+        mapped = int(coordinates.notna().all(axis=1).sum())
+    else:
+        mapped = 0
+
+    if "shading" in df.columns:
+        shade = normalized_category_series(df, "shading")
+    else:
+        shade = pd.Series(["Needs Review"] * total, index=df.index, dtype=str)
+    review_backlog = int(shade.isin(["Needs Review", "Unknown", "(blank)"]).sum())
+    no_shade = int(shade.eq("No Shade").sum())
+    classified = max(total - review_backlog, 0)
+
+    return [
+        {
+            "label": "Mapped stops",
+            "value": f"{mapped:,}",
+            "delta": f"{format_summary_percent(mapped, total)} with coordinates",
+            "help": "Stops in the current view with usable latitude and longitude.",
+        },
+        {
+            "label": "Classified stops",
+            "value": f"{classified:,}",
+            "delta": f"{format_summary_percent(classified, total)} of current view",
+            "help": "Stops with a shade category other than Needs Review or blank.",
+        },
+        {
+            "label": "Review backlog",
+            "value": f"{review_backlog:,}",
+            "delta": f"{format_summary_percent(review_backlog, total)} remaining",
+            "help": "Stops still marked Needs Review, Unknown, or blank in the current view.",
+        },
+        {
+            "label": "No-shade stops",
+            "value": f"{no_shade:,}",
+            "delta": f"{format_summary_percent(no_shade, classified)} of classified",
+            "help": "Classified stops where no shade visibly reaches the waiting area.",
+        },
+    ]
 
 
 def chart_data(df: pd.DataFrame, chart: dict[str, Any]) -> tuple[pd.DataFrame, str, str]:
