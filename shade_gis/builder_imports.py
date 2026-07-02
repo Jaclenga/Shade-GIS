@@ -736,7 +736,7 @@ def render_mapped_import_controls(
     button_label: str,
 ) -> None:
     metadata = metadata or {}
-    st.dataframe(raw.head(25), use_container_width=True)
+    st.dataframe(raw.head(25), width="stretch")
     if {"stop_lat", "stop_lon"}.issubset(raw.columns):
         missing_coordinates = raw[["stop_lat", "stop_lon"]].isna().any(axis=1).sum()
         st.caption(f"Geometry validation: {len(raw):,} records, {int(missing_coordinates):,} missing coordinates.")
@@ -769,3 +769,4 @@ def render_mapped_import_controls(
             metadata=metadata,
         )
         st.success(f"Imported {len(prepared):,} mapped stops.")
+

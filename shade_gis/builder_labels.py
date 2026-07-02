@@ -238,11 +238,11 @@ def render_agreement_metrics(labels: pd.DataFrame, stops: pd.DataFrame) -> None:
     if labels.empty:
         st.info("Submit raw labels from at least two assessments to compute agreement metrics.")
         return
-    st.dataframe(agreement_metric_summary(labels, stops), use_container_width=True, hide_index=True)
+    st.dataframe(agreement_metric_summary(labels, stops), width="stretch", hide_index=True)
     majority = majority_label_table(labels)
     if not majority.empty:
         display = majority.sort_values(["disagreement_flag", "agreement_pct", "stop_id"], ascending=[False, True, True])
-        st.dataframe(display, use_container_width=True, hide_index=True)
+        st.dataframe(display, width="stretch", hide_index=True)
 
 
 def split_list_field(value: Any) -> list[str]:
@@ -317,3 +317,4 @@ def review_queue_label(row: pd.Series) -> str:
     label_count = int(float(row.get("label_count", 0) or 0))
     disagreement = "disputed labels" if bool(row.get("disagreement_flag", False)) else f"{label_count} label(s)"
     return f"{stop_picker_label(row)} - {status} - {disagreement}"
+

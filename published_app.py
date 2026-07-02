@@ -718,7 +718,7 @@ def render_route_shade_dashboard(df: pd.DataFrame) -> None:
     pivot = grouped.pivot_table(index="route", columns="shading", values="stops", fill_value=0, aggfunc="sum")
     st.markdown("#### Shade By Route")
     st.bar_chart(pivot)
-    st.dataframe(grouped.sort_values(["stops", "route"], ascending=[False, True]), use_container_width=True, hide_index=True)
+    st.dataframe(grouped.sort_values(["stops", "route"], ascending=[False, True]), width="stretch", hide_index=True)
 
 
 def render_grouped_shade_dashboard(df: pd.DataFrame, group_column: str, title: str) -> None:
@@ -735,7 +735,7 @@ def render_grouped_shade_dashboard(df: pd.DataFrame, group_column: str, title: s
     pivot = grouped.pivot_table(index=group_column, columns="shading", values="stops", fill_value=0, aggfunc="sum")
     st.markdown(f"#### {title}")
     st.bar_chart(pivot)
-    st.dataframe(grouped.sort_values(["stops", group_column], ascending=[False, True]), use_container_width=True, hide_index=True)
+    st.dataframe(grouped.sort_values(["stops", group_column], ascending=[False, True]), width="stretch", hide_index=True)
 
 
 def render_numeric_by_shade_dashboard(df: pd.DataFrame, numeric_column: str, value_label: str, title: str) -> None:
@@ -755,7 +755,7 @@ def render_numeric_by_shade_dashboard(df: pd.DataFrame, numeric_column: str, val
     )
     st.markdown(f"#### {title}")
     st.bar_chart(summary, x="shading", y=f"Mean {value_label}")
-    st.dataframe(summary, use_container_width=True, hide_index=True)
+    st.dataframe(summary, width="stretch", hide_index=True)
 
 
 def render_issue_analytics_dashboard(df: pd.DataFrame, visualization: dict[str, Any], raw_labels: pd.DataFrame) -> None:
@@ -773,13 +773,13 @@ def render_issue_analytics_dashboard(df: pd.DataFrame, visualization: dict[str, 
             st.markdown("#### Shade Distribution")
             shade_counts = count_by_field(df, "shading")
             st.bar_chart(shade_counts, x="shading", y="stops")
-            st.dataframe(shade_counts, use_container_width=True, hide_index=True)
+            st.dataframe(shade_counts, width="stretch", hide_index=True)
     if "Review status" in selected and "review_status" in df.columns:
         with summary_cols[1]:
             st.markdown("#### Review Status")
             review_counts = count_by_field(df, "review_status")
             st.bar_chart(review_counts, x="review_status", y="stops")
-            st.dataframe(review_counts, use_container_width=True, hide_index=True)
+            st.dataframe(review_counts, width="stretch", hide_index=True)
 
     queue_rows = []
     if "Stops without shade" in selected and "shading" in df.columns:
@@ -788,7 +788,7 @@ def render_issue_analytics_dashboard(df: pd.DataFrame, visualization: dict[str, 
         queue_rows.append({"Queue": "Stops requiring review", "Stops": int(normalized_category_series(df, "shading").eq("Needs Review").sum())})
     if queue_rows:
         st.markdown("#### Action Queues")
-        st.dataframe(pd.DataFrame(queue_rows), use_container_width=True, hide_index=True)
+        st.dataframe(pd.DataFrame(queue_rows), width="stretch", hide_index=True)
 
     if "Agreement metrics" in selected:
         render_agreement_metrics(raw_labels)
@@ -802,7 +802,7 @@ def render_issue_analytics_dashboard(df: pd.DataFrame, visualization: dict[str, 
         st.markdown("#### Highest Priority Stops")
         priority = df.sort_values("priority_score", ascending=False).head(20)
         columns = get_selected_display_columns(priority, visualization)
-        st.dataframe(priority.loc[:, columns], use_container_width=True, hide_index=True)
+        st.dataframe(priority.loc[:, columns], width="stretch", hide_index=True)
 
 
 def render_methodology(config: dict[str, Any]) -> None:
@@ -831,7 +831,7 @@ def render_methodology(config: dict[str, Any]) -> None:
     taxonomy = config.get("taxonomy", [])
     if taxonomy:
         st.markdown("## Shade Taxonomy")
-        st.dataframe(pd.DataFrame(taxonomy), use_container_width=True, hide_index=True)
+        st.dataframe(pd.DataFrame(taxonomy), width="stretch", hide_index=True)
 
 
 def dataframe_to_geojson(df: pd.DataFrame) -> str:
@@ -992,9 +992,9 @@ def render_agreement_metrics(labels: pd.DataFrame) -> None:
         ("Fleiss kappa", format_metric_value(fleiss_kappa(labels))),
         ("Krippendorff alpha", format_metric_value(krippendorff_alpha_nominal(labels))),
     ], columns=["Metric", "Value"])
-    st.dataframe(summary, use_container_width=True, hide_index=True)
+    st.dataframe(summary, width="stretch", hide_index=True)
     if not majority.empty:
-        st.dataframe(majority.sort_values(["disagreement_flag", "agreement_pct", "stop_id"], ascending=[False, True, True]), use_container_width=True, hide_index=True)
+        st.dataframe(majority.sort_values(["disagreement_flag", "agreement_pct", "stop_id"], ascending=[False, True, True]), width="stretch", hide_index=True)
 
 
 def main() -> None:
@@ -1027,7 +1027,7 @@ def main() -> None:
             with map_cols[0]:
                 map_selection = st.pydeck_chart(
                     build_deck_chart(visible_stops, taxonomy, visualization),
-                    use_container_width=True,
+                    width="stretch",
                     on_select="rerun",
                     selection_mode="single-object",
                     key="published_stops_map",
@@ -1043,7 +1043,7 @@ def main() -> None:
         if visualization.get("show_legend", True) and taxonomy:
             legend = pd.DataFrame(taxonomy)
             columns = [column for column in ["name", "description", "color"] if column in legend.columns]
-            st.dataframe(legend.loc[:, columns], use_container_width=True, hide_index=True)
+            st.dataframe(legend.loc[:, columns], width="stretch", hide_index=True)
     with tabs[1]:
         render_issue_analytics_dashboard(visible_stops, visualization, raw_labels)
         render_custom_charts(visible_stops, visualization)
@@ -1060,3 +1060,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

@@ -36,8 +36,6 @@ def render_methodology_page() -> None:
                 "Works referenced:\n"
                 "    Google. (n.d.). Google Maps imagery [Map and street-level imagery]. Retrieved Month Day, Year, from https://www.google.com/maps\n"
                 "    Transit Agency. (Year). General Transit Feed Specification (GTFS) data feed [Data set]. URL\n"
-                "    Lanza, K., & Durand, C. P. (2021). Heat-moderating effects of bus stop shelters and tree shade on public transport ridership. International Journal of Environmental Research and Public Health, 18(2), 463. https://doi.org/10.3390/ijerph18020463\n"
-                "    Briant, S., Cushing, D. F., Washington, T., Pham, K., Pemasiri Hewa Thondilege, A. S., White, K. M., ... & Fookes, C. (2026). Thermal comfort at bus stops in a subtropical context: Investigating perceptions and satisfaction levels while waiting for the bus. In Human-Building Interaction: The Nexus of Architecture, Building Science and Interaction Design (pp. 119-145). Springer Nature Switzerland.\n"
                 "    Author, A. A., & Author, B. B. (Year). Title of article. Title of Journal, volume(issue), page range. https://doi.org/xxxxx\n"
                 "    Author or Organization. (Year). Title of report. Publisher. URL"
             ),

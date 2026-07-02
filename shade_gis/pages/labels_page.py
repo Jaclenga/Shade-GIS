@@ -58,7 +58,7 @@ def render_review_queue(project_id: str, stops: pd.DataFrame, labels: pd.DataFra
     if filtered.empty:
         st.info("No stops match the review queue filters.")
         return None
-    st.dataframe(filtered.loc[:, display_columns].head(200), use_container_width=True, hide_index=True)
+    st.dataframe(filtered.loc[:, display_columns].head(200), width="stretch", hide_index=True)
 
     queue_records = filtered.reset_index(drop=True)
     queue_labels = [review_queue_label(row) for _, row in queue_records.iterrows()]
@@ -96,7 +96,7 @@ def render_review_queue(project_id: str, stops: pd.DataFrame, labels: pd.DataFra
             ]
             if column in stop_labels.columns
         ]
-        st.dataframe(stop_labels.loc[:, visible_label_columns], use_container_width=True, hide_index=True)
+        st.dataframe(stop_labels.loc[:, visible_label_columns], width="stretch", hide_index=True)
 
     previous = stop_review_snapshot(selected_stop)
     category_options = taxonomy_names(taxonomy)
@@ -222,7 +222,7 @@ def render_review_audit_history(project_id: str, selected_stop_id: str | None) -
         ]
         if column in history.columns
     ]
-    st.dataframe(history.loc[:, visible_columns], use_container_width=True, hide_index=True)
+    st.dataframe(history.loc[:, visible_columns], width="stretch", hide_index=True)
     st.download_button(
         "Download review audit CSV",
         history.to_csv(index=False).encode("utf-8"),
@@ -267,7 +267,7 @@ def render_labels_page() -> None:
         return
 
     labels = list_shade_labels(project_id)
-    st.dataframe(raw_label_summary(labels, stops), use_container_width=True, hide_index=True)
+    st.dataframe(raw_label_summary(labels, stops), width="stretch", hide_index=True)
     render_agreement_metrics(labels, stops)
     queue_stop_id = render_review_queue(project_id, stops, labels, taxonomy)
     render_review_audit_history(project_id, queue_stop_id)
@@ -391,13 +391,14 @@ def render_labels_page() -> None:
             ]
             if column in history.columns
         ]
-        st.dataframe(history.loc[:, visible_columns], use_container_width=True, hide_index=True)
+        st.dataframe(history.loc[:, visible_columns], width="stretch", hide_index=True)
         st.download_button(
             "Download raw labels CSV",
             history.to_csv(index=False).encode("utf-8"),
             "shade_study_raw_labels.csv",
             "text/csv",
         )
+
 
 
 

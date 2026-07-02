@@ -36,7 +36,7 @@ def render_preview_page() -> None:
             with map_cols[0]:
                 map_selection = st.pydeck_chart(
                     published_app.build_deck_chart(visible_stops, taxonomy, visualization),
-                    use_container_width=True,
+                    width="stretch",
                     on_select="rerun",
                     selection_mode="single-object",
                     key="preview_stops_map",
@@ -51,7 +51,7 @@ def render_preview_page() -> None:
         published_app.render_map_filter_controls(stops, "preview")
         if visualization.get("show_legend", True):
             legend = pd.DataFrame(taxonomy).sort_values("sort_order")
-            st.dataframe(legend.loc[:, ["name", "description", "color"]], use_container_width=True, hide_index=True)
+            st.dataframe(legend.loc[:, ["name", "description", "color"]], width="stretch", hide_index=True)
     with tabs[1]:
         published_app.render_issue_analytics_dashboard(visible_stops, visualization, raw_labels)
         published_app.render_custom_charts(visible_stops, visualization)
@@ -84,7 +84,8 @@ def render_preview_page() -> None:
                     file_name="shade_study_raw_labels.csv",
                     mime="text/csv",
                 )
-        st.dataframe(pd.DataFrame(st.session_state["import_log"]), use_container_width=True, hide_index=True)
+        st.dataframe(pd.DataFrame(st.session_state["import_log"]), width="stretch", hide_index=True)
+
 
 
 

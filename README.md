@@ -275,13 +275,63 @@ The builder itself can be deployed as a Streamlit app with:
 - Main file: `app.py`
 - Python dependencies: `requirements.txt` at the repository root, which delegates to `requirements/requirements.txt`
 
-To publish a rendered study app, use the builder's `Deploy` page. Either create a GitHub repository and upload the generated bundle contents, or run the included PowerShell helper with the GitHub CLI:
+To publish a rendered study app, use the builder's `Deploy` page. The generated bundle can create a new GitHub repository or publish into a pre-existing private repository that your GitHub account can access.
+
+After downloading the bundle, the browser should save it to your Downloads folder. The default commands assume that location:
 
 ```powershell
-.\deploy_to_github.ps1 -RepositoryName "your-shade-study"
+$BundleName = "your-shade-study.zip"
+$ZipPath = Join-Path (Join-Path $env:USERPROFILE "Downloads") $BundleName
+$ExtractTo = Join-Path (Join-Path $env:USERPROFILE "Documents") "your-shade-study"
+if (-not (Test-Path $ZipPath)) {
+    throw "Expected the deploy bundle at $ZipPath. If your browser saved it somewhere else, move it to Downloads or update `$ZipPath."
+}
+Expand-Archive -Path $ZipPath -DestinationPath $ExtractTo -Force
+Set-Location $ExtractTo
+if (-not (Test-Path ".\deploy_to_github.ps1")) {
+    throw "deploy_to_github.ps1 was not found. Check that `$ExtractTo points to the extracted deploy bundle folder, then run Set-Location `$ExtractTo."
+}
+git --version
+gh auth status
+gh repo view OWNER/REPO
 ```
 
-The generated repository can then be connected to Streamlit Community Cloud with `app.py` as the main file.
+Only change `$BundleName` if the downloaded zip has a different filename. `$ExtractTo` is the folder PowerShell will create for the extracted app files.
+Run `.\deploy_to_github.ps1` only after `Set-Location $ExtractTo`; the helper is generated inside the extracted deploy bundle, not inside the builder source folder.
+
+If GitHub CLI is not authenticated, run `gh auth login`. If Windows blocks the downloaded script, run `Unblock-File .\deploy_to_github.ps1` once from the extracted bundle folder.
+Before publishing into an existing private repository, verify the exact repository owner/name and account access:
+
+```powershell
+gh auth status
+gh repo view Jaclenga/sunbelt-shade-project
+```
+
+If that verification works, deploy with the same owner/name:
+
+```powershell
+.\deploy_to_github.ps1 -Mode existing -RepositoryName "Jaclenga/sunbelt-shade-project" -Branch "main"
+```
+
+If GitHub reports that it "Could not resolve to a Repository", the signed-in account does not have access to that private repo, or the repo owner/name is different.
+
+For a new repository:
+
+```powershell
+.\deploy_to_github.ps1 -Mode create -RepositoryName "your-shade-study" -Branch "main" -Visibility private
+```
+
+For an existing private repository:
+
+```powershell
+.\deploy_to_github.ps1 -Mode existing -RepositoryName "OWNER/REPO" -Branch "main"
+```
+
+Before committing, the helper prints `git status`, `git diff --stat`, and a staged diff summary, then asks you to type `PUBLISH`. Add `-Yes` only when you intentionally want non-interactive publishing.
+
+In existing-repository mode, the helper verifies private repo visibility when it can, clones the target repo into a temporary `_shade_gis_publish_*` folder under PowerShell's temp path, checks out the selected branch, copies only generated app/runtime files into that checkout, commits changes, pushes back to GitHub, and cleans up the temporary folder. It does not copy protected files such as `.git/`, `.github/`, `README.md`, `LICENSE`, `.env*`, or `secrets.toml`. In new-repository mode, it initializes Git in the extracted bundle, stages only generated app files, creates the GitHub repository, and pushes the branch. Public publishing requires the explicit `-AllowPublicTarget` flag.
+
+The generated repository can then be connected to Streamlit Community Cloud or another Streamlit host with `app.py` as the main file. Private repositories require the deployment host to have access to the repository.
 
 ## License and Citation
 

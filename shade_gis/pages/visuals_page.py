@@ -441,7 +441,7 @@ def render_visuals_page() -> None:
         else:
             st.pydeck_chart(
                 build_deck_chart(stops, st.session_state["taxonomy"], visualization),
-                use_container_width=True,
+                width="stretch",
                 height=VISUAL_MAP_HEIGHT,
             )
 
@@ -457,7 +457,7 @@ def render_visuals_page() -> None:
     else:
         st.dataframe(
             st.session_state["stops"].loc[:, display_columns].head(20),
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
         )
 
@@ -466,7 +466,8 @@ def render_visuals_page() -> None:
     field_summary = pd.DataFrame(
         [{"field": column, "non_null_values": int(stops[column].notna().sum())} for column in active_columns]
     )
-    st.dataframe(field_summary, use_container_width=True, hide_index=True)
+    st.dataframe(field_summary, width="stretch", hide_index=True)
+
 
 
 

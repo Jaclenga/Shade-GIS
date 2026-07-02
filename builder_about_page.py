@@ -71,7 +71,7 @@ def render_builder_about_page(
         st.markdown("## Shade Taxonomy")
         taxonomy_df = pd.DataFrame(taxonomy)
         visible_cols = [column for column in ["sort_order", "name", "description", "color"] if column in taxonomy_df.columns]
-        st.dataframe(taxonomy_df.loc[:, visible_cols], use_container_width=True, hide_index=True)
+        st.dataframe(taxonomy_df.loc[:, visible_cols], width="stretch", hide_index=True)
 
     st.markdown("## Data Sources")
     st.markdown(methodology.get("data_sources", ""))
@@ -87,7 +87,7 @@ def render_builder_about_page(
         st.markdown(priority_formula.get("summary", ""))
         weights = priority_formula.get("weights", [])
         if weights:
-            st.dataframe(pd.DataFrame(weights), use_container_width=True, hide_index=True)
+            st.dataframe(pd.DataFrame(weights), width="stretch", hide_index=True)
 
     st.markdown("## Contributors")
     st.markdown(methodology.get("contributors", ""))
@@ -105,7 +105,8 @@ def render_builder_about_page(
 
     if import_log:
         st.markdown("## Import Log")
-        st.dataframe(pd.DataFrame(import_log), use_container_width=True, hide_index=True)
+        st.dataframe(pd.DataFrame(import_log), width="stretch", hide_index=True)
 
     st.markdown("## Citation")
     render_grouped_citations(methodology.get("citation", ""))
+

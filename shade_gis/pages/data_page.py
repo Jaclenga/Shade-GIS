@@ -29,7 +29,7 @@ def render_project_storage_controls() -> None:
                 load_project_into_session(selected_project_id)
                 st.rerun()
     with cols[1]:
-        if st.button("Save now", use_container_width=True):
+        if st.button("Save now", width="stretch"):
             save_active_project_to_store()
             st.success("Project saved.")
     with cols[2]:
@@ -43,7 +43,7 @@ def render_project_storage_controls() -> None:
     with create_cols[0]:
         new_project_name = st.text_input("New blank project name", key="new_project_name")
     with create_cols[1]:
-        if st.button("Create blank project", use_container_width=True):
+        if st.button("Create blank project", width="stretch"):
             new_project_id = create_blank_project(new_project_name)
             load_project_into_session(new_project_id)
             st.rerun()
@@ -92,7 +92,7 @@ def render_data_page() -> None:
                     zip_format = detect_zip_import_format(contents)
                     if zip_format == "GTFS":
                         raw, metadata = parse_gtfs_zip(contents)
-                        st.dataframe(raw.head(25), use_container_width=True)
+                        st.dataframe(raw.head(25), width="stretch")
                         if st.button("Use uploaded GTFS stops", type="primary", key=f"{key_prefix}_gtfs"):
                             mapping = {field: field for field in REQUIRED_STOP_FIELDS + OPTIONAL_FIELDS if field in raw.columns}
                             metadata.update({"original_filename": filename})
@@ -189,7 +189,7 @@ def render_data_page() -> None:
         manual_rows = st.data_editor(
             manual_template,
             num_rows="dynamic",
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
             key="manual_import_rows",
         )
@@ -219,7 +219,7 @@ def render_data_page() -> None:
     edited_taxonomy = st.data_editor(
         pd.DataFrame(taxonomy),
         num_rows="dynamic",
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
         column_config={
             "name": st.column_config.TextColumn("Category"),
@@ -240,8 +240,9 @@ def render_data_page() -> None:
         st.success("Taxonomy applied to the active dataset.")
 
     st.subheader("Dataset Health")
-    st.dataframe(validation_summary(st.session_state["stops"]), use_container_width=True, hide_index=True)
-    st.dataframe(st.session_state["stops"].head(50), use_container_width=True, hide_index=True)
+    st.dataframe(validation_summary(st.session_state["stops"]), width="stretch", hide_index=True)
+    st.dataframe(st.session_state["stops"].head(50), width="stretch", hide_index=True)
+
 
 
 
