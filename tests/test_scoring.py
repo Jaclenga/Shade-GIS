@@ -12,28 +12,24 @@ def test_priority_scoring_is_deterministic_for_fixed_weights():
                 "stop_id": "1001",
                 "shading": "No Shade",
                 "ridership": 100,
-                "heat_vulnerability_index": 0.9,
-                "tree_canopy_pct": 0.1,
+                "context_score": 0.9,
             },
             {
                 "stop_id": "1002",
                 "shading": "Limited Natural Shade",
                 "ridership": 50,
-                "heat_vulnerability_index": 0.3,
-                "tree_canopy_pct": 0.6,
+                "context_score": 0.3,
             },
         ]
     )
     weights = {
         "ridership": 1,
-        "heat_vulnerability_index": 1,
-        "low_tree_canopy": 1,
         "low_shade": 1,
     }
 
     scores = calculate_priority_scores(stops, weights)
 
-    assert scores.tolist() == [97.5, 30.8]
+    assert scores.tolist() == [100.0, 25.0]
 
 
 def test_priority_scoring_handles_missing_inputs_zero_weights_and_unknown_shade():

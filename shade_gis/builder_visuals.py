@@ -42,7 +42,6 @@ DEFAULT_VISUALIZATION = {
         "Shade by route",
         "Shade by neighborhood",
         "Shade vs ridership",
-        "Shade vs heat vulnerability",
         "Priority stops",
     ],
     "overlays": [],
@@ -59,14 +58,8 @@ DEFAULT_VISUALIZATION = {
 
 MARKER_SHAPES = ["Circle", "Pin", "Square", "Diamond", "Triangle"]
 DESTINATION_FILTER_COLUMNS = ["nearby_destinations", "destinations", "destination"]
-CATEGORICAL_MAP_FILTERS = ["shading", "review_status", "heat_vulnerability_label"]
-NUMERIC_MAP_FILTERS = [
-    "confidence",
-    "ridership",
-    "heat_vulnerability_index",
-    "tree_canopy_pct",
-    "priority_score",
-]
+CATEGORICAL_MAP_FILTERS = ["shading", "review_status"]
+NUMERIC_MAP_FILTERS = ["confidence", "ridership", "priority_score"]
 GIS_OVERLAY_CATEGORIES = ["Transportation", "Environmental", "Demographic", "Destinations", "Other"]
 GIS_OVERLAY_CATEGORIES = ["Transportation", "Environmental", "Demographic", "Destinations", "Other"]
 
@@ -98,10 +91,6 @@ FIELD_LABELS = {
     "review_status": "Review status",
     "confidence": "Confidence",
     "ridership": "Ridership",
-    "heat_vulnerability_index": "Heat vulnerability index",
-    "heat_vulnerability_label": "Heat vulnerability label",
-    "tree_canopy_pct": "Tree canopy percent",
-    "lst_median": "Land surface temperature",
     "nearby_destinations": "Nearby destinations",
     "priority_score": "Priority score",
 }
@@ -111,12 +100,6 @@ OVERLAY_REQUIREMENTS = {
     "Ridership": ["ridership"],
     "Existing shelters": ["shelter", "shelter_status", "has_shelter"],
     "Route frequency": ["route_frequency", "trips_per_day", "headway_minutes"],
-    "Tree canopy": ["tree_canopy_pct"],
-    "Land surface temperature": ["lst_median"],
-    "Heat vulnerability": ["heat_vulnerability_index", "heat_vulnerability_label"],
-    "NDVI": ["ndvi"],
-    "Zero-vehicle households": ["zero_vehicle_households"],
-    "Older adult population": ["older_adult_population"],
     "Nearby destinations": ["nearby_destinations"],
 }
 
@@ -129,7 +112,6 @@ METRIC_REQUIREMENTS = {
     "Shade by route": ["routes", "shading"],
     "Shade by neighborhood": ["municipality", "shading"],
     "Shade vs ridership": ["ridership", "shading"],
-    "Shade vs heat vulnerability": ["heat_vulnerability_index", "shading"],
     "Priority stops": ["priority_score"],
 }
 
@@ -143,14 +125,6 @@ PRIORITY_FACTOR_DETAILS = {
     "low_shade": (
         "Low shade",
         "Stops labeled No Shade or Needs Review receive more priority.",
-    ),
-    "heat_vulnerability_index": (
-        "Heat vulnerability",
-        "Higher heat vulnerability values increase priority when that field is present.",
-    ),
-    "low_tree_canopy": (
-        "Low tree canopy",
-        "Lower tree canopy share increases priority when tree canopy data is present.",
     ),
 }
 
@@ -177,7 +151,7 @@ SHADE_PALETTES = {
     "Default shade study": ["#dc143c", "#d69e2e", "#228b22", "#4682b4", "#805aaa", "#808080"],
     "Colorblind friendly": ["#d55e00", "#e69f00", "#009e73", "#0072b2", "#cc79a7", "#999999"],
     "High contrast": ["#b91c1c", "#f97316", "#15803d", "#2563eb", "#7c3aed", "#475569"],
-    "Canopy and shelter": ["#dc2626", "#ca8a04", "#16a34a", "#0ea5e9", "#9333ea", "#71717a"],
+    "Infrastructure mix": ["#dc2626", "#ca8a04", "#16a34a", "#0ea5e9", "#9333ea", "#71717a"],
     "Civic map": ["#ef4444", "#f59e0b", "#22c55e", "#3b82f6", "#a855f7", "#64748b"],
 }
 

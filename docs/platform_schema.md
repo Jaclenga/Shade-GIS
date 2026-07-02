@@ -95,11 +95,12 @@ Optional fields:
 | `review_status` | Workflow status such as unlabeled, accepted, or disputed. |
 | `confidence` | Reviewer or model confidence. |
 | `ridership` | Ridership measure used for prioritization. |
-| `heat_vulnerability_index` | Heat exposure or vulnerability score. |
-| `heat_vulnerability_label` | Human-readable heat vulnerability category. |
-| `tree_canopy_pct` | Nearby tree canopy share from 0 to 1. |
-| `lst_median` | Median land surface temperature or equivalent heat metric. |
 | `nearby_destinations` | Destination or nearby-place labels used for public map filtering. |
+
+Columns outside the required and optional platform fields are preserved as dataset attributes in
+`stops.extra_json`. They can be shown in tables, map hovers, color palettes, public filters, custom
+charts, and exports when the active dataset contains usable values, but they are not promoted into
+the core platform schema.
 
 ## Shade Taxonomy
 
@@ -110,7 +111,7 @@ The default reusable taxonomy is:
 | `No Shade` | No shade reaches the waiting area. |
 | `Limited Natural Shade` | Vegetation shades part of the waiting area. |
 | `Significant Natural Shade` | Vegetation shades most of the waiting area. |
-| `Intentional Built Shade` | A shelter, canopy, awning, or similar passenger facility shades riders. |
+| `Intentional Built Shade` | A shelter, awning, roof, or similar passenger facility shades riders. |
 | `Incidental Built Shade` | A nearby non-shelter built feature shades riders. |
 | `Needs Review` | The stop needs imagery, review, or disagreement resolution. |
 
@@ -155,8 +156,8 @@ Visualization settings store the selected map color field, premade and editable 
 categories, review statuses, priority-score gradients, and other categorical columns, plus marker
 shape, size, opacity, outline, base map style, uploaded GIS overlays, data-backed context field
 selections, up to 10 custom X/Y chart settings, advanced dashboard sections, public data
-table/map-hover columns, and priority weights. Optional context fields such as heat vulnerability
-or tree canopy are exposed only when the active dataset contains usable values for those fields.
+table/map-hover columns, and priority weights. Dataset-specific attributes are discovered from the
+active stop table and remain project data, not schema-level platform fields.
 
 Uploaded GIS overlays live under `visualization.gis_overlays`. Each overlay stores a name,
 category, source, license, original filename, format, style settings, import timestamp, summary
@@ -171,8 +172,8 @@ left out.
 
 The Analytics tab renders the dashboard sections described in the platform issue when supporting
 fields are available: summary statistics, shade distribution, stops without shade, stops requiring
-review, agreement statistics, shade by route, shade by neighborhood, shade vs. ridership, shade vs.
-heat vulnerability, and highest-priority stops. Custom charts remain available below the dashboard.
+review, agreement statistics, shade by route, shade by neighborhood, shade vs. ridership, and
+highest-priority stops. Custom charts remain available below the dashboard.
 
 ## Preview Exports
 
@@ -197,10 +198,10 @@ Import log `imported_at` values are stored as timezone-aware local timestamps wi
 File imports also record the original filename when available; API imports record the source URL.
 
 The public preview also includes user-facing map controls to search by stop name or stop ID, filter
-routes, shade categories, review statuses, confidence, ridership, heat vulnerability, tree canopy,
-priority score, and nearby destinations when those fields exist, click markers to select a stop,
-inspect a stop-detail panel, and show or hide stops whose shade label is still `Needs Review`
-without changing the exported dataset.
+routes, shade categories, review statuses, confidence, ridership, priority score, nearby
+destinations, and eligible dataset-specific attributes when those fields exist, click markers to
+select a stop, inspect a stop-detail panel, and show or hide stops whose shade label is still
+`Needs Review` without changing the exported dataset.
 
 ## Review And Release Entities
 

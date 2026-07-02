@@ -163,7 +163,7 @@ DEFAULT_PROJECT = {
     "region": "Tampa, Florida",
     "description": (
         "A reusable shade inventory project seeded with Tampa-area GTFS stops, "
-        "shade classifications, and heat-context fields."
+        "shade classifications, and optional dataset attributes."
     ),
     "owners": "Open transit and climate research contributors",
     "visibility": "Public",
@@ -195,7 +195,7 @@ DEFAULT_TAXONOMY = [
     },
     {
         "name": "Intentional Built Shade",
-        "description": "A purpose-built shelter, awning, canopy, or overhang shades riders.",
+        "description": "A purpose-built shelter, awning, roof, or overhang shades riders.",
         "color": "#4682b4",
         "sort_order": 4,
     },

@@ -76,8 +76,8 @@ def minimal_stops() -> pd.DataFrame:
                 "review_status": "Needs Review",
                 "confidence": 0.7,
                 "ridership": 120,
-                "heat_vulnerability_index": 0.9,
-                "tree_canopy_pct": 0.1,
+                "context_score": 0.9,
+                "context_label": "High",
                 "nearby_destinations": "Hospital",
             },
             {
@@ -92,8 +92,8 @@ def minimal_stops() -> pd.DataFrame:
                 "review_status": "Unlabeled",
                 "confidence": 0.9,
                 "ridership": 80,
-                "heat_vulnerability_index": 0.3,
-                "tree_canopy_pct": 0.6,
+                "context_score": 0.3,
+                "context_label": "Moderate",
                 "nearby_destinations": "School",
             },
         ]

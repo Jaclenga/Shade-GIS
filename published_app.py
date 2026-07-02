@@ -41,20 +41,22 @@ FILTER_FIELD_LABELS = {
     "review_status": "Review status",
     "confidence": "Confidence",
     "ridership": "Ridership",
-    "heat_vulnerability_index": "Heat vulnerability index",
-    "heat_vulnerability_label": "Heat vulnerability label",
-    "tree_canopy_pct": "Tree canopy percent",
     "priority_score": "Priority score",
 }
 DESTINATION_FILTER_COLUMNS = ["nearby_destinations", "destinations", "destination"]
-CATEGORICAL_MAP_FILTERS = ["shading", "review_status", "heat_vulnerability_label"]
-NUMERIC_MAP_FILTERS = [
-    "confidence",
-    "ridership",
-    "heat_vulnerability_index",
-    "tree_canopy_pct",
-    "priority_score",
-]
+BASE_CATEGORICAL_MAP_FILTERS = ["shading", "review_status"]
+BASE_NUMERIC_MAP_FILTERS = ["confidence", "ridership", "priority_score"]
+FILTER_EXCLUDED_FIELDS = {
+    "stop_id",
+    "stop_name",
+    "stop_lat",
+    "stop_lon",
+    "routes",
+    "route",
+    "nearby_destinations",
+    "destinations",
+    "destination",
+}
 METRIC_REQUIREMENTS = {
     "Shade distribution": ["shading"],
     "Stops without shade": ["shading"],
@@ -64,7 +66,6 @@ METRIC_REQUIREMENTS = {
     "Shade by route": ["routes", "shading"],
     "Shade by neighborhood": ["municipality", "shading"],
     "Shade vs ridership": ["ridership", "shading"],
-    "Shade vs heat vulnerability": ["heat_vulnerability_index", "shading"],
     "Priority stops": ["priority_score"],
 }
 
@@ -349,6 +350,29 @@ def numeric_filter_bounds(df: pd.DataFrame, column: str) -> tuple[float, float] 
     return low, high
 
 
+def categorical_map_filter_columns(df: pd.DataFrame) -> list[str]:
+    columns = [column for column in BASE_CATEGORICAL_MAP_FILTERS if categorical_filter_options(df, column)]
+    for column in df.columns:
+        if column in columns or column in FILTER_EXCLUDED_FIELDS:
+            continue
+        if numeric_filter_bounds(df, column) is not None:
+            continue
+        options = categorical_filter_options(df, column)
+        if 1 < len(options) <= 25:
+            columns.append(column)
+    return columns
+
+
+def numeric_map_filter_columns(df: pd.DataFrame) -> list[str]:
+    columns = [column for column in BASE_NUMERIC_MAP_FILTERS if numeric_filter_bounds(df, column) is not None]
+    for column in df.columns:
+        if column in columns or column in FILTER_EXCLUDED_FIELDS:
+            continue
+        if numeric_filter_bounds(df, column) is not None:
+            columns.append(column)
+    return columns
+
+
 def destination_columns(df: pd.DataFrame) -> list[str]:
     return [column for column in DESTINATION_FILTER_COLUMNS if column in df.columns]
 
@@ -366,11 +390,11 @@ def current_map_filters(df: pd.DataFrame, key_prefix: str) -> dict[str, Any]:
         "numeric": {},
         "destination_query": str(st.session_state.get(f"{key_prefix}_destination_filter", "") or ""),
     }
-    for column in CATEGORICAL_MAP_FILTERS:
+    for column in categorical_map_filter_columns(df):
         options = categorical_filter_options(df, column)
         selected = st.session_state.get(f"{key_prefix}_{column}_filter", [])
         filters["categorical"][column] = [value for value in selected if value in options]
-    for column in NUMERIC_MAP_FILTERS:
+    for column in numeric_map_filter_columns(df):
         bounds = numeric_filter_bounds(df, column)
         if bounds is None:
             continue
@@ -398,21 +422,17 @@ def render_map_filter_controls(df: pd.DataFrame, key_prefix: str) -> dict[str, A
             key=f"{key_prefix}_route_filter",
         )
 
-        categorical_columns = [
-            column for column in CATEGORICAL_MAP_FILTERS if categorical_filter_options(df, column)
-        ]
+        categorical_columns = categorical_map_filter_columns(df)
         if categorical_columns:
-            category_cols = st.columns(len(categorical_columns))
+            category_cols = st.columns(min(3, len(categorical_columns)))
             for index, column in enumerate(categorical_columns):
-                category_cols[index].multiselect(
+                category_cols[index % len(category_cols)].multiselect(
                     filter_label(column),
                     categorical_filter_options(df, column),
                     key=f"{key_prefix}_{column}_filter",
                 )
 
-        numeric_columns = [
-            column for column in NUMERIC_MAP_FILTERS if numeric_filter_bounds(df, column) is not None
-        ]
+        numeric_columns = numeric_map_filter_columns(df)
         if numeric_columns:
             numeric_cols = st.columns(min(3, len(numeric_columns)))
             for index, column in enumerate(numeric_columns):
@@ -778,8 +798,6 @@ def render_issue_analytics_dashboard(df: pd.DataFrame, visualization: dict[str, 
         render_grouped_shade_dashboard(df, "municipality", "Shade By Neighborhood")
     if "Shade vs ridership" in selected:
         render_numeric_by_shade_dashboard(df, "ridership", "Ridership", "Shade Vs Ridership")
-    if "Shade vs heat vulnerability" in selected:
-        render_numeric_by_shade_dashboard(df, "heat_vulnerability_index", "Heat Vulnerability", "Shade Vs Heat Vulnerability")
     if "Priority stops" in selected and "priority_score" in df.columns:
         st.markdown("#### Highest Priority Stops")
         priority = df.sort_values("priority_score", ascending=False).head(20)

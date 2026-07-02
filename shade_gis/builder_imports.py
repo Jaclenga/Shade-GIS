@@ -49,10 +49,6 @@ OPTIONAL_FIELDS = [
     "review_status",
     "confidence",
     "ridership",
-    "heat_vulnerability_index",
-    "heat_vulnerability_label",
-    "tree_canopy_pct",
-    "lst_median",
     "nearby_destinations",
 ]
 FIELD_ALIASES = {
@@ -69,10 +65,6 @@ FIELD_ALIASES = {
     "review_status": ["review_status", "status"],
     "confidence": ["confidence", "score"],
     "ridership": ["ridership", "boardings", "ons", "passengers"],
-    "heat_vulnerability_index": ["heat_vulnerability_index", "hvi", "heat_index"],
-    "heat_vulnerability_label": ["heat_vulnerability_label", "hvi_label"],
-    "tree_canopy_pct": ["tree_canopy_pct", "canopy", "tree_canopy"],
-    "lst_median": ["lst_median", "lst", "land_surface_temperature"],
     "nearby_destinations": ["nearby_destinations", "destinations", "destination", "nearby_places", "places"],
 }
 
@@ -662,18 +654,6 @@ def calculate_priority_scores(df: pd.DataFrame, weights: dict[str, float] | None
         ridership = ridership / ridership.max() if ridership.max() and ridership.max() > 0 else ridership
         score_parts.append((ridership_weight, ridership))
 
-    heat_weight = float(weights.get("heat_vulnerability_index", 0.0))
-    if heat_weight > 0 and "heat_vulnerability_index" in df.columns:
-        heat = pd.to_numeric(df.get("heat_vulnerability_index"), errors="coerce").fillna(0)
-        heat = heat / heat.max() if heat.max() and heat.max() > 0 else heat
-        score_parts.append((heat_weight, heat))
-
-    canopy_weight = float(weights.get("low_tree_canopy", 0.0))
-    if canopy_weight > 0 and "tree_canopy_pct" in df.columns:
-        canopy = pd.to_numeric(df.get("tree_canopy_pct"), errors="coerce").fillna(0)
-        canopy = canopy.clip(lower=0, upper=1)
-        score_parts.append((canopy_weight, 1 - canopy))
-
     low_shade_weight = float(weights.get("low_shade", 0.0))
     if low_shade_weight > 0 and "shading" in df.columns:
         low_shade = df.get("shading", pd.Series(index=df.index, dtype=str)).isin(["No Shade", "Needs Review"]).astype(float)
@@ -706,7 +686,7 @@ def prepare_stop_dataset(raw: pd.DataFrame, project: dict[str, Any], taxonomy: l
     df["shading"] = df["shading"].apply(lambda value: normalize_category(value, taxonomy))
     df["review_status"] = df["review_status"].apply(normalize_review_status)
 
-    numeric_fields = ["confidence", "ridership", "heat_vulnerability_index", "tree_canopy_pct", "lst_median"]
+    numeric_fields = ["confidence", "ridership"]
     for field in numeric_fields:
         df[field] = pd.to_numeric(df[field], errors="coerce")
 

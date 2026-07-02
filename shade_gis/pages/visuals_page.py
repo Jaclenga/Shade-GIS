@@ -117,14 +117,14 @@ def render_gis_overlay_controls(visualization: dict[str, Any]) -> None:
         "Upload GeoJSON or zipped Shapefile overlay",
         type=["geojson", "json", "zip"],
         key="gis_overlay_upload",
-        help="Use this for real map layers such as routes, shelters, canopy, NDVI, Census geographies, or destinations.",
+        help="Use this for real map layers such as routes, shelters, boundaries, service areas, or destinations.",
     )
     st.caption(
         f"Overlay upload limit: {format_bytes(max_upload_bytes())}; ZIPs may expand to "
         f"{format_bytes(max_zip_uncompressed_bytes())}."
     )
     overlay_cols = st.columns([1.2, 1, 1])
-    overlay_name = overlay_cols[0].text_input("Overlay name", key="gis_overlay_name", placeholder="Tree canopy")
+    overlay_name = overlay_cols[0].text_input("Overlay name", key="gis_overlay_name", placeholder="Transit service area")
     overlay_category = overlay_cols[1].selectbox("Overlay category", GIS_OVERLAY_CATEGORIES, key="gis_overlay_category")
     overlay_color = overlay_cols[2].color_picker("Overlay color", "#2563eb", key="gis_overlay_color")
     source_cols = st.columns([1, 1])
@@ -308,7 +308,7 @@ def render_visuals_page() -> None:
                         default=visualization["overlays"],
                         help=(
                             "These options expose contextual fields that are already attached to stop rows, "
-                            "such as routes, ridership, shelters, heat vulnerability, or canopy. They only appear "
+                            "such as routes, ridership, shelters, destinations, or local project attributes. They only appear "
                             "when those columns have usable values: at least one non-null cell with text or data "
                             "after blank spaces are trimmed."
                         ),
@@ -423,10 +423,6 @@ def render_visuals_page() -> None:
                     priority_factors.append(("ridership", "Ridership weight"))
                 if "shading" in stops.columns:
                     priority_factors.append(("low_shade", "Low shade weight"))
-                if has_column_data(stops, "heat_vulnerability_index"):
-                    priority_factors.append(("heat_vulnerability_index", "Heat vulnerability weight"))
-                if has_column_data(stops, "tree_canopy_pct"):
-                    priority_factors.append(("low_tree_canopy", "Low tree canopy weight"))
 
                 if priority_factors:
                     for key, label in priority_factors:

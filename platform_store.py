@@ -204,10 +204,6 @@ STOP_FIELDS = [
     "review_status",
     "confidence",
     "ridership",
-    "heat_vulnerability_index",
-    "heat_vulnerability_label",
-    "tree_canopy_pct",
-    "lst_median",
     "priority_score",
 ]
 
@@ -246,9 +242,6 @@ NUMERIC_STOP_FIELDS = {
     "stop_lon",
     "confidence",
     "ridership",
-    "heat_vulnerability_index",
-    "tree_canopy_pct",
-    "lst_median",
     "priority_score",
 }
 
@@ -701,10 +694,9 @@ def _save_project_bundle_once(
             INSERT INTO stops (
                 project_id, stop_id, stop_name, stop_lat, stop_lon, agency, routes,
                 municipality, shading, shade_coverage, shade_sources, review_status,
-                confidence, ridership, heat_vulnerability_index, heat_vulnerability_label,
-                tree_canopy_pct, lst_median, priority_score, extra_json, created_at, updated_at
+                confidence, ridership, priority_score, extra_json, created_at, updated_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             [stop_record(project_id, row, now) for row in dataframe_records(stops)],
         )
@@ -723,8 +715,17 @@ def _save_project_bundle_once(
 def stops_dataframe(rows: list[sqlite3.Row]) -> pd.DataFrame:
     records: list[dict[str, Any]] = []
     for row in rows:
-        record = {field: row[field] for field in STOP_FIELDS}
-        record.update(json.loads(row["extra_json"] or "{}"))
+        row_keys = set(row.keys())
+        record = {field: row[field] for field in STOP_FIELDS if field in row_keys}
+        extra = {
+            key: row[key]
+            for key in row_keys
+            if key not in STOP_FIELDS
+            and key not in {"id", "project_id", "extra_json", "created_at", "updated_at"}
+            and row[key] is not None
+        }
+        extra.update(json.loads(row["extra_json"] or "{}"))
+        record.update(extra)
         records.append(record)
     if not records:
         return pd.DataFrame(columns=STOP_FIELDS)
@@ -757,10 +758,6 @@ def stop_record(project_id: str, row: dict[str, Any], now: str) -> tuple[Any, ..
         clean_number(values[11]),
         clean_number(values[12]),
         clean_number(values[13]),
-        clean_scalar(values[14]),
-        clean_number(values[15]),
-        clean_number(values[16]),
-        clean_number(values[17]),
         json.dumps(extra, ensure_ascii=True),
         now,
         now,
@@ -865,10 +862,6 @@ CREATE TABLE IF NOT EXISTS stops (
     review_status TEXT,
     confidence REAL,
     ridership REAL,
-    heat_vulnerability_index REAL,
-    heat_vulnerability_label TEXT,
-    tree_canopy_pct REAL,
-    lst_median REAL,
     priority_score REAL,
     extra_json TEXT NOT NULL DEFAULT '{}',
     created_at TEXT NOT NULL,

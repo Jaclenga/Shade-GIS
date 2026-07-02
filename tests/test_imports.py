@@ -31,8 +31,6 @@ def test_csv_import_maps_fields_deduplicates_and_logs(project, taxonomy):
         "stop_lon": "lon",
         "routes": "route",
         "ridership": "ridership",
-        "heat_vulnerability_index": "heat_vulnerability_index",
-        "tree_canopy_pct": "tree_canopy_pct",
         "nearby_destinations": "nearby_destinations",
     }
 
@@ -49,6 +47,7 @@ def test_csv_import_maps_fields_deduplicates_and_logs(project, taxonomy):
     assert len(prepared) == 2
     assert prepared.loc[prepared["stop_id"] == "1001", "stop_lat"].iloc[0] == pytest.approx(27.9506)
     assert prepared.loc[prepared["stop_id"] == "1001", "routes"].iloc[0] == "10"
+    assert prepared.loc[prepared["stop_id"] == "1001", "context_label"].iloc[0] == "High"
     assert builder_app.st.session_state["import_log"][0]["rows"] == 2
     assert builder_app.st.session_state["import_log"][0]["source"] == "stops_minimal.csv"
 
