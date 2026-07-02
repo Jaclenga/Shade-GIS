@@ -18,6 +18,7 @@ Shade-GIS follows a project-based builder approach that keeps local prototyping 
 - [How it works?](#how-it-works)
 - [Getting Started](#getting-started)
 - [Supported Data](#supported-data)
+- [Bundled Example Dataset](#bundled-example-dataset)
 - [Configuration](#configuration)
 - [Testing](#testing)
 - [Deployment](#deployment)
@@ -163,6 +164,31 @@ Supported import paths:
 | Zipped Shapefile | Upload a `.zip` containing at least `.shp` and `.dbf`; records are mapped through the same field-mapping panel. |
 | API URL | Fetches CSV or GeoJSON from a URL and stores the source URL in the import log. |
 | Manual entry | Provides an editable table for adding individual stops without a source file. |
+
+## Bundled Example Dataset
+
+The repository includes a small Tampa/HART starter study to demonstrate the builder workflow with real stop records. The example is not meant to be a complete published shade inventory. It is a handcrafted sample dataset: 32 bus stop datapoints were manually reviewed using Google Maps imagery and coded for visible shade conditions at the passenger waiting area.
+
+The reviewed example records focus on three shade fields:
+
+| Field | Meaning in the example dataset |
+| --- | --- |
+| `shade_coverage` | The amount of visible shade reaching the waiting area: `No Shade`, `Limited`, `Significant`, or `Unknown`. |
+| `shade_sources` | The visible source of shade reaching the waiting area, such as `Natural`, `Constructed`, `Manmade`, or combined labels when multiple sources are present. |
+| `shading` | The derived map category used for coloring, filtering, summaries, and public display. |
+
+Manual coding used the visible waiting area as the unit of analysis. Reviewers should code what appears to shade the place where a rider would reasonably stand or sit while waiting, rather than nearby objects that do not visibly shade that space.
+
+The example labels distinguish:
+
+- `No Shade`: no visible shade reaches the waiting area.
+- `Limited Natural Shade`: vegetation shades part of the waiting area.
+- `Significant Natural Shade`: vegetation shades most of the waiting area or seating area.
+- `Constructed Shade`: a purpose-built shelter, awning, roof, or overhang shades riders.
+- `Manmade Shade`: a nearby building or other non-shelter built feature shades the waiting area.
+- `Unknown`: the stop has not been manually classified or the imagery is not clear enough to support a confident label.
+
+Because the example was created from Google Maps imagery, it should be treated as a demonstration dataset with known limitations. Image dates, camera angle, season, time of day, temporary obstructions, and incomplete street-level coverage can all affect what shade is visible. The sample is useful for testing the platform workflow, previewing maps and review tools, and illustrating a reproducible coding approach; project teams should perform their own review before publishing a local study.
 
 ## Configuration
 

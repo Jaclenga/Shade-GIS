@@ -215,36 +215,66 @@ DEFAULT_TAXONOMY = [
 
 DEFAULT_METHODOLOGY = {
     "title": "Bus Stop Shade Study",
-    "summary": "Preparing a reproducible, city-wide shade inventory from GTFS bus stop data.",
+    "summary": "Visualizing bus stop shade for a more comfortable and resilient transit system.",
     "purpose": (
-        "This project helps researchers, transit agencies, and municipalities collect, "
-        "review, visualize, and publish standardized bus stop shade datasets."
+        "Tampa's hot and humid climate can make waiting for transit uncomfortable, particularly at bus stops "
+        "with limited protection from direct sunlight. Inspired by research examining the relationship between "
+        "bus stop shade, heat exposure, and transit use, this project explores how shade is distributed across "
+        "a transit network and provides a platform for community-driven data collection.\n\n"
+        "The bundled Tampa/HART starter study combines official bus stop locations from HART's GTFS feed with "
+        "a small handcrafted example: 32 bus stop datapoints were manually analyzed using Google Maps imagery "
+        "and coded for visible shade conditions at the passenger waiting area. The goal is to support "
+        "transportation planning, accessibility research, resilience initiatives, and public understanding of "
+        "the rider experience.\n\n"
+        "By identifying which stops provide meaningful shade and which do not, a shade study can help highlight "
+        "opportunities for shelter installation, vegetation, maintenance, and other improvements that make "
+        "transit more comfortable and accessible for riders. Research on thermal comfort at bus stops has shown "
+        "that the waiting environment plays an important role in how riders perceive public transportation."
     ),
     "shade_method": (
-        "Classifications should describe visible shade reaching the passenger waiting area, "
-        "not merely nearby trees or structures. Store raw labels and consensus labels so "
-        "future reviewers can reproduce decisions."
+        "Classifications should describe visible shade reaching the passenger waiting area, not merely nearby "
+        "trees or structures. The waiting area is the place where a passenger would reasonably stand or sit "
+        "while waiting for transit, including benches when present. Code what visibly shades the waiting area, "
+        "not what might shade it at another time.\n\n"
+        "Manual review records three fields:\n\n"
+        "- `shade_coverage`: the amount of visible shade reaching the waiting area: `No Shade`, `Limited`, "
+        "`Significant`, or `Unknown`.\n"
+        "- `shade_sources`: the visible source of shade reaching the waiting area, such as `Natural`, "
+        "`Constructed`, `Manmade`, or combined labels when multiple sources are present.\n"
+        "- `shading`: the derived map category used for coloring, filtering, summaries, and public display.\n\n"
+        "Trees, utility poles, signs, and nearby buildings should not be classified as `Constructed` unless "
+        "they are clearly intended to provide passenger shade or weather protection. Nearby buildings that "
+        "visibly shade the waiting area should be coded as `Manmade`. Store raw labels and consensus labels "
+        "so future reviewers can reproduce decisions."
     ),
     "data_sources": (
-        "- GTFS stops and routes\n"
-        "- Expert or crowdsourced shade labels\n"
-        "- Optional environmental, demographic, and transportation overlays"
+        "- Hillsborough Area Regional Transit (HART) GTFS stops and routes\n"
+        "- Tampa/HART starter shade review sample: 32 manually analyzed bus stop datapoints\n"
+        "- Google Maps imagery used for manual waiting-area shade review\n"
+        "- Expert, field-audit, imported, or community-submitted shade labels\n"
+        "- Optional project-specific attributes and GIS overlays"
     ),
     "contributors": "Project team, reviewers, and community contributors",
     "citation": (
         "Dataset release:\n"
-        "    Author or Organization. (Year). Title of dataset or study release (Version number) [Data set]. Publisher. URL"
+        "    Shade Study Builder contributors. (2026). Tampa/HART starter shade review sample (Version 0.1.0) [Data set]. Shade-GIS.\n"
+        "    Author or Organization. (Year). Title of local shade study release (Version number) [Data set]. Publisher. URL"
     ),
     "bibliography": (
         "Works referenced:\n"
-        "    Author, A. A., & Author, B. B. (Year). Title of article. Title of Journal, volume(issue), page range. https://doi.org/xxxxx\n"
-        "    Author or Organization. (Year). Title of report. Publisher. URL"
+        "    Google. (n.d.). Google Maps imagery [Map and street-level imagery]. Retrieved July 2, 2026, from https://www.google.com/maps\n"
+        "    Hillsborough Area Regional Transit. (Year). General Transit Feed Specification (GTFS) data feed [Data set]. Retrieved June 17, 2026, from the HART GTFS feed.\n"
+        "    Lanza, K., & Durand, C. P. (2021). Heat-moderating effects of bus stop shelters and tree shade on public transport ridership. International Journal of Environmental Research and Public Health, 18(2), 463. https://doi.org/10.3390/ijerph18020463\n"
+        "    Briant, S., Cushing, D. F., Washington, T., Pham, K., Pemasiri Hewa Thondilege, A. S., White, K. M., ... & Fookes, C. (2026). Thermal comfort at bus stops in a subtropical context: Investigating perceptions and satisfaction levels while waiting for the bus. In Human-Building Interaction: The Nexus of Architecture, Building Science and Interaction Design (pp. 119-145). Springer Nature Switzerland.\n"
+        "    Author, A. A., & Author, B. B. (Year). Title of article. Title of Journal, volume(issue), page range. https://doi.org/xxxxx"
     ),
     "limitations": (
-        "Imagery date, time of day, season, and reviewer uncertainty can affect shade labels. "
-        "Published releases should document these limitations."
+        "The bundled starter data is a demonstration sample, not a complete published shade inventory. "
+        "Google Maps image dates, camera angle, season, time of day, temporary obstructions, incomplete "
+        "street-level coverage, and reviewer uncertainty can all affect visible shade labels. Published "
+        "releases should document these limitations and perform a project-specific review before use."
     ),
-    "release_history": "- 0.1.0: Draft project configuration and starter dataset",
+    "release_history": "- 0.1.0: Draft project configuration with Tampa/HART starter dataset and 32 manually reviewed example datapoints",
 }
 
 REVIEW_STATUS_COLORS = {
