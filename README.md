@@ -167,7 +167,7 @@ Supported import paths:
 
 ## Bundled Example Dataset
 
-The repository includes a small Tampa/HART starter study to demonstrate the builder workflow with real stop records. The example is not meant to be a complete published shade inventory. It is a handcrafted sample dataset: 32 bus stop datapoints were manually reviewed using Google Maps imagery and coded for visible shade conditions at the passenger waiting area.
+The repository includes a small Tampa/HART starter study to demonstrate the builder workflow with real stop records. The example is not meant to be a complete published shade inventory. It is a handcrafted sample dataset: 34 bus stop datapoints were manually reviewed using Google Maps imagery, accepted by project admin Jack Lenga, and coded for visible shade conditions at the passenger waiting area.
 
 The reviewed example records focus on three shade fields:
 

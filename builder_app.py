@@ -222,8 +222,8 @@ DEFAULT_METHODOLOGY = {
         "bus stop shade, heat exposure, and transit use, this project explores how shade is distributed across "
         "a transit network and provides a platform for community-driven data collection.\n\n"
         "The bundled Tampa/HART starter study combines official bus stop locations from HART's GTFS feed with "
-        "a small handcrafted example: 32 bus stop datapoints were manually analyzed using Google Maps imagery "
-        "and coded for visible shade conditions at the passenger waiting area. The goal is to support "
+        "a small handcrafted example: 34 bus stop datapoints were manually analyzed using Google Maps imagery, "
+        "accepted by project admin Jack Lenga, and coded for visible shade conditions at the passenger waiting area. The goal is to support "
         "transportation planning, accessibility research, resilience initiatives, and public understanding of "
         "the rider experience.\n\n"
         "By identifying which stops provide meaningful shade and which do not, a shade study can help highlight "
@@ -249,7 +249,7 @@ DEFAULT_METHODOLOGY = {
     ),
     "data_sources": (
         "- Hillsborough Area Regional Transit (HART) GTFS stops and routes\n"
-        "- Tampa/HART starter shade review sample: 32 manually analyzed bus stop datapoints\n"
+        "- Tampa/HART starter shade review sample: 34 manually analyzed and admin-accepted bus stop datapoints\n"
         "- Google Maps imagery used for manual waiting-area shade review\n"
         "- Expert, field-audit, imported, or community-submitted shade labels\n"
         "- Optional project-specific attributes and GIS overlays"
@@ -274,7 +274,7 @@ DEFAULT_METHODOLOGY = {
         "street-level coverage, and reviewer uncertainty can all affect visible shade labels. Published "
         "releases should document these limitations and perform a project-specific review before use."
     ),
-    "release_history": "- 0.1.0: Draft project configuration with Tampa/HART starter dataset and 32 manually reviewed example datapoints",
+    "release_history": "- 0.1.0: Draft project configuration with Tampa/HART starter dataset and 34 manually reviewed, admin-accepted example datapoints",
 }
 
 REVIEW_STATUS_COLORS = {

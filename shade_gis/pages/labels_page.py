@@ -232,6 +232,122 @@ def render_review_audit_history(project_id: str, selected_stop_id: str | None) -
 
 
 
+def selected_stop_reference_dataset(stops: pd.DataFrame, stop_id: str) -> pd.DataFrame:
+    if stops.empty or "stop_id" not in stops.columns:
+        return pd.DataFrame(columns=stops.columns)
+    stop_mask = stops["stop_id"].astype(str) == str(stop_id)
+    selected = stops.loc[stop_mask].copy()
+    if selected.empty:
+        return selected
+    if {"stop_lat", "stop_lon"}.issubset(selected.columns):
+        coordinates = selected[["stop_lat", "stop_lon"]].apply(pd.to_numeric, errors="coerce")
+        selected = selected.loc[coordinates.notna().all(axis=1)].copy()
+        selected[["stop_lat", "stop_lon"]] = coordinates.loc[selected.index]
+    return selected
+
+
+
+def stop_reference_map_datasets(stops: pd.DataFrame, selected_stop_id: str) -> tuple[pd.DataFrame, pd.DataFrame]:
+    if stops.empty or "stop_id" not in stops.columns:
+        empty = pd.DataFrame(columns=stops.columns)
+        return empty, empty
+    if not {"stop_lat", "stop_lon"}.issubset(stops.columns):
+        empty = pd.DataFrame(columns=stops.columns)
+        return empty, empty
+
+    mappable = stops.copy()
+    coordinates = mappable[["stop_lat", "stop_lon"]].apply(pd.to_numeric, errors="coerce")
+    mappable = mappable.loc[coordinates.notna().all(axis=1)].copy()
+    if mappable.empty:
+        return mappable, mappable
+    mappable[["stop_lat", "stop_lon"]] = coordinates.loc[mappable.index]
+    selected = mappable.loc[mappable["stop_id"].astype(str) == str(selected_stop_id)].copy()
+    return mappable, selected
+
+
+
+def build_stop_reference_deck(
+    stops: pd.DataFrame,
+    selected_stop_id: str,
+    taxonomy: list[dict[str, Any]],
+    visualization: dict[str, Any],
+) -> pdk.Deck | None:
+    mappable_stops, selected_stop = stop_reference_map_datasets(stops, selected_stop_id)
+    if mappable_stops.empty or selected_stop.empty:
+        return None
+
+    map_visualization = dict(visualization)
+    map_visualization["marker_size"] = min(8, max(5, int(map_visualization.get("marker_size", 7))))
+    deck = build_deck_chart(mappable_stops, taxonomy, map_visualization)
+    highlight_layer = pdk.Layer(
+        "ScatterplotLayer",
+        data=selected_stop,
+        id="selected_label_stop_layer",
+        get_position="[stop_lon, stop_lat]",
+        get_fill_color=[255, 75, 75, 70],
+        get_line_color=[255, 75, 75],
+        get_radius=18,
+        radius_units="pixels",
+        radius_min_pixels=18,
+        radius_max_pixels=18,
+        stroked=True,
+        filled=True,
+        line_width_min_pixels=4,
+        pickable=False,
+    )
+    deck.layers = [*deck.layers, highlight_layer]
+    return deck
+
+
+
+def stop_id_from_reference_map_selection(selection_event: Any, mappable_stops: pd.DataFrame) -> str | None:
+    return published_app.selected_stop_id_from_map_selection(selection_event, mappable_stops)
+
+
+
+def render_stop_reference_map(
+    stops: pd.DataFrame,
+    selected_stop_id: str,
+    taxonomy: list[dict[str, Any]],
+    visualization: dict[str, Any],
+) -> str | None:
+    mappable_stops, selected_stop = stop_reference_map_datasets(stops, selected_stop_id)
+    if mappable_stops.empty or selected_stop.empty:
+        st.info("No map location is available for the selected stop.")
+        return None
+    deck = build_stop_reference_deck(mappable_stops, selected_stop_id, taxonomy, visualization)
+    if deck is None:
+        st.info("No map location is available for the selected stop.")
+        return None
+    selection = st.pydeck_chart(
+        deck,
+        width="stretch",
+        height=320,
+        on_select="rerun",
+        selection_mode="single-object",
+        key=f"label_reference_map_{selected_stop_id}",
+    )
+    return stop_id_from_reference_map_selection(selection, mappable_stops)
+
+
+
+def sync_label_stop_picker(stop_options: pd.DataFrame) -> None:
+    if stop_options.empty or "stop_id" not in stop_options.columns:
+        return
+    stop_ids = stop_options["stop_id"].astype(str).tolist()
+    selected_stop_id = str(st.session_state.get("label_selected_stop_id", "") or "")
+    if selected_stop_id not in stop_ids:
+        selected_stop_id = stop_ids[0]
+        st.session_state["label_selected_stop_id"] = selected_stop_id
+    selected_index = stop_ids.index(selected_stop_id)
+    current_index = st.session_state.get("label_stop_index")
+    if not isinstance(current_index, int) or current_index < 0 or current_index >= len(stop_ids):
+        st.session_state["label_stop_index"] = selected_index
+    elif stop_ids[current_index] != selected_stop_id:
+        st.session_state["label_stop_index"] = selected_index
+
+
+
 def apply_label_to_current_stop(
     stop_id: str,
     shade_category: str,
@@ -250,6 +366,32 @@ def apply_label_to_current_stop(
     stops.loc[mask, "shade_sources"] = shade_sources
     stops.loc[mask, "confidence"] = confidence
     stops.loc[mask, "review_status"] = "Needs Review"
+    st.session_state["stops"] = stops
+
+
+
+def apply_review_decision_to_stop(
+    stop_id: str,
+    shade_category: str,
+    shade_coverage: str,
+    shade_sources: str,
+    confidence: float,
+    review_status: str,
+) -> None:
+    stops = st.session_state.get("stops", pd.DataFrame()).copy()
+    if stops.empty or "stop_id" not in stops.columns:
+        return
+    mask = stops["stop_id"].astype(str) == str(stop_id)
+    if not mask.any():
+        return
+    for column in ["shading", "shade_coverage", "shade_sources", "confidence", "review_status"]:
+        if column not in stops.columns:
+            stops[column] = ""
+    stops.loc[mask, "shading"] = shade_category
+    stops.loc[mask, "shade_coverage"] = shade_coverage
+    stops.loc[mask, "shade_sources"] = shade_sources
+    stops.loc[mask, "confidence"] = confidence
+    stops.loc[mask, "review_status"] = review_status
     st.session_state["stops"] = stops
 
 
@@ -274,6 +416,7 @@ def render_labels_page() -> None:
 
     st.subheader("Raw Label Collection")
     stop_options = stops.reset_index(drop=True)
+    sync_label_stop_picker(stop_options)
     stop_labels = [stop_picker_label(row) for _, row in stop_options.iterrows()]
     selected_index = st.selectbox(
         "Stop to label",
@@ -283,11 +426,17 @@ def render_labels_page() -> None:
     )
     selected_stop = stop_options.iloc[int(selected_index)]
     selected_stop_id = str(selected_stop.get("stop_id", ""))
+    st.session_state["label_selected_stop_id"] = selected_stop_id
 
     detail_cols = st.columns([1, 1, 1])
     detail_cols[0].metric("Current label", str(selected_stop.get("shading", "Needs Review") or "Needs Review"))
     detail_cols[1].metric("Review status", str(selected_stop.get("review_status", "Unlabeled") or "Unlabeled"))
     detail_cols[2].metric("Raw labels for stop", len(list_shade_labels(project_id, selected_stop_id)))
+
+    map_selected_stop_id = render_stop_reference_map(stops, selected_stop_id, taxonomy, st.session_state.get("visualization", {}))
+    if map_selected_stop_id and map_selected_stop_id != selected_stop_id:
+        st.session_state["label_selected_stop_id"] = map_selected_stop_id
+        st.rerun()
 
     with st.form("raw_label_form", clear_on_submit=False):
         st.subheader("Submit Raw Shade Label")
