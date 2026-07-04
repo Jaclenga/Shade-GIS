@@ -3,8 +3,8 @@ message: "If you use this software or a published shade-study dataset built with
 title: "Shade Study Builder"
 type: software
 authors:
-  - name: "Shade Study Builder contributors"
-abstract: "A Streamlit platform for preparing, configuring, visualizing, and publishing reusable bus stop shade studies from GTFS and mapped CSV datasets."
+  - name: "Jack Lenga"
+abstract: "A Streamlit platform for preparing, visualizing, and publishing reusable bus stop shade studies from GTFS and mapped CSV datasets."
 keywords:
   - transit
   - GTFS
