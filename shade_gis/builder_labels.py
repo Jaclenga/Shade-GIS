@@ -218,7 +218,7 @@ def agreement_metric_summary(labels: pd.DataFrame, stops: pd.DataFrame) -> pd.Da
         float(majority["agreement_pct"].mean()) if not majority.empty and "agreement_pct" in majority else None
     )
     cohen, cohen_pairs = average_pairwise_cohen_kappa(labels)
-    return pd.DataFrame(
+    summary = pd.DataFrame(
         [
             ("Stops with labels", labeled_stops),
             ("Stops with 2+ labels", multi_label_stops),
@@ -231,6 +231,8 @@ def agreement_metric_summary(labels: pd.DataFrame, stops: pd.DataFrame) -> pd.Da
         ],
         columns=["Metric", "Value"],
     )
+    summary["Value"] = summary["Value"].astype(str)
+    return summary
 
 
 def render_agreement_metrics(labels: pd.DataFrame, stops: pd.DataFrame) -> None:

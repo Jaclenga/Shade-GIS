@@ -215,29 +215,27 @@ def render_data_page() -> None:
     with source_cols[2]:
         project["source_url"] = st.text_input("Source URL", project["source_url"])
 
-    st.subheader("Shade Taxonomy")
-    edited_taxonomy = st.data_editor(
-        pd.DataFrame(taxonomy),
-        num_rows="dynamic",
+    st.subheader("Shade Source Taxonomy")
+    st.dataframe(
+        pd.DataFrame(SHADE_SOURCE_TAXONOMY),
         width="stretch",
         hide_index=True,
         column_config={
-            "name": st.column_config.TextColumn("Category"),
-            "description": st.column_config.TextColumn("Definition"),
-            "color": st.column_config.TextColumn("Hex color"),
-            "sort_order": st.column_config.NumberColumn("Sort order", min_value=1, step=1),
+            "shade_source": st.column_config.TextColumn("Shade Source"),
+            "operational_definition": st.column_config.TextColumn("Operational Definition"),
         },
     )
-    if st.button(
-        "Apply taxonomy",
-        help=(
-            "Save the edited shade categories and reapply them to the active dataset "
-            "so maps, legends, previews, and exports use the latest taxonomy."
-        ),
-    ):
-        st.session_state["taxonomy"] = edited_taxonomy.fillna("").to_dict("records")
-        st.session_state["stops"] = prepare_stop_dataset(st.session_state["stops"], project, st.session_state["taxonomy"])
-        st.success("Taxonomy applied to the active dataset.")
+
+    st.subheader("Shade Coverage Taxonomy")
+    st.dataframe(
+        pd.DataFrame(SHADE_COVERAGE_TAXONOMY),
+        width="stretch",
+        hide_index=True,
+        column_config={
+            "shade_coverage": st.column_config.TextColumn("Shade Coverage"),
+            "operational_definition": st.column_config.TextColumn("Operational Definition"),
+        },
+    )
 
     st.subheader("Dataset Health")
     st.dataframe(validation_summary(st.session_state["stops"]), width="stretch", hide_index=True)

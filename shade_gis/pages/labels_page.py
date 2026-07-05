@@ -105,7 +105,7 @@ def render_review_queue(project_id: str, stops: pd.DataFrame, labels: pd.DataFra
     coverage_options = SHADE_COVERAGE_OPTIONS
     current_coverage = previous["shade_coverage"]
     coverage_index = coverage_options.index(current_coverage) if current_coverage in coverage_options else len(coverage_options) - 1
-    current_sources = [source for source in split_list_field(previous["shade_sources"]) if source in SHADE_SOURCE_OPTIONS]
+    current_sources = [source for source in normalized_shade_sources(previous["shade_sources"]) if source in SHADE_SOURCE_OPTIONS]
     current_confidence = previous["confidence"]
     try:
         confidence_default = float(current_confidence)
@@ -146,7 +146,18 @@ def render_review_queue(project_id: str, stops: pd.DataFrame, labels: pd.DataFra
         with lower_cols[0]:
             final_coverage = st.selectbox("Final shade coverage", coverage_options, index=coverage_index, key="review_final_coverage")
         with lower_cols[1]:
-            final_sources = st.multiselect("Final shade source(s)", SHADE_SOURCE_OPTIONS, default=current_sources, key="review_final_sources")
+            st.markdown("Final shade source(s)")
+            final_sources = []
+            final_source_cols = st.columns(len(SHADE_SOURCE_OPTIONS))
+            for index, source in enumerate(SHADE_SOURCE_OPTIONS):
+                with final_source_cols[index]:
+                    if st.checkbox(
+                        source,
+                        value=source in current_sources and final_coverage != "No Shade",
+                        key=f"review_final_source_{source.lower()}",
+                        disabled=final_coverage == "No Shade",
+                    ):
+                        final_sources.append(source)
         notes = st.text_area("Decision notes", key="review_notes", height=110)
         decision_submitted = st.form_submit_button("Apply review decision", type="primary")
 
@@ -348,6 +359,100 @@ def sync_label_stop_picker(stop_options: pd.DataFrame) -> None:
 
 
 
+def infer_shade_sources_from_category(shade_category: str) -> str:
+    normalized = str(shade_category or "").strip().lower()
+    if not normalized or "no shade" in normalized or "needs review" in normalized:
+        return ""
+    if "natural" in normalized or "tree" in normalized or "vegetation" in normalized:
+        return "Natural"
+    if "constructed" in normalized or "intentional" in normalized or "shelter" in normalized or "canopy" in normalized:
+        return "Constructed"
+    if "manmade" in normalized or "incidental" in normalized or "building" in normalized or "built" in normalized:
+        return "Manmade"
+    return ""
+
+
+def normalize_shade_source(value: str) -> str:
+    normalized = str(value or "").strip().lower()
+    if normalized == "natural":
+        return "Natural"
+    if normalized in {"constructed", "intentional built", "intentional constructed"}:
+        return "Constructed"
+    if normalized in {"manmade", "incidental built"}:
+        return "Manmade"
+    return ""
+
+
+def normalized_shade_sources(value: Any) -> list[str]:
+    sources: list[str] = []
+    for source in split_list_field(value):
+        normalized = normalize_shade_source(source)
+        if normalized and normalized not in sources:
+            sources.append(normalized)
+    return sources
+
+
+def shade_type_from_category(shade_category: str) -> str:
+    normalized = str(shade_category or "").strip().lower()
+    if not normalized or "needs review" in normalized:
+        return "Needs Review"
+    if "no shade" in normalized:
+        return "Needs Review"
+    if "natural" in normalized or "tree" in normalized or "vegetation" in normalized:
+        return "Natural Shade"
+    if "constructed" in normalized or "intentional" in normalized or "shelter" in normalized or "canopy" in normalized:
+        return "Constructed Shade"
+    if "manmade" in normalized or "incidental" in normalized or "building" in normalized or "built" in normalized:
+        return "Manmade Shade"
+    return str(shade_category or "").strip() or "Needs Review"
+
+
+def shade_type_options(taxonomy: list[dict[str, Any]]) -> list[str]:
+    options: list[str] = []
+    for category in taxonomy_names(taxonomy):
+        shade_type = shade_type_from_category(category)
+        if shade_type not in options:
+            options.append(shade_type)
+    for shade_type in ["Natural Shade", "Constructed Shade", "Manmade Shade", "Needs Review"]:
+        if shade_type not in options:
+            options.append(shade_type)
+    return options
+
+
+def coverage_from_category(shade_category: str, fallback: str = "") -> str:
+    normalized = str(shade_category or "").strip().lower()
+    if str(fallback or "").strip() in {"No Shade", "Limited", "Significant"}:
+        return str(fallback).strip()
+    if "no shade" in normalized:
+        return "No Shade"
+    if "limited" in normalized:
+        return "Limited"
+    if "significant" in normalized:
+        return "Significant"
+    return "Limited"
+
+
+def shade_category_from_type(shade_type: str, shade_coverage: str) -> str:
+    if shade_coverage == "No Shade":
+        return "No Shade"
+    if shade_type == "Natural Shade":
+        return f"{shade_coverage} Natural Shade"
+    return shade_type
+
+
+def shade_category_from_coverage_and_sources(shade_coverage: str, shade_sources: list[str]) -> str:
+    if shade_coverage == "No Shade":
+        return "No Shade"
+    if "Constructed" in shade_sources:
+        return "Constructed Shade"
+    if "Manmade" in shade_sources:
+        return "Manmade Shade"
+    if "Natural" in shade_sources:
+        return f"{shade_coverage} Natural Shade"
+    return "Needs Review"
+
+
+
 def apply_label_to_current_stop(
     stop_id: str,
     shade_category: str,
@@ -440,38 +545,78 @@ def render_labels_page() -> None:
 
     with st.form("raw_label_form", clear_on_submit=False):
         st.subheader("Submit Raw Shade Label")
-        form_cols = st.columns([1, 1, 1])
-        with form_cols[0]:
-            labeler_id = st.text_input("Reviewer or contributor ID", key="labeler_id")
-            labeler_role = st.selectbox("Reviewer role", LABELER_ROLE_OPTIONS, key="labeler_role")
-        with form_cols[1]:
-            source_label = st.selectbox("Label source", LABEL_SOURCE_OPTIONS, key="label_source")
-            image_id = st.text_input("Image ID or reference", key="label_image_id")
-        with form_cols[2]:
-            confidence = st.slider("Confidence", 0.0, 1.0, 0.75, 0.05, key="label_confidence")
+        current_category = str(selected_stop.get("shading", "")).strip()
+        manual_source_index = LABEL_SOURCE_OPTIONS.index("Manual review") if "Manual review" in LABEL_SOURCE_OPTIONS else 0
+        default_role = "Reviewer" if "Reviewer" in LABELER_ROLE_OPTIONS else LABELER_ROLE_OPTIONS[0]
+
+        st.markdown("##### Label")
+        coverage_labels = ["Limited", "No Shade", "Significant Shade"]
+        coverage_values = {"Limited": "Limited", "No Shade": "No Shade", "Significant Shade": "Significant"}
+        current_coverage = str(selected_stop.get("shade_coverage", "") or "")
+        coverage_default = coverage_from_category(current_category, current_coverage)
+        coverage_label_default = "Significant Shade" if coverage_default == "Significant" else coverage_default
+        coverage_index = coverage_labels.index(coverage_label_default) if coverage_label_default in coverage_labels else 0
+        coverage_label = st.selectbox("Coverage", coverage_labels, index=coverage_index, key="label_coverage")
+        shade_coverage = coverage_values[coverage_label]
+
+        existing_sources = normalized_shade_sources(selected_stop.get("shade_sources", ""))
+        if not existing_sources:
+            inferred_source = infer_shade_sources_from_category(current_category)
+            existing_sources = [inferred_source] if inferred_source else []
+        selected_sources = []
+        st.markdown("Shade source")
+        source_cols = st.columns(len(SHADE_SOURCE_OPTIONS))
+        for index, source in enumerate(SHADE_SOURCE_OPTIONS):
+            with source_cols[index]:
+                if st.checkbox(
+                    source,
+                    value=source in existing_sources and shade_coverage != "No Shade",
+                    key=f"label_source_{source.lower()}",
+                    disabled=shade_coverage == "No Shade",
+                ):
+                    selected_sources.append(source)
+        shade_sources = [] if shade_coverage == "No Shade" else selected_sources
+        shade_sources_text = "; ".join(shade_sources)
+        shade_category = shade_category_from_coverage_and_sources(shade_coverage, shade_sources)
+
+        st.markdown("##### Assessment")
+        confidence_choice = st.radio(
+            "Confidence",
+            ["Low", "Medium", "High"],
+            index=1,
+            horizontal=True,
+            key="label_confidence_level",
+        )
+        confidence = {"Low": 0.35, "Medium": 0.7, "High": 1.0}[confidence_choice]
+
+        st.markdown("##### Optional")
+        notes = st.text_area("Notes", key="label_notes", height=80)
+
+        with st.expander("Advanced", expanded=False):
+            labeler_id = st.text_input("Reviewer", key="labeler_id")
+            labeler_role = default_role
+            source_label = st.selectbox(
+                "Label source",
+                LABEL_SOURCE_OPTIONS,
+                index=manual_source_index,
+                key="label_source",
+            )
+            image_id = st.text_input("Image reference", key="label_image_id")
+
+        action_cols = st.columns([2, 1], vertical_alignment="bottom")
+        with action_cols[0]:
             apply_current = st.checkbox(
-                "Also update current map label",
+                "Update map label immediately",
                 value=False,
                 help="The raw label is always saved. This additionally updates the current stop fields used by maps and exports.",
             )
-
-        category_options = taxonomy_names(taxonomy)
-        current_category = str(selected_stop.get("shading", "")).strip()
-        category_index = category_options.index(current_category) if current_category in category_options else 0
-        shade_category = st.selectbox("Shade category", category_options, index=category_index, key="label_category")
-        coverage_cols = st.columns([1, 1])
-        with coverage_cols[0]:
-            shade_coverage = st.selectbox("Shade coverage", SHADE_COVERAGE_OPTIONS, key="label_coverage")
-        with coverage_cols[1]:
-            shade_sources = st.multiselect("Shade source(s)", SHADE_SOURCE_OPTIONS, key="label_sources")
-        notes = st.text_area("Notes", key="label_notes", height=120)
-        submitted = st.form_submit_button("Save raw label", type="primary")
+        with action_cols[1]:
+            submitted = st.form_submit_button("Save Label", type="primary", width="stretch")
 
     if submitted:
         if not selected_stop_id.strip():
             st.error("Selected stop is missing a stop ID.")
         else:
-            shade_sources_text = "; ".join(shade_sources)
             label_id = add_shade_label(
                 project_id,
                 {

@@ -194,13 +194,13 @@ DEFAULT_TAXONOMY = [
         "sort_order": 3,
     },
     {
-        "name": "Intentional Built Shade",
+        "name": "Constructed Shade",
         "description": "A purpose-built shelter, awning, roof, or overhang shades riders.",
         "color": "#4682b4",
         "sort_order": 4,
     },
     {
-        "name": "Incidental Built Shade",
+        "name": "Manmade Shade",
         "description": "A nearby building or other non-shelter built feature shades riders.",
         "color": "#805aaa",
         "sort_order": 5,
@@ -210,6 +210,39 @@ DEFAULT_TAXONOMY = [
         "description": "The stop needs imagery, review, or disagreement resolution.",
         "color": "#808080",
         "sort_order": 6,
+    },
+]
+
+SHADE_SOURCE_TAXONOMY = [
+    {
+        "shade_source": "Natural",
+        "operational_definition": "Trees, palms, hedges, or other vegetation visibly shade the waiting area.",
+    },
+    {
+        "shade_source": "Constructed",
+        "operational_definition": (
+            "A designated, purpose-built bus shelter, awning, canopy, overhang, or similar passenger shelter "
+            "visibly shades the waiting area."
+        ),
+    },
+    {
+        "shade_source": "Manmade",
+        "operational_definition": "A nearby building or other non-shelter built feature visibly shades the waiting area.",
+    },
+]
+
+SHADE_COVERAGE_TAXONOMY = [
+    {
+        "shade_coverage": "No Shade",
+        "operational_definition": "No shade visibly reaches the waiting area.",
+    },
+    {
+        "shade_coverage": "Limited",
+        "operational_definition": "Shade visibly reaches part of the waiting area, but does not cover most of it.",
+    },
+    {
+        "shade_coverage": "Significant",
+        "operational_definition": "Shade visibly covers most of the waiting area or seating area.",
     },
 ]
 
@@ -236,12 +269,15 @@ DEFAULT_METHODOLOGY = {
         "trees or structures. The waiting area is the place where a passenger would reasonably stand or sit "
         "while waiting for transit, including benches when present. Code what visibly shades the waiting area, "
         "not what might shade it at another time.\n\n"
-        "Manual review records three fields:\n\n"
-        "- `shade_coverage`: the amount of visible shade reaching the waiting area: `No Shade`, `Limited`, "
-        "`Significant`, or `Unknown`.\n"
-        "- `shade_sources`: the visible source of shade reaching the waiting area, such as `Natural`, "
-        "`Constructed`, `Manmade`, or combined labels when multiple sources are present.\n"
-        "- `shading`: the derived map category used for coloring, filtering, summaries, and public display.\n\n"
+        "Manual review records three fields: `shade_coverage`, `shade_sources`, and the derived `shading` "
+        "map category used for coloring, filtering, summaries, and public display.\n\n"
+        "Shade coverage definitions: `No Shade` means no shade visibly reaches the waiting area; `Limited` "
+        "means shade visibly reaches part of the waiting area, but does not cover most of it; `Significant` "
+        "means shade visibly covers most of the waiting area or seating area.\n\n"
+        "Shade source definitions: `Natural` means trees, palms, hedges, or other vegetation visibly shade "
+        "the waiting area; `Constructed` means a designated, purpose-built bus shelter, awning, canopy, "
+        "overhang, or similar passenger shelter visibly shades the waiting area; `Manmade` means a nearby "
+        "building or other non-shelter built feature visibly shades the waiting area.\n\n"
         "Trees, utility poles, signs, and nearby buildings should not be classified as `Constructed` unless "
         "they are clearly intended to provide passenger shade or weather protection. Nearby buildings that "
         "visibly shade the waiting area should be coded as `Manmade`. Store raw labels and consensus labels "
@@ -330,19 +366,9 @@ LABELER_ROLE_OPTIONS = [
     "Model",
 ]
 
-SHADE_SOURCE_OPTIONS = [
-    "Natural",
-    "Intentional Built",
-    "Incidental Built",
-    "Other",
-]
+SHADE_SOURCE_OPTIONS = [item["shade_source"] for item in SHADE_SOURCE_TAXONOMY]
 
-SHADE_COVERAGE_OPTIONS = [
-    "No Shade",
-    "Limited",
-    "Significant",
-    "Unknown",
-]
+SHADE_COVERAGE_OPTIONS = [item["shade_coverage"] for item in SHADE_COVERAGE_TAXONOMY]
 
 
 def rgb_to_hex(value: list[int]) -> str:

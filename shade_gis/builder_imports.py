@@ -25,8 +25,8 @@ DEFAULT_PRIORITY_WEIGHTS = {"ridership": 0.5, "low_shade": 0.5}
 API_FETCH_TIMEOUT_SECONDS = 30
 
 SHADE_ALIASES = {
-    "Constructed Shade": "Intentional Built Shade",
-    "Manmade Shade": "Incidental Built Shade",
+    "Intentional Built Shade": "Constructed Shade",
+    "Incidental Built Shade": "Manmade Shade",
     "Unknown": "Needs Review",
 }
 REVIEW_STATUS_NAMES = {

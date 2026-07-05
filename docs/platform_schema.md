@@ -20,7 +20,7 @@ The canonical relational shape is:
 | --- | --- |
 | `projects` | One row per shade study, including publication metadata and source metadata. |
 | `project_settings` | JSON methodology and visualization settings for each project. |
-| `shade_taxonomy` | Editable shade category names, definitions, colors, and sort order. |
+| `shade_taxonomy` | Editable derived map category names, definitions, colors, and sort order. |
 | `stops` | Per-project stop records, priority scores, review fields, and extra imported columns. |
 | `images` | Uploaded or referenced imagery associated with projects and stops. |
 | `shade_labels` | Raw expert, crowd, imported, or model-assisted label submissions. |
@@ -89,9 +89,9 @@ Optional fields:
 | `agency` | Agency label for multi-agency studies. |
 | `routes` | Semicolon-separated route labels serving the stop. |
 | `municipality` | Local jurisdiction or neighborhood label. |
-| `shading` | Current shade taxonomy category. |
-| `shade_coverage` | Coverage dimension, if collected separately. |
-| `shade_sources` | Source dimension, such as natural or built shade. |
+| `shading` | Current derived map category. |
+| `shade_coverage` | Coverage dimension: `No Shade`, `Limited`, or `Significant`. |
+| `shade_sources` | Semicolon-separated source dimension: `Natural`, `Constructed`, `Manmade`, or multiple values. |
 | `review_status` | Workflow status such as unlabeled, accepted, or disputed. |
 | `confidence` | Reviewer or model confidence. |
 | `ridership` | Ridership measure used for prioritization. |
@@ -102,20 +102,26 @@ Columns outside the required and optional platform fields are preserved as datas
 charts, and exports when the active dataset contains usable values, but they are not promoted into
 the core platform schema.
 
-## Shade Taxonomy
+## Shade Taxonomies
 
-The default reusable taxonomy is:
+The core source taxonomy is:
 
-| Category | Intent |
+| Shade Source | Operational Definition |
 | --- | --- |
-| `No Shade` | No shade reaches the waiting area. |
-| `Limited Natural Shade` | Vegetation shades part of the waiting area. |
-| `Significant Natural Shade` | Vegetation shades most of the waiting area. |
-| `Intentional Built Shade` | A shelter, awning, roof, or similar passenger facility shades riders. |
-| `Incidental Built Shade` | A nearby non-shelter built feature shades riders. |
-| `Needs Review` | The stop needs imagery, review, or disagreement resolution. |
+| `Natural` | Trees, palms, hedges, or other vegetation visibly shade the waiting area. |
+| `Constructed` | A designated, purpose-built bus shelter, awning, canopy, overhang, or similar passenger shelter visibly shades the waiting area. |
+| `Manmade` | A nearby building or other non-shelter built feature visibly shades the waiting area. |
 
-Project teams can edit names, descriptions, colors, and sort order in the `Data` page.
+The core coverage taxonomy is:
+
+| Shade Coverage | Operational Definition |
+| --- | --- |
+| `No Shade` | No shade visibly reaches the waiting area. |
+| `Limited` | Shade visibly reaches part of the waiting area, but does not cover most of it. |
+| `Significant` | Shade visibly covers most of the waiting area or seating area. |
+
+The `shading` field remains a derived map category for coloring, filtering, summaries, and public
+display. It is computed from the submitted coverage and source values.
 
 ## Raw Shade Labels
 

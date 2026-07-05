@@ -31,7 +31,7 @@ Shade studies often combine transit feeds, local imagery review, community obser
 
 Shade-GIS addresses those recurring needs by providing:
 
-- A reusable Streamlit builder for configuring study metadata, source data, shade taxonomy, methodology copy, visualizations, and exports.
+- A reusable Streamlit builder for configuring study metadata, source data, shade source and coverage taxonomies, methodology copy, visualizations, and exports.
 - Flexible import paths for GTFS, CSV, GeoJSON, zipped Shapefiles, API-hosted files, and manually entered records.
 - A raw labeling and admin review workflow that preserves submissions, agreement metrics, final labels, and audit history.
 - Project-scoped durable storage through SQLite by default, with a Postgres-ready relational schema for shared deployments.
@@ -55,7 +55,7 @@ Shade-GIS consists of the following layers:
 
 ### Builder App
 
-The builder starts with the bundled Tampa/HART starter dataset, or with a new imported dataset. Project teams can configure metadata, import logs, source licensing, shade taxonomy, review workflow, map styling, dashboard sections, custom charts, public table columns, map hover fields, GIS overlays, and methodology content.
+The builder starts with the bundled Tampa/HART starter dataset, or with a new imported dataset. Project teams can configure metadata, import logs, source licensing, shade source and coverage taxonomies, review workflow, map styling, dashboard sections, custom charts, public table columns, map hover fields, GIS overlays, and methodology content.
 
 The main app entrypoint is intentionally small:
 
@@ -173,7 +173,7 @@ The reviewed example records focus on three shade fields:
 
 | Field | Meaning in the example dataset |
 | --- | --- |
-| `shade_coverage` | The amount of visible shade reaching the waiting area: `No Shade`, `Limited`, `Significant`, or `Unknown`. |
+| `shade_coverage` | The amount of visible shade reaching the waiting area: `No Shade`, `Limited`, or `Significant`. |
 | `shade_sources` | The visible source of shade reaching the waiting area, such as `Natural`, `Constructed`, `Manmade`, or combined labels when multiple sources are present. |
 | `shading` | The derived map category used for coloring, filtering, summaries, and public display. |
 
@@ -184,9 +184,24 @@ The example labels distinguish:
 - `No Shade`: no visible shade reaches the waiting area.
 - `Limited Natural Shade`: vegetation shades part of the waiting area.
 - `Significant Natural Shade`: vegetation shades most of the waiting area or seating area.
-- `Constructed Shade`: a purpose-built shelter, awning, roof, or overhang shades riders.
+- `Constructed Shade`: a designated, purpose-built bus shelter, awning, canopy, overhang, or similar passenger shelter shades riders.
 - `Manmade Shade`: a nearby building or other non-shelter built feature shades the waiting area.
-- `Unknown`: the stop has not been manually classified or the imagery is not clear enough to support a confident label.
+
+Shade source definitions:
+
+| Shade source | Operational definition |
+| --- | --- |
+| `Natural` | Trees, palms, hedges, or other vegetation visibly shade the waiting area. |
+| `Constructed` | A designated, purpose-built bus shelter, awning, canopy, overhang, or similar passenger shelter visibly shades the waiting area. |
+| `Manmade` | A nearby building or other non-shelter built feature visibly shades the waiting area. |
+
+Shade coverage definitions:
+
+| Shade coverage | Operational definition |
+| --- | --- |
+| `No Shade` | No shade visibly reaches the waiting area. |
+| `Limited` | Shade visibly reaches part of the waiting area, but does not cover most of it. |
+| `Significant` | Shade visibly covers most of the waiting area or seating area. |
 
 Because the example was created from Google Maps imagery, it should be treated as a demonstration dataset with known limitations. Image dates, camera angle, season, time of day, temporary obstructions, and incomplete street-level coverage can all affect what shade is visible. The sample is useful for testing the platform workflow, previewing maps and review tools, and illustrating a reproducible coding approach; project teams should perform their own review before publishing a local study.
 

@@ -52,7 +52,7 @@ def render_about_page(
         | Shade Source | Operational Definition |
         | --- | --- |
         | Natural | Trees, palms, hedges, or other vegetation visibly shade the waiting area |
-        | Constructed | A designated, purpose-built bus shelter, awning, roof, overhang, or similar passenger shelter visibly shades the waiting area |
+        | Constructed | A designated, purpose-built bus shelter, awning, canopy, overhang, or similar passenger shelter visibly shades the waiting area |
         | Manmade | A nearby building, wall, or other non-shelter built feature visibly shades the waiting area |
         | Natural; Constructed; Manmade | More than one source type visibly shades the waiting area |
 
@@ -75,7 +75,7 @@ def render_about_page(
         | No Shade | No visible shelter and no vegetation visibly shading the waiting area |
         | Limited Natural Shade | Vegetation visibly shades part of the waiting area, but does not visibly cover most of it |
         | Significant Natural Shade | Vegetation visibly covers most of the waiting area or seating area |
-        | Constructed Shade | A purpose-built shelter, awning, roof, or overhang visibly shades the waiting area |
+        | Constructed Shade | A designated, purpose-built bus shelter, awning, canopy, overhang, or similar passenger shelter visibly shades the waiting area |
         | Manmade Shade | A nearby building or other non-shelter built feature visibly shades the waiting area |
 
         ## Classification Examples

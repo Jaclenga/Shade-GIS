@@ -3,7 +3,15 @@ from __future__ import annotations
 import pandas as pd
 
 from platform_store import add_review_event, add_shade_label, create_project, list_review_history, list_shade_labels
-from builder_app import majority_label_table, review_queue_table
+from builder_app import (
+    SHADE_COVERAGE_OPTIONS,
+    SHADE_COVERAGE_TAXONOMY,
+    SHADE_SOURCE_OPTIONS,
+    SHADE_SOURCE_TAXONOMY,
+    agreement_metric_summary,
+    majority_label_table,
+    review_queue_table,
+)
 from shade_gis.pages import labels_page
 
 
@@ -42,6 +50,28 @@ def test_raw_labels_conflict_and_majority_are_queryable(db_path, project, taxono
     assert bool(majority.loc[0, "disagreement_flag"]) is True
     assert bool(majority.loc[0, "tied_majority"]) is True
     assert queue.loc[queue["stop_id"] == "1001", "label_count"].iloc[0] == 2
+
+
+def test_agreement_metric_summary_value_column_is_arrow_safe(db_path, project, taxonomy, methodology, visualization, minimal_stops):
+    project_id = create_project(project, taxonomy, methodology, visualization, minimal_stops, [], db_path)
+    for labeler_id in ["alice", "bob"]:
+        add_shade_label(
+            project_id,
+            {
+                "stop_id": "1001",
+                "labeler_id": labeler_id,
+                "labeler_role": "Contributor",
+                "shade_category": "No Shade",
+                "confidence": 0.8,
+                "source": "crowdsourcing",
+            },
+            db_path,
+        )
+
+    summary = agreement_metric_summary(list_shade_labels(project_id, "1001", db_path), minimal_stops)
+
+    assert summary["Value"].map(type).eq(str).all()
+    assert summary.loc[summary["Metric"] == "Mean majority agreement", "Value"].iloc[0] == "100.0%"
 
 
 def test_review_lifecycle_records_every_admin_action(db_path, project, taxonomy, methodology, visualization, minimal_stops):
@@ -174,3 +204,52 @@ def test_sync_label_stop_picker_tracks_selected_stop(monkeypatch, minimal_stops)
 
     assert FakeStreamlit.session_state["label_selected_stop_id"] == "1001"
     assert FakeStreamlit.session_state["label_stop_index"] == 0
+
+
+def test_infer_shade_sources_from_category():
+    assert labels_page.infer_shade_sources_from_category("Significant Natural Shade") == "Natural"
+    assert labels_page.infer_shade_sources_from_category("Constructed Shade") == "Constructed"
+    assert labels_page.infer_shade_sources_from_category("Intentional Built Shade") == "Constructed"
+    assert labels_page.infer_shade_sources_from_category("Manmade Shade") == "Manmade"
+    assert labels_page.infer_shade_sources_from_category("Incidental Built Shade") == "Manmade"
+    assert labels_page.infer_shade_sources_from_category("No Shade") == ""
+    assert labels_page.infer_shade_sources_from_category("Needs Review") == ""
+
+
+def test_source_and_coverage_taxonomies_match_schema_terms():
+    assert SHADE_SOURCE_OPTIONS == ["Natural", "Constructed", "Manmade"]
+    assert SHADE_COVERAGE_OPTIONS == ["No Shade", "Limited", "Significant"]
+    assert [item["shade_source"] for item in SHADE_SOURCE_TAXONOMY] == SHADE_SOURCE_OPTIONS
+    assert [item["shade_coverage"] for item in SHADE_COVERAGE_TAXONOMY] == SHADE_COVERAGE_OPTIONS
+
+
+def test_shade_type_options_collapse_coverage_specific_categories(taxonomy):
+    assert labels_page.shade_type_options(taxonomy) == [
+        "Needs Review",
+        "Natural Shade",
+        "Constructed Shade",
+        "Manmade Shade",
+    ]
+
+
+def test_shade_category_from_type_preserves_storage_compatibility():
+    assert labels_page.shade_category_from_type("Natural Shade", "Limited") == "Limited Natural Shade"
+    assert labels_page.shade_category_from_type("Natural Shade", "Significant") == "Significant Natural Shade"
+    assert labels_page.shade_category_from_type("Natural Shade", "No Shade") == "No Shade"
+    assert labels_page.shade_category_from_type("Constructed Shade", "Significant") == "Constructed Shade"
+
+
+def test_normalized_shade_sources_preserves_distinct_constructed_and_manmade():
+    assert labels_page.normalized_shade_sources("Natural; Intentional Built; Incidental Built") == [
+        "Natural",
+        "Constructed",
+        "Manmade",
+    ]
+
+
+def test_shade_category_from_coverage_and_sources_derives_map_label():
+    assert labels_page.shade_category_from_coverage_and_sources("No Shade", ["Natural"]) == "No Shade"
+    assert labels_page.shade_category_from_coverage_and_sources("Limited", ["Natural"]) == "Limited Natural Shade"
+    assert labels_page.shade_category_from_coverage_and_sources("Significant", ["Natural"]) == "Significant Natural Shade"
+    assert labels_page.shade_category_from_coverage_and_sources("Limited", ["Manmade", "Natural"]) == "Manmade Shade"
+    assert labels_page.shade_category_from_coverage_and_sources("Limited", ["Natural", "Constructed"]) == "Constructed Shade"
