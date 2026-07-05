@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pandas as pd
 
+import published_app
 from published_app import summary_metric_cards
 
 
@@ -49,3 +50,46 @@ def test_summary_metric_cards_do_not_surface_empty_accepted_status() -> None:
     assert metric_by_label(metrics, "Classified stops")["value"] == "34"
     assert metric_by_label(metrics, "Review backlog")["delta"] == "98.5% remaining"
     assert metric_by_label(metrics, "No-shade stops")["delta"] == "35.3% of classified"
+
+
+def test_published_agreement_metrics_value_column_is_arrow_safe(monkeypatch) -> None:
+    captured = []
+
+    class FakeStreamlit:
+        @staticmethod
+        def markdown(*args, **kwargs):
+            return None
+
+        @staticmethod
+        def info(*args, **kwargs):
+            return None
+
+        @staticmethod
+        def dataframe(data, *args, **kwargs):
+            captured.append(data)
+
+    labels = pd.DataFrame(
+        [
+            {
+                "stop_id": "1001",
+                "labeler_id": "alice",
+                "labeler_role": "Contributor",
+                "shade_category": "No Shade",
+                "source": "crowdsourcing",
+            },
+            {
+                "stop_id": "1001",
+                "labeler_id": "bob",
+                "labeler_role": "Contributor",
+                "shade_category": "No Shade",
+                "source": "crowdsourcing",
+            },
+        ]
+    )
+    monkeypatch.setattr(published_app, "st", FakeStreamlit)
+
+    published_app.render_agreement_metrics(labels)
+
+    summary = captured[0]
+    assert summary["Value"].map(type).eq(str).all()
+    assert summary.loc[summary["Metric"] == "Mean majority agreement", "Value"].iloc[0] == "100.0%"

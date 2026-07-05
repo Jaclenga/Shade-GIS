@@ -1044,6 +1044,7 @@ def render_agreement_metrics(labels: pd.DataFrame) -> None:
         ("Fleiss kappa", format_metric_value(fleiss_kappa(labels))),
         ("Krippendorff alpha", format_metric_value(krippendorff_alpha_nominal(labels))),
     ], columns=["Metric", "Value"])
+    summary["Value"] = summary["Value"].astype(str)
     st.dataframe(summary, width="stretch", hide_index=True)
     if not majority.empty:
         st.dataframe(majority.sort_values(["disagreement_flag", "agreement_pct", "stop_id"], ascending=[False, True, True]), width="stretch", hide_index=True)
