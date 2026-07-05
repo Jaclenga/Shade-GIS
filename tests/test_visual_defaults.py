@@ -49,7 +49,7 @@ def test_default_dashboard_charts_are_sources_and_coverage():
             {
                 "shade_sources": "Natural",
                 "shade_coverage": "Limited",
-                "shading": "Limited Natural Shade",
+                "shading": "Limited",
                 "review_status": "Unlabeled",
             }
         ]
@@ -69,7 +69,7 @@ def test_legacy_default_dashboard_selection_migrates_to_sources_and_coverage():
             {
                 "shade_sources": "Natural",
                 "shade_coverage": "Limited",
-                "shading": "Limited Natural Shade",
+                "shading": "Limited",
                 "review_status": "Unlabeled",
             }
         ]

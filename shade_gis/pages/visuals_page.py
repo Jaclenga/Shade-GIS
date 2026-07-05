@@ -6,7 +6,7 @@ def render_palette_controls(
     taxonomy: list[dict[str, Any]],
     color_options: dict[str, str],
 ) -> None:
-    field = color_options.get(visualization.get("color_by", "Shade category"), "shading")
+    field = color_options.get(visualization.get("color_by", "Shade coverage"), "shading")
     st.markdown("#### Color Palette")
     if field == "shading":
         previous_palette = visualization.get("shade_palette", "Custom")
@@ -251,7 +251,7 @@ def render_visuals_page() -> None:
             with st.container(height=VISUAL_MAP_HEIGHT, border=False):
                 color_options = get_color_options(stops)
                 if visualization.get("color_by") not in color_options:
-                    visualization["color_by"] = "Shade category"
+                    visualization["color_by"] = "Shade coverage"
                 color_labels = list(color_options)
                 visualization["color_by"] = st.selectbox(
                     "Color stops by",

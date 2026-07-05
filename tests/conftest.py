@@ -88,7 +88,7 @@ def minimal_stops() -> pd.DataFrame:
                 "agency": "Test Transit",
                 "routes": "10",
                 "municipality": "Test City",
-                "shading": "Limited Natural Shade",
+                "shading": "Limited",
                 "review_status": "Unlabeled",
                 "confidence": 0.9,
                 "ridership": 80,

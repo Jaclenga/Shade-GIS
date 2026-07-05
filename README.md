@@ -175,17 +175,13 @@ The reviewed example records focus on three shade fields:
 | --- | --- |
 | `shade_coverage` | The amount of visible shade reaching the waiting area: `No Shade`, `Limited`, or `Significant`. |
 | `shade_sources` | The visible source of shade reaching the waiting area, such as `Natural`, `Constructed`, `Manmade`, or combined labels when multiple sources are present. |
-| `shading` | The derived map category used for coloring, filtering, summaries, and public display. |
+| `shading` | The derived coverage category used for coloring, filtering, summaries, and public display. |
 
 Manual coding used the visible waiting area as the unit of analysis. Reviewers should code what appears to shade the place where a rider would reasonably stand or sit while waiting, rather than nearby objects that do not visibly shade that space.
 
-The example labels distinguish:
-
-- `No Shade`: no visible shade reaches the waiting area.
-- `Limited Natural Shade`: vegetation shades part of the waiting area.
-- `Significant Natural Shade`: vegetation shades most of the waiting area or seating area.
-- `Constructed Shade`: a designated, purpose-built bus shelter, awning, canopy, overhang, or similar passenger shelter shades riders.
-- `Manmade Shade`: a nearby building or other non-shelter built feature shades the waiting area.
+The example labels distinguish source and coverage separately. Use `shade_sources` for what creates
+the shade and `shade_coverage` for how much of the waiting area is shaded. The derived `shading`
+field mirrors the coverage code so map filters do not combine source and coverage into one label.
 
 Shade source definitions:
 

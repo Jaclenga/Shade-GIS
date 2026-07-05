@@ -14,7 +14,7 @@ def test_summary_metric_cards_report_inventory_readiness() -> None:
     stops = pd.DataFrame(
         [
             {"stop_lat": 27.95, "stop_lon": -82.45, "shading": "No Shade", "review_status": "Unlabeled"},
-            {"stop_lat": 27.96, "stop_lon": -82.46, "shading": "Limited Natural Shade", "review_status": "Unlabeled"},
+            {"stop_lat": 27.96, "stop_lon": -82.46, "shading": "Limited", "review_status": "Unlabeled"},
             {"stop_lat": 27.97, "stop_lon": -82.47, "shading": "Needs Review", "review_status": "Needs Review"},
             {"stop_lat": None, "stop_lon": -82.48, "shading": "", "review_status": "Unlabeled"},
             {"stop_lat": 27.98, "stop_lon": -82.49, "shading": "Unknown", "review_status": "Unlabeled"},
@@ -38,7 +38,7 @@ def test_summary_metric_cards_do_not_surface_empty_accepted_status() -> None:
         {
             "stop_lat": [27.95] * 2315,
             "stop_lon": [-82.45] * 2315,
-            "shading": ["No Shade"] * 12 + ["Limited Natural Shade"] * 22 + ["Needs Review"] * 2281,
+            "shading": ["No Shade"] * 12 + ["Limited"] * 22 + ["Needs Review"] * 2281,
             "review_status": ["Unlabeled"] * 2315,
         }
     )
@@ -126,7 +126,8 @@ def test_stop_detail_picker_avoids_session_state_default_warning(monkeypatch) ->
             {
                 "stop_id": "1002",
                 "stop_name": "Second Stop",
-                "shading": "Constructed Shade",
+                "shading": "Significant",
+                "shade_sources": "Constructed",
                 "review_status": "Accepted",
                 "priority_score": 1.0,
             },

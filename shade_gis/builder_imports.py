@@ -25,8 +25,13 @@ DEFAULT_PRIORITY_WEIGHTS = {"ridership": 0.5, "low_shade": 0.5}
 API_FETCH_TIMEOUT_SECONDS = 30
 
 SHADE_ALIASES = {
-    "Intentional Built Shade": "Constructed Shade",
-    "Incidental Built Shade": "Manmade Shade",
+    "Limited Natural Shade": "Limited",
+    "Significant Natural Shade": "Significant",
+    "Natural Shade": "Needs Review",
+    "Constructed Shade": "Needs Review",
+    "Intentional Built Shade": "Needs Review",
+    "Manmade Shade": "Needs Review",
+    "Incidental Built Shade": "Needs Review",
     "Unknown": "Needs Review",
 }
 REVIEW_STATUS_NAMES = {
@@ -656,7 +661,7 @@ def calculate_priority_scores(df: pd.DataFrame, weights: dict[str, float] | None
 
     low_shade_weight = float(weights.get("low_shade", 0.0))
     if low_shade_weight > 0 and "shading" in df.columns:
-        low_shade = df.get("shading", pd.Series(index=df.index, dtype=str)).isin(["No Shade", "Needs Review"]).astype(float)
+        low_shade = df.get("shading", pd.Series(index=df.index, dtype=str)).isin(["No Shade", "Limited", "Limited Natural Shade", "Needs Review"]).astype(float)
         score_parts.append((low_shade_weight, low_shade))
 
     total_weight = sum(weight for weight, _ in score_parts)

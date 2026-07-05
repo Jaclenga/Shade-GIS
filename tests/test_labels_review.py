@@ -24,7 +24,7 @@ def test_raw_labels_conflict_and_majority_are_queryable(db_path, project, taxono
             "stop_id": "1001",
             "labeler_id": "alice",
             "labeler_role": "Contributor",
-            "shade_category": "Limited Natural Shade",
+            "shade_category": "Limited",
             "confidence": 0.7,
             "source": "crowdsourcing",
         },
@@ -81,7 +81,7 @@ def test_review_queue_display_uses_reviewer_friendly_columns(minimal_stops):
         "Needs attention",
         "Priority",
     ]
-    assert display.loc[0, "Most common raw label"] == "Constructed Shade"
+    assert display.loc[0, "Most common raw label"] == "Constructed"
     assert display.loc[0, "Agreement"] == "66.7%"
     assert display.loc[0, "Needs attention"] == "Disagreement"
 
@@ -115,7 +115,7 @@ def test_raw_label_comparison_table_hides_storage_names():
 
     display = labels_page.raw_label_comparison_table(labels)
 
-    assert display.loc[0, "Label"] == "Constructed Shade"
+    assert display.loc[0, "Label"] == "Constructed"
     assert display.loc[0, "Sources"] == "Constructed"
     assert display.loc[0, "Confidence"] == "75%"
     assert display.loc[0, "Reviewer"] == "Jack Lenga (Reviewer)"
@@ -141,7 +141,7 @@ def test_label_code_definition_tables_include_core_schema_terms(taxonomy):
     ]
     assert tables["Coverage codes"]["Code"].tolist() == ["No Shade", "Limited", "Significant"]
     assert tables["Source codes"]["Code"].tolist() == ["Natural", "Constructed", "Manmade"]
-    assert "Constructed Shade" in tables["Map label codes"]["Code"].tolist()
+    assert tables["Map label codes"]["Code"].tolist() == ["No Shade", "Limited", "Significant", "Needs Review"]
     assert "Accepted" in tables["Review status codes"]["Code"].tolist()
 
 
@@ -316,20 +316,23 @@ def test_source_and_coverage_taxonomies_match_schema_terms():
     assert [item["shade_coverage"] for item in SHADE_COVERAGE_TAXONOMY] == SHADE_COVERAGE_OPTIONS
 
 
-def test_shade_type_options_collapse_coverage_specific_categories(taxonomy):
+def test_shade_type_options_keep_sources_and_coverage_distinct(taxonomy):
     assert labels_page.shade_type_options(taxonomy) == [
+        "No Shade",
+        "Limited",
+        "Significant",
         "Needs Review",
-        "Natural Shade",
-        "Constructed Shade",
-        "Manmade Shade",
+        "Natural",
+        "Constructed",
+        "Manmade",
     ]
 
 
-def test_shade_category_from_type_preserves_storage_compatibility():
-    assert labels_page.shade_category_from_type("Natural Shade", "Limited") == "Limited Natural Shade"
-    assert labels_page.shade_category_from_type("Natural Shade", "Significant") == "Significant Natural Shade"
-    assert labels_page.shade_category_from_type("Natural Shade", "No Shade") == "No Shade"
-    assert labels_page.shade_category_from_type("Constructed Shade", "Significant") == "Constructed Shade"
+def test_shade_category_from_type_returns_coverage_only():
+    assert labels_page.shade_category_from_type("Natural", "Limited") == "Limited"
+    assert labels_page.shade_category_from_type("Natural", "Significant") == "Significant"
+    assert labels_page.shade_category_from_type("Natural", "No Shade") == "No Shade"
+    assert labels_page.shade_category_from_type("Constructed", "Significant") == "Significant"
 
 
 def test_normalized_shade_sources_preserves_distinct_constructed_and_manmade():
@@ -342,7 +345,7 @@ def test_normalized_shade_sources_preserves_distinct_constructed_and_manmade():
 
 def test_shade_category_from_coverage_and_sources_derives_map_label():
     assert labels_page.shade_category_from_coverage_and_sources("No Shade", ["Natural"]) == "No Shade"
-    assert labels_page.shade_category_from_coverage_and_sources("Limited", ["Natural"]) == "Limited Natural Shade"
-    assert labels_page.shade_category_from_coverage_and_sources("Significant", ["Natural"]) == "Significant Natural Shade"
-    assert labels_page.shade_category_from_coverage_and_sources("Limited", ["Manmade", "Natural"]) == "Manmade Shade"
-    assert labels_page.shade_category_from_coverage_and_sources("Limited", ["Natural", "Constructed"]) == "Constructed Shade"
+    assert labels_page.shade_category_from_coverage_and_sources("Limited", ["Natural"]) == "Limited"
+    assert labels_page.shade_category_from_coverage_and_sources("Significant", ["Natural"]) == "Significant"
+    assert labels_page.shade_category_from_coverage_and_sources("Limited", ["Manmade", "Natural"]) == "Limited"
+    assert labels_page.shade_category_from_coverage_and_sources("Limited", ["Natural", "Constructed"]) == "Limited"

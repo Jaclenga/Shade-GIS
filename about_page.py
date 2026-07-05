@@ -37,7 +37,7 @@ def render_about_page(
 
         - `shade_coverage`: the observed or voted amount of shade reaching the waiting area.
         - `shade_sources`: the observed or voted source labels for shade reaching the waiting area.
-        - `shading`: the derived map label used for legends, summaries, filters, and exports.
+        - `shading`: the derived coverage label used for legends, summaries, filters, and exports.
         - `review_status`: the current labeling or review workflow state.
         - `confidence`: reviewer, model, or workflow confidence when collected.
         - `ridership`: optional ridership measure when available.
@@ -68,15 +68,8 @@ def render_about_page(
         intended to provide passenger shade or weather protection. Nearby buildings that visibly shade the waiting
         area should be coded as Manmade.
 
-        ### Current App Labels
-
-        | Category | Operational Definition |
-        | --- | --- |
-        | No Shade | No visible shelter and no vegetation visibly shading the waiting area |
-        | Limited Natural Shade | Vegetation visibly shades part of the waiting area, but does not visibly cover most of it |
-        | Significant Natural Shade | Vegetation visibly covers most of the waiting area or seating area |
-        | Constructed Shade | A designated, purpose-built bus shelter, awning, canopy, overhang, or similar passenger shelter visibly shades the waiting area |
-        | Manmade Shade | A nearby building or other non-shelter built feature visibly shades the waiting area |
+        `shade_sources` and `shade_coverage` are stored separately. The map-facing `shading` value mirrors
+        coverage, while source labels remain available in their own field for filters, charts, exports, and review.
 
         ## Classification Examples
 

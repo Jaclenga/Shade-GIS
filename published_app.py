@@ -26,10 +26,11 @@ MAP_STYLES = {
 }
 
 COLOR_MODE_FIELDS = {
-    "Shade category": "shading",
+    "Shade coverage": "shading",
     "Review status": "review_status",
     "Priority score": "priority_score",
 }
+LEGACY_COLOR_MODE_FIELDS = {"Shade category": "shading"}
 
 DEFAULT_DISPLAY_COLUMNS = ["stop_id", "stop_name", "routes", "shading", "review_status", "priority_score"]
 DEFAULT_PALETTE = [
@@ -37,7 +38,7 @@ DEFAULT_PALETTE = [
     "#0891b2", "#be123c", "#4d7c0f", "#7c3aed", "#0f766e",
 ]
 FILTER_FIELD_LABELS = {
-    "shading": "Shade category",
+    "shading": "Shade coverage",
     "review_status": "Review status",
     "confidence": "Confidence",
     "ridership": "Ridership",
@@ -135,7 +136,11 @@ def calculate_priority_scores(df: pd.DataFrame, weights: dict[str, float]) -> pd
             weight_total += ridership_weight
     low_shade_weight = float(weights.get("low_shade", 0) or 0)
     if low_shade_weight and "shading" in df:
-        low_shade = df["shading"].isin(["No Shade", "Limited Natural Shade", "Needs Review"]).astype(float)
+        if "shade_coverage" in df.columns:
+            low_shade_values = df["shade_coverage"].fillna("").astype(str).str.strip()
+        else:
+            low_shade_values = df["shading"].fillna("").astype(str).str.strip()
+        low_shade = low_shade_values.isin(["No Shade", "Limited", "Limited Natural Shade", "Needs Review"]).astype(float)
         score += low_shade_weight * low_shade
         weight_total += low_shade_weight
     if weight_total == 0:
@@ -212,8 +217,8 @@ def build_gis_overlay_layers(visualization: dict[str, Any]) -> list[pdk.Layer]:
 
 
 def color_lookup(df: pd.DataFrame, taxonomy: list[dict[str, Any]], visualization: dict[str, Any]) -> tuple[str, dict[str, list[int]]]:
-    label = visualization.get("color_by", "Shade category")
-    field = COLOR_MODE_FIELDS.get(label, label)
+    label = visualization.get("color_by", "Shade coverage")
+    field = COLOR_MODE_FIELDS.get(label) or LEGACY_COLOR_MODE_FIELDS.get(label, label)
     if field not in df.columns:
         field = "shading" if "shading" in df.columns else df.columns[0]
     if field == "priority_score":
@@ -681,7 +686,7 @@ def summary_metric_cards(df: pd.DataFrame) -> list[dict[str, str]]:
             "label": "Classified stops",
             "value": f"{classified:,}",
             "delta": f"{format_summary_percent(classified, total)} of current view",
-            "help": "Stops with a shade category other than Needs Review or blank.",
+            "help": "Stops with shade coverage other than Needs Review or blank.",
         },
         {
             "label": "Review backlog",

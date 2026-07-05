@@ -46,7 +46,7 @@ DEFAULT_CUSTOM_CHARTS = [
 ]
 
 DEFAULT_VISUALIZATION = {
-    "color_by": "Shade category",
+    "color_by": "Shade coverage",
     "marker_shape": "Circle",
     "marker_size": 7,
     "marker_opacity": 0.82,
@@ -88,10 +88,11 @@ MAP_STYLES = {
 }
 
 COLOR_MODE_FIELDS = {
-    "Shade category": "shading",
+    "Shade coverage": "shading",
     "Review status": "review_status",
     "Priority score": "priority_score",
 }
+LEGACY_COLOR_MODE_FIELDS = {"Shade category": "shading"}
 
 FIELD_LABELS = {
     "stop_id": "Stop ID",
@@ -101,7 +102,7 @@ FIELD_LABELS = {
     "agency": "Agency",
     "routes": "Routes",
     "municipality": "Municipality",
-    "shading": "Shade category",
+    "shading": "Shade coverage",
     "shade_coverage": "Shade coverage",
     "shade_sources": "Shade sources",
     "review_status": "Review status",
@@ -161,7 +162,7 @@ PRIORITY_FACTOR_DETAILS = {
     ),
     "low_shade": (
         "Low shade",
-        "Stops labeled No Shade or Needs Review receive more priority.",
+        "Stops with No Shade, Limited coverage, or Needs Review receive more priority.",
     ),
 }
 
@@ -503,7 +504,7 @@ def render_custom_charts(df: pd.DataFrame, visualization: dict[str, Any]) -> Non
 
 
 def priority_score_used_in_visualization(visualization: dict[str, Any]) -> bool:
-    if COLOR_MODE_FIELDS.get(visualization.get("color_by", "")) == "priority_score":
+    if {**LEGACY_COLOR_MODE_FIELDS, **COLOR_MODE_FIELDS}.get(visualization.get("color_by", "")) == "priority_score":
         return True
     if "Priority stops" in visualization.get("metric_cards", []):
         return True
@@ -583,8 +584,8 @@ def color_for_priority(value: Any, visualization: dict[str, Any]) -> list[int]:
 def color_dataset(df: pd.DataFrame, taxonomy: list[dict[str, Any]], visualization: dict[str, Any]) -> pd.DataFrame:
     colored = df.copy()
     color_options = get_color_options(colored)
-    color_by = visualization.get("color_by", "Shade category")
-    field = color_options.get(color_by, "shading")
+    color_by = visualization.get("color_by", "Shade coverage")
+    field = color_options.get(color_by) or LEGACY_COLOR_MODE_FIELDS.get(color_by, "shading")
     if field == "review_status":
         review_colors = visualization.get("review_status_colors", {})
         colored["fill_color"] = colored["review_status"].map(

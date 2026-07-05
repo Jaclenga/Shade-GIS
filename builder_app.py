@@ -182,34 +182,22 @@ DEFAULT_TAXONOMY = [
         "sort_order": 1,
     },
     {
-        "name": "Limited Natural Shade",
-        "description": "Vegetation shades part of the waiting area, but not most of it.",
+        "name": "Limited",
+        "description": "Shade visibly reaches part of the waiting area, but not most of it.",
         "color": "#d69e2e",
         "sort_order": 2,
     },
     {
-        "name": "Significant Natural Shade",
-        "description": "Vegetation visibly covers most of the waiting area or seating area.",
+        "name": "Significant",
+        "description": "Shade visibly covers most of the waiting area or seating area.",
         "color": "#228b22",
         "sort_order": 3,
-    },
-    {
-        "name": "Constructed Shade",
-        "description": "A purpose-built shelter, awning, roof, or overhang shades riders.",
-        "color": "#4682b4",
-        "sort_order": 4,
-    },
-    {
-        "name": "Manmade Shade",
-        "description": "A nearby building or other non-shelter built feature shades riders.",
-        "color": "#805aaa",
-        "sort_order": 5,
     },
     {
         "name": "Needs Review",
         "description": "The stop needs imagery, review, or disagreement resolution.",
         "color": "#808080",
-        "sort_order": 6,
+        "sort_order": 4,
     },
 ]
 
@@ -269,8 +257,8 @@ DEFAULT_METHODOLOGY = {
         "trees or structures. The waiting area is the place where a passenger would reasonably stand or sit "
         "while waiting for transit, including benches when present. Code what visibly shades the waiting area, "
         "not what might shade it at another time.\n\n"
-        "Manual review records three fields: `shade_coverage`, `shade_sources`, and the derived `shading` "
-        "map category used for coloring, filtering, summaries, and public display.\n\n"
+        "Manual review records separate fields for `shade_coverage` and `shade_sources`. The derived "
+        "`shading` field mirrors the coverage code for coloring, filtering, summaries, and public display.\n\n"
         "Shade coverage definitions: `No Shade` means no shade visibly reaches the waiting area; `Limited` "
         "means shade visibly reaches part of the waiting area, but does not cover most of it; `Significant` "
         "means shade visibly covers most of the waiting area or seating area.\n\n"

@@ -224,9 +224,6 @@ def render_admin_review_decision(
     taxonomy: list[dict[str, Any]],
 ) -> None:
     previous = stop_review_snapshot(selected_stop)
-    category_options = taxonomy_names(taxonomy)
-    current_category = previous["shade_category"]
-    category_index = category_options.index(current_category) if current_category in category_options else 0
     coverage_options = SHADE_COVERAGE_OPTIONS
     current_coverage = previous["shade_coverage"]
     coverage_index = coverage_options.index(current_coverage) if current_coverage in coverage_options else len(coverage_options) - 1
@@ -255,7 +252,7 @@ def render_admin_review_decision(
                 key="review_actor_role",
             )
 
-        decision_cols = st.columns([1, 1, 1])
+        decision_cols = st.columns([1, 1])
         with decision_cols[0]:
             final_status = st.selectbox(
                 "Final review status",
@@ -264,8 +261,6 @@ def render_admin_review_decision(
                 key="review_final_status",
             )
         with decision_cols[1]:
-            final_category = st.selectbox("Final shade category", category_options, index=category_index, key="review_final_category")
-        with decision_cols[2]:
             final_confidence = st.slider("Decision confidence", 0.0, 1.0, confidence_default, 0.05, key="review_final_confidence")
 
         lower_cols = st.columns([1, 1])
@@ -292,6 +287,7 @@ def render_admin_review_decision(
             st.error("Selected stop is missing a stop ID.")
         else:
             final_sources_text = "; ".join(final_sources)
+            final_category = shade_category_from_coverage_and_sources(final_coverage, final_sources)
             apply_review_decision_to_stop(
                 selected_stop_id,
                 final_category,
@@ -499,8 +495,13 @@ def normalize_shade_category_label(value: Any) -> str:
             normalized for part in text.split(";") if (normalized := normalize_shade_category_label(part))
         )
     aliases = {
-        "Intentional Built Shade": "Constructed Shade",
-        "Incidental Built Shade": "Manmade Shade",
+        "Intentional Built Shade": "Constructed",
+        "Incidental Built Shade": "Manmade",
+        "Limited Natural Shade": "Limited",
+        "Significant Natural Shade": "Significant",
+        "Constructed Shade": "Constructed",
+        "Manmade Shade": "Manmade",
+        "Natural Shade": "Natural",
         "Unknown": "Needs Review",
     }
     return aliases.get(text, text)
@@ -633,13 +634,17 @@ def shade_type_from_category(shade_category: str) -> str:
     if not normalized or "needs review" in normalized:
         return "Needs Review"
     if "no shade" in normalized:
-        return "Needs Review"
+        return "No Shade"
+    if "limited" in normalized:
+        return "Limited"
+    if "significant" in normalized:
+        return "Significant"
     if "natural" in normalized or "tree" in normalized or "vegetation" in normalized:
-        return "Natural Shade"
+        return "Natural"
     if "constructed" in normalized or "intentional" in normalized or "shelter" in normalized or "canopy" in normalized:
-        return "Constructed Shade"
+        return "Constructed"
     if "manmade" in normalized or "incidental" in normalized or "building" in normalized or "built" in normalized:
-        return "Manmade Shade"
+        return "Manmade"
     return str(shade_category or "").strip() or "Needs Review"
 
 
@@ -649,7 +654,7 @@ def shade_type_options(taxonomy: list[dict[str, Any]]) -> list[str]:
         shade_type = shade_type_from_category(category)
         if shade_type not in options:
             options.append(shade_type)
-    for shade_type in ["Natural Shade", "Constructed Shade", "Manmade Shade", "Needs Review"]:
+    for shade_type in ["No Shade", "Limited", "Significant", "Natural", "Constructed", "Manmade", "Needs Review"]:
         if shade_type not in options:
             options.append(shade_type)
     return options
@@ -669,23 +674,11 @@ def coverage_from_category(shade_category: str, fallback: str = "") -> str:
 
 
 def shade_category_from_type(shade_type: str, shade_coverage: str) -> str:
-    if shade_coverage == "No Shade":
-        return "No Shade"
-    if shade_type == "Natural Shade":
-        return f"{shade_coverage} Natural Shade"
-    return shade_type
+    return shade_coverage if shade_coverage in SHADE_COVERAGE_OPTIONS else "Needs Review"
 
 
 def shade_category_from_coverage_and_sources(shade_coverage: str, shade_sources: list[str]) -> str:
-    if shade_coverage == "No Shade":
-        return "No Shade"
-    if "Constructed" in shade_sources:
-        return "Constructed Shade"
-    if "Manmade" in shade_sources:
-        return "Manmade Shade"
-    if "Natural" in shade_sources:
-        return f"{shade_coverage} Natural Shade"
-    return "Needs Review"
+    return shade_coverage if shade_coverage in SHADE_COVERAGE_OPTIONS else "Needs Review"
 
 
 
@@ -773,11 +766,11 @@ def render_raw_label_collection(
         default_role = "Reviewer" if "Reviewer" in LABELER_ROLE_OPTIONS else LABELER_ROLE_OPTIONS[0]
 
         st.markdown("##### Label")
-        coverage_labels = ["Limited", "No Shade", "Significant Shade"]
-        coverage_values = {"Limited": "Limited", "No Shade": "No Shade", "Significant Shade": "Significant"}
+        coverage_labels = ["Limited", "No Shade", "Significant"]
+        coverage_values = {"Limited": "Limited", "No Shade": "No Shade", "Significant": "Significant"}
         current_coverage = str(selected_stop.get("shade_coverage", "") or "")
         coverage_default = coverage_from_category(current_category, current_coverage)
-        coverage_label_default = "Significant Shade" if coverage_default == "Significant" else coverage_default
+        coverage_label_default = coverage_default
         coverage_index = coverage_labels.index(coverage_label_default) if coverage_label_default in coverage_labels else 0
         coverage_label = st.selectbox("Coverage", coverage_labels, index=coverage_index, key="label_coverage")
         shade_coverage = coverage_values[coverage_label]

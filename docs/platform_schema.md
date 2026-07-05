@@ -89,7 +89,7 @@ Optional fields:
 | `agency` | Agency label for multi-agency studies. |
 | `routes` | Semicolon-separated route labels serving the stop. |
 | `municipality` | Local jurisdiction or neighborhood label. |
-| `shading` | Current derived map category. |
+| `shading` | Current derived coverage category used by maps and filters. |
 | `shade_coverage` | Coverage dimension: `No Shade`, `Limited`, or `Significant`. |
 | `shade_sources` | Semicolon-separated source dimension: `Natural`, `Constructed`, `Manmade`, or multiple values. |
 | `review_status` | Workflow status such as unlabeled, accepted, or disputed. |
@@ -121,13 +121,14 @@ The core coverage taxonomy is:
 | `Significant` | Shade visibly covers most of the waiting area or seating area. |
 
 The `shading` field remains a derived map category for coloring, filtering, summaries, and public
-display. It is computed from the submitted coverage and source values.
+display. It mirrors `shade_coverage`; source labels stay in `shade_sources` so source and coverage
+are not collapsed into a single display value.
 
 ## Raw Shade Labels
 
 The `Labels` page writes every submitted assessment to `shade_labels` instead of replacing earlier
 labels. Each label records the stop ID, optional image reference, reviewer or contributor ID,
-reviewer role, source type, shade category, coverage, shade sources, confidence, notes, and
+reviewer role, source type, derived coverage category, coverage, shade sources, confidence, notes, and
 timestamp. A reviewer can optionally apply a submitted label to the current stop fields used by the
 map and exports, but the raw label row is still retained either way.
 

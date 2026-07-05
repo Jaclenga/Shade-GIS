@@ -16,7 +16,7 @@ def test_priority_scoring_is_deterministic_for_fixed_weights():
             },
             {
                 "stop_id": "1002",
-                "shading": "Limited Natural Shade",
+                "shading": "Limited",
                 "ridership": 50,
                 "context_score": 0.3,
             },
@@ -29,7 +29,7 @@ def test_priority_scoring_is_deterministic_for_fixed_weights():
 
     scores = calculate_priority_scores(stops, weights)
 
-    assert scores.tolist() == [100.0, 25.0]
+    assert scores.tolist() == [100.0, 75.0]
 
 
 def test_priority_scoring_handles_missing_inputs_zero_weights_and_unknown_shade():
