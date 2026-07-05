@@ -93,3 +93,49 @@ def test_published_agreement_metrics_value_column_is_arrow_safe(monkeypatch) -> 
     summary = captured[0]
     assert summary["Value"].map(type).eq(str).all()
     assert summary.loc[summary["Metric"] == "Mean majority agreement", "Value"].iloc[0] == "100.0%"
+
+
+def test_stop_detail_picker_avoids_session_state_default_warning(monkeypatch) -> None:
+    selectbox_calls = []
+
+    class FakeStreamlit:
+        session_state = {}
+
+        @staticmethod
+        def info(*args, **kwargs):
+            return None
+
+        @staticmethod
+        def selectbox(*args, **kwargs):
+            selectbox_calls.append((args, kwargs))
+            return 1
+
+        @staticmethod
+        def markdown(*args, **kwargs):
+            return None
+
+    stops = pd.DataFrame(
+        [
+            {
+                "stop_id": "1001",
+                "stop_name": "First Stop",
+                "shading": "No Shade",
+                "review_status": "Unlabeled",
+                "priority_score": 0.0,
+            },
+            {
+                "stop_id": "1002",
+                "stop_name": "Second Stop",
+                "shading": "Constructed Shade",
+                "review_status": "Accepted",
+                "priority_score": 1.0,
+            },
+        ]
+    )
+    FakeStreamlit.session_state["preview_selected_stop_id"] = "1002"
+    monkeypatch.setattr(published_app, "st", FakeStreamlit)
+
+    published_app.render_stop_detail_workflow(stops, {}, "preview")
+
+    assert FakeStreamlit.session_state["preview_stop_picker"] == 1
+    assert "index" not in selectbox_calls[0][1]

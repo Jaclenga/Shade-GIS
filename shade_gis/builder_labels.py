@@ -317,6 +317,12 @@ def review_queue_table(stops: pd.DataFrame, labels: pd.DataFrame) -> pd.DataFram
 def review_queue_label(row: pd.Series) -> str:
     status = str(row.get("review_status", "Unlabeled") or "Unlabeled")
     label_count = int(float(row.get("label_count", 0) or 0))
-    disagreement = "disputed labels" if bool(row.get("disagreement_flag", False)) else f"{label_count} label(s)"
-    return f"{stop_picker_label(row)} - {status} - {disagreement}"
+    agreement = float(row.get("agreement_pct", 0) or 0)
+    if bool(row.get("disagreement_flag", False)):
+        review_state = f"{label_count} labels, disagreement"
+    elif label_count:
+        review_state = f"{label_count} labels, {agreement:.1f}% agreement"
+    else:
+        review_state = "no labels yet"
+    return f"{stop_picker_label(row)} | {status} | {review_state}"
 

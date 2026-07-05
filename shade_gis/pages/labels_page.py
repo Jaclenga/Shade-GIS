@@ -37,33 +37,15 @@ def render_review_queue(project_id: str, stops: pd.DataFrame, labels: pd.DataFra
     if only_conflicts:
         filtered = filtered[filtered["disagreement_flag"].astype(bool)]
 
-    display_columns = [
-        column
-        for column in [
-            "stop_id",
-            "stop_name",
-            "routes",
-            "municipality",
-            "shading",
-            "review_status",
-            "priority_score",
-            "majority_label",
-            "label_count",
-            "agreement_pct",
-            "disagreement_flag",
-            "tied_majority",
-        ]
-        if column in filtered.columns
-    ]
     if filtered.empty:
         st.info("No stops match the review queue filters.")
         return None
-    st.dataframe(filtered.loc[:, display_columns].head(200), width="stretch", hide_index=True)
+    st.dataframe(review_queue_display_table(filtered).head(200), width="stretch", hide_index=True)
 
     queue_records = filtered.reset_index(drop=True)
     queue_labels = [review_queue_label(row) for _, row in queue_records.iterrows()]
     selected_index = st.selectbox(
-        "Queue stop",
+        "Stop to review",
         range(len(queue_records)),
         format_func=lambda index: queue_labels[index],
         key="review_queue_stop_index",
@@ -72,31 +54,18 @@ def render_review_queue(project_id: str, stops: pd.DataFrame, labels: pd.DataFra
     selected_stop_id = str(selected_stop.get("stop_id", ""))
 
     stop_labels = labels[labels["stop_id"].astype(str) == selected_stop_id] if not labels.empty else pd.DataFrame()
-    detail_cols = st.columns([1, 1, 1, 1])
-    detail_cols[0].metric("Current label", str(selected_stop.get("shading", "Needs Review") or "Needs Review"))
-    detail_cols[1].metric("Review status", str(selected_stop.get("review_status", "Unlabeled") or "Unlabeled"))
-    detail_cols[2].metric("Agreement", f"{float(selected_stop.get('agreement_pct', 0) or 0):.1f}%")
-    detail_cols[3].metric("Raw labels", int(float(selected_stop.get("label_count", 0) or 0)))
+    detail_cols = st.columns([1.25, 1, 1.25, 1, 1])
+    detail_cols[0].metric("Current map label", normalize_shade_category_label(selected_stop.get("shading", "Needs Review")))
+    detail_cols[1].metric("Status", str(selected_stop.get("review_status", "Unlabeled") or "Unlabeled"))
+    detail_cols[2].metric("Most common raw label", normalize_shade_category_label(selected_stop.get("majority_label", "")) or "Not enough labels")
+    detail_cols[3].metric("Agreement", f"{float(selected_stop.get('agreement_pct', 0) or 0):.1f}%")
+    detail_cols[4].metric("Submitted labels", int(float(selected_stop.get("label_count", 0) or 0)))
 
     if stop_labels.empty:
         st.info("No raw labels are attached to this stop yet.")
     else:
-        visible_label_columns = [
-            column
-            for column in [
-                "created_at",
-                "shade_category",
-                "shade_coverage",
-                "shade_sources",
-                "confidence",
-                "labeler_role",
-                "labeler_id",
-                "source",
-                "notes",
-            ]
-            if column in stop_labels.columns
-        ]
-        st.dataframe(stop_labels.loc[:, visible_label_columns], width="stretch", hide_index=True)
+        st.markdown("#### Raw Label Comparison")
+        st.dataframe(raw_label_comparison_table(stop_labels), width="stretch", hide_index=True)
 
     previous = stop_review_snapshot(selected_stop)
     category_options = taxonomy_names(taxonomy)
@@ -356,6 +325,110 @@ def sync_label_stop_picker(stop_options: pd.DataFrame) -> None:
         st.session_state["label_stop_index"] = selected_index
     elif stop_ids[current_index] != selected_stop_id:
         st.session_state["label_stop_index"] = selected_index
+
+
+def normalize_shade_category_label(value: Any) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    if ";" in text:
+        return "; ".join(
+            normalized for part in text.split(";") if (normalized := normalize_shade_category_label(part))
+        )
+    aliases = {
+        "Intentional Built Shade": "Constructed Shade",
+        "Incidental Built Shade": "Manmade Shade",
+        "Unknown": "Needs Review",
+    }
+    return aliases.get(text, text)
+
+
+def format_review_source(value: Any) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    return text.replace("_", " ").title()
+
+
+def format_confidence(value: Any) -> str:
+    try:
+        confidence = float(value)
+    except (TypeError, ValueError):
+        return ""
+    if pd.isna(confidence):
+        return ""
+    if 0 <= confidence <= 1:
+        return f"{confidence * 100:.0f}%"
+    return f"{confidence:.2f}"
+
+
+def format_submitted_at(value: Any) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    return text.replace("T", " ")
+
+
+def reviewer_display(row: pd.Series) -> str:
+    reviewer = str(row.get("labeler_id", "") or "").strip()
+    role = str(row.get("labeler_role", "") or "").strip()
+    if reviewer and role:
+        return f"{reviewer} ({role})"
+    return reviewer or role or "Unspecified"
+
+
+def source_display(value: Any) -> str:
+    sources = normalized_shade_sources(value)
+    return "; ".join(sources)
+
+
+def review_queue_display_table(queue: pd.DataFrame) -> pd.DataFrame:
+    records = []
+    for _, row in queue.iterrows():
+        label_count = int(float(row.get("label_count", 0) or 0))
+        agreement = float(row.get("agreement_pct", 0) or 0)
+        if bool(row.get("disagreement_flag", False)):
+            attention = "Disagreement"
+        elif bool(row.get("tied_majority", False)):
+            attention = "Tied vote"
+        elif label_count == 0:
+            attention = "Needs labels"
+        else:
+            attention = "Ready to review"
+        records.append(
+            {
+                "Stop": stop_picker_label(row),
+                "Status": str(row.get("review_status", "Unlabeled") or "Unlabeled"),
+                "Current map label": normalize_shade_category_label(row.get("shading", "")),
+                "Most common raw label": normalize_shade_category_label(row.get("majority_label", "")) or "Not enough labels",
+                "Labels": label_count,
+                "Agreement": f"{agreement:.1f}%",
+                "Needs attention": attention,
+                "Priority": f"{float(row.get('priority_score', 0) or 0):.2f}",
+            }
+        )
+    return pd.DataFrame.from_records(records)
+
+
+def raw_label_comparison_table(stop_labels: pd.DataFrame) -> pd.DataFrame:
+    records = []
+    for _, row in stop_labels.iterrows():
+        records.append(
+            {
+                "Submitted": format_submitted_at(row.get("created_at", "")),
+                "Label": normalize_shade_category_label(row.get("shade_category", "")),
+                "Coverage": str(row.get("shade_coverage", "") or ""),
+                "Sources": source_display(row.get("shade_sources", "")),
+                "Confidence": format_confidence(row.get("confidence", "")),
+                "Reviewer": reviewer_display(row),
+                "Input": format_review_source(row.get("source", "")),
+                "Notes": str(row.get("notes", "") or ""),
+            }
+        )
+    display = pd.DataFrame.from_records(records)
+    for column in display.columns:
+        display[column] = display[column].astype(str)
+    return display
 
 
 

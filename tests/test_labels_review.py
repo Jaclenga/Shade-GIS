@@ -10,6 +10,7 @@ from builder_app import (
     SHADE_SOURCE_TAXONOMY,
     agreement_metric_summary,
     majority_label_table,
+    review_queue_label,
     review_queue_table,
 )
 from shade_gis.pages import labels_page
@@ -50,6 +51,68 @@ def test_raw_labels_conflict_and_majority_are_queryable(db_path, project, taxono
     assert bool(majority.loc[0, "disagreement_flag"]) is True
     assert bool(majority.loc[0, "tied_majority"]) is True
     assert queue.loc[queue["stop_id"] == "1001", "label_count"].iloc[0] == 2
+
+
+def test_review_queue_display_uses_reviewer_friendly_columns(minimal_stops):
+    queue = minimal_stops.copy()
+    queue["majority_label"] = ["Intentional Built Shade", ""]
+    queue["label_count"] = [3, 0]
+    queue["agreement_pct"] = [66.7, 0.0]
+    queue["disagreement_flag"] = [True, False]
+    queue["tied_majority"] = [False, False]
+    queue["priority_score"] = [12.345, 0]
+
+    display = labels_page.review_queue_display_table(queue)
+
+    assert display.columns.tolist() == [
+        "Stop",
+        "Status",
+        "Current map label",
+        "Most common raw label",
+        "Labels",
+        "Agreement",
+        "Needs attention",
+        "Priority",
+    ]
+    assert display.loc[0, "Most common raw label"] == "Constructed Shade"
+    assert display.loc[0, "Agreement"] == "66.7%"
+    assert display.loc[0, "Needs attention"] == "Disagreement"
+
+
+def test_review_queue_label_reads_like_review_task(minimal_stops):
+    row = minimal_stops.iloc[0].copy()
+    row["review_status"] = "Unlabeled"
+    row["label_count"] = 3
+    row["agreement_pct"] = 66.7
+    row["disagreement_flag"] = False
+
+    assert review_queue_label(row).endswith("| Unlabeled | 3 labels, 66.7% agreement")
+
+
+def test_raw_label_comparison_table_hides_storage_names():
+    labels = pd.DataFrame(
+        [
+            {
+                "created_at": "2026-07-05T11:57:11-04:00",
+                "shade_category": "Intentional Built Shade",
+                "shade_coverage": "Significant",
+                "shade_sources": "Intentional Built",
+                "confidence": 0.75,
+                "labeler_role": "Reviewer",
+                "labeler_id": "Jack Lenga",
+                "source": "manual_review",
+                "notes": "",
+            }
+        ]
+    )
+
+    display = labels_page.raw_label_comparison_table(labels)
+
+    assert display.loc[0, "Label"] == "Constructed Shade"
+    assert display.loc[0, "Sources"] == "Constructed"
+    assert display.loc[0, "Confidence"] == "75%"
+    assert display.loc[0, "Reviewer"] == "Jack Lenga (Reviewer)"
+    assert display.loc[0, "Input"] == "Manual Review"
 
 
 def test_agreement_metric_summary_value_column_is_arrow_safe(db_path, project, taxonomy, methodology, visualization, minimal_stops):

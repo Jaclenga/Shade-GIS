@@ -573,7 +573,6 @@ def render_stop_detail_workflow(df: pd.DataFrame, visualization: dict[str, Any],
     picked_index = st.selectbox(
         "Selected stop",
         range(len(options)),
-        index=selected_index,
         format_func=lambda index: stop_picker_label(options.iloc[int(index)]),
         key=picker_key,
     )
