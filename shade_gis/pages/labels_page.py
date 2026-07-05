@@ -1,11 +1,156 @@
 from builder_app import *
 
-def render_review_queue(project_id: str, stops: pd.DataFrame, labels: pd.DataFrame, taxonomy: list[dict[str, Any]]) -> str | None:
+
+REVIEW_STATUS_DEFINITIONS = {
+    "Unlabeled": "No raw label or admin review has been collected for the stop.",
+    "Needs Review": "The stop needs imagery review, more labels, or admin resolution.",
+    "Crowd Reviewed": "Community or contributor labels have been collected but not accepted as final.",
+    "Expert Reviewed": "An expert reviewer has made a decision that may still need project acceptance.",
+    "Accepted": "The project accepts the current label for mapping, analysis, and export.",
+    "Disputed": "Reviewers disagree or the evidence is ambiguous enough to require follow-up.",
+    "Archived": "The stop or decision is retained for audit history but removed from active review.",
+}
+
+LABEL_WORKFLOW_OPTIONS = ["Review labels", "Submit raw label"]
+
+
+def label_code_definition_tables(taxonomy: list[dict[str, Any]]) -> dict[str, pd.DataFrame]:
+    active_taxonomy = taxonomy or DEFAULT_TAXONOMY
+    coverage = pd.DataFrame(
+        [
+            {
+                "Code": item.get("shade_coverage", ""),
+                "Definition": item.get("operational_definition", ""),
+            }
+            for item in SHADE_COVERAGE_TAXONOMY
+        ]
+    )
+    sources = pd.DataFrame(
+        [
+            {
+                "Code": item.get("shade_source", ""),
+                "Definition": item.get("operational_definition", ""),
+            }
+            for item in SHADE_SOURCE_TAXONOMY
+        ]
+    )
+    map_label_rows = [
+        {
+            "Code": normalize_shade_category_label(item.get("name", "")),
+            "Definition": item.get("description", ""),
+        }
+        for item in active_taxonomy
+        if str(item.get("name", "") or "").strip()
+    ]
+    map_labels = pd.DataFrame(map_label_rows, columns=["Code", "Definition"]).drop_duplicates(
+        subset=["Code"],
+        keep="first",
+    )
+    review_statuses = pd.DataFrame(
+        [
+            {
+                "Code": status,
+                "Definition": REVIEW_STATUS_DEFINITIONS.get(status, ""),
+            }
+            for status in REVIEW_STATUS_COLORS
+        ]
+    )
+    storage_fields = pd.DataFrame(
+        [
+            {
+                "Code": "shade_coverage",
+                "Definition": "Extent of shade reaching the passenger waiting area.",
+            },
+            {
+                "Code": "shade_sources",
+                "Definition": "Observed source categories for shade reaching the waiting area.",
+            },
+            {
+                "Code": "shading",
+                "Definition": "Derived map label used for coloring, filtering, summaries, and exports.",
+            },
+            {
+                "Code": "review_status",
+                "Definition": "Workflow state for the current map label or admin decision.",
+            },
+            {
+                "Code": "confidence",
+                "Definition": "Reviewer confidence saved as a numeric score from 0 to 1.",
+            },
+        ]
+    )
+    return {
+        "Stored fields": storage_fields,
+        "Coverage codes": coverage,
+        "Source codes": sources,
+        "Map label codes": map_labels,
+        "Review status codes": review_statuses,
+    }
+
+
+def render_label_code_helper(taxonomy: list[dict[str, Any]], title: str = "Label/code definitions") -> None:
+    with st.expander(title, expanded=False):
+        for section, table in label_code_definition_tables(taxonomy).items():
+            st.markdown(f"##### {section}")
+            st.dataframe(table, width="stretch", hide_index=True)
+
+
+def render_label_workflow_toggle() -> str:
+    if hasattr(st, "segmented_control"):
+        selected = st.segmented_control(
+            "Labeling workflow",
+            LABEL_WORKFLOW_OPTIONS,
+            default=LABEL_WORKFLOW_OPTIONS[0],
+            key="label_workflow_mode",
+        )
+        return selected or LABEL_WORKFLOW_OPTIONS[0]
+    return st.radio(
+        "Labeling workflow",
+        LABEL_WORKFLOW_OPTIONS,
+        index=0,
+        horizontal=True,
+        key="label_workflow_mode",
+    )
+
+
+def render_shared_label_reference_map(
+    stops: pd.DataFrame,
+    selected_stop_id: str,
+    taxonomy: list[dict[str, Any]],
+) -> None:
+    map_selected_stop_id = render_stop_reference_map(
+        stops,
+        selected_stop_id,
+        taxonomy,
+        st.session_state.get("visualization", {}),
+    )
+    if map_selected_stop_id and map_selected_stop_id != selected_stop_id:
+        st.session_state["label_selected_stop_id"] = map_selected_stop_id
+        st.rerun()
+
+
+def sync_review_queue_stop_picker(queue_records: pd.DataFrame) -> None:
+    if queue_records.empty or "stop_id" not in queue_records.columns:
+        return
+    stop_ids = queue_records["stop_id"].astype(str).tolist()
+    selected_stop_id = str(st.session_state.get("label_selected_stop_id", "") or "")
+    if selected_stop_id in stop_ids:
+        st.session_state["review_queue_stop_index"] = stop_ids.index(selected_stop_id)
+        return
+    current_index = st.session_state.get("review_queue_stop_index")
+    if not isinstance(current_index, int) or current_index < 0 or current_index >= len(stop_ids):
+        st.session_state["review_queue_stop_index"] = 0
+
+
+def render_review_queue_selector(
+    stops: pd.DataFrame,
+    labels: pd.DataFrame,
+) -> tuple[str | None, pd.Series | None]:
     st.subheader("Admin Review Queue")
     queue = review_queue_table(stops, labels)
     if queue.empty:
-        st.info("Import stops before reviewing labels.")
-        return None
+        st.info("Submit raw labels before reviewing label decisions.")
+        return None, None
 
     filter_cols = st.columns([1.2, 1.1, 1.1], vertical_alignment="bottom")
     status_options = list(REVIEW_STATUS_COLORS)
@@ -39,10 +184,11 @@ def render_review_queue(project_id: str, stops: pd.DataFrame, labels: pd.DataFra
 
     if filtered.empty:
         st.info("No stops match the review queue filters.")
-        return None
+        return None, None
     st.dataframe(review_queue_display_table(filtered).head(200), width="stretch", hide_index=True)
 
     queue_records = filtered.reset_index(drop=True)
+    sync_review_queue_stop_picker(queue_records)
     queue_labels = [review_queue_label(row) for _, row in queue_records.iterrows()]
     selected_index = st.selectbox(
         "Stop to review",
@@ -52,6 +198,7 @@ def render_review_queue(project_id: str, stops: pd.DataFrame, labels: pd.DataFra
     )
     selected_stop = queue_records.iloc[int(selected_index)]
     selected_stop_id = str(selected_stop.get("stop_id", ""))
+    st.session_state["label_selected_stop_id"] = selected_stop_id
 
     stop_labels = labels[labels["stop_id"].astype(str) == selected_stop_id] if not labels.empty else pd.DataFrame()
     detail_cols = st.columns([1.25, 1, 1.25, 1, 1])
@@ -67,6 +214,15 @@ def render_review_queue(project_id: str, stops: pd.DataFrame, labels: pd.DataFra
         st.markdown("#### Raw Label Comparison")
         st.dataframe(raw_label_comparison_table(stop_labels), width="stretch", hide_index=True)
 
+    return selected_stop_id, selected_stop
+
+
+def render_admin_review_decision(
+    project_id: str,
+    selected_stop_id: str,
+    selected_stop: pd.Series,
+    taxonomy: list[dict[str, Any]],
+) -> None:
     previous = stop_review_snapshot(selected_stop)
     category_options = taxonomy_names(taxonomy)
     current_category = previous["shade_category"]
@@ -84,6 +240,7 @@ def render_review_queue(project_id: str, stops: pd.DataFrame, labels: pd.DataFra
 
     with st.form("admin_review_decision_form", clear_on_submit=False):
         st.markdown("#### Admin Review Decision")
+        render_label_code_helper(taxonomy, "Review label/code definitions")
         top_cols = st.columns([1, 1, 1])
         with top_cols[0]:
             action = st.selectbox("Decision type", REVIEW_ACTION_OPTIONS, key="review_action")
@@ -170,6 +327,12 @@ def render_review_queue(project_id: str, stops: pd.DataFrame, labels: pd.DataFra
             st.success(f"Applied review decision and saved audit event {event_id}.")
             st.rerun()
 
+
+def render_review_queue(project_id: str, stops: pd.DataFrame, labels: pd.DataFrame, taxonomy: list[dict[str, Any]]) -> str | None:
+    selected_stop_id, selected_stop = render_review_queue_selector(stops, labels)
+    if not selected_stop_id or selected_stop is None:
+        return None
+    render_admin_review_decision(project_id, selected_stop_id, selected_stop, taxonomy)
     return selected_stop_id
 
 
@@ -574,24 +737,12 @@ def apply_review_decision_to_stop(
 
 
 
-def render_labels_page() -> None:
-    st.title("Labeling")
-    project_id = st.session_state.get("active_project_id")
-    stops = st.session_state.get("stops", pd.DataFrame())
-    taxonomy = st.session_state.get("taxonomy", [])
-    if not project_id:
-        st.warning("Save or load a project before collecting labels.")
-        return
-    if stops.empty:
-        st.warning("Import a stop dataset before collecting labels.")
-        return
-
-    labels = list_shade_labels(project_id)
-    st.dataframe(raw_label_summary(labels, stops), width="stretch", hide_index=True)
-    render_agreement_metrics(labels, stops)
-    queue_stop_id = render_review_queue(project_id, stops, labels, taxonomy)
-    render_review_audit_history(project_id, queue_stop_id)
-
+def render_raw_label_collection(
+    project_id: str,
+    stops: pd.DataFrame,
+    labels: pd.DataFrame,
+    taxonomy: list[dict[str, Any]],
+) -> None:
     st.subheader("Raw Label Collection")
     stop_options = stops.reset_index(drop=True)
     sync_label_stop_picker(stop_options)
@@ -609,15 +760,14 @@ def render_labels_page() -> None:
     detail_cols = st.columns([1, 1, 1])
     detail_cols[0].metric("Current label", str(selected_stop.get("shading", "Needs Review") or "Needs Review"))
     detail_cols[1].metric("Review status", str(selected_stop.get("review_status", "Unlabeled") or "Unlabeled"))
-    detail_cols[2].metric("Raw labels for stop", len(list_shade_labels(project_id, selected_stop_id)))
+    selected_stop_labels = labels[labels["stop_id"].astype(str) == selected_stop_id] if not labels.empty else pd.DataFrame()
+    detail_cols[2].metric("Raw labels for stop", len(selected_stop_labels))
 
-    map_selected_stop_id = render_stop_reference_map(stops, selected_stop_id, taxonomy, st.session_state.get("visualization", {}))
-    if map_selected_stop_id and map_selected_stop_id != selected_stop_id:
-        st.session_state["label_selected_stop_id"] = map_selected_stop_id
-        st.rerun()
+    render_shared_label_reference_map(stops, selected_stop_id, taxonomy)
 
     with st.form("raw_label_form", clear_on_submit=False):
         st.subheader("Submit Raw Shade Label")
+        render_label_code_helper(taxonomy, "Raw label/code definitions")
         current_category = str(selected_stop.get("shading", "")).strip()
         manual_source_index = LABEL_SOURCE_OPTIONS.index("Manual review") if "Manual review" in LABEL_SOURCE_OPTIONS else 0
         default_role = "Reviewer" if "Reviewer" in LABELER_ROLE_OPTIONS else LABELER_ROLE_OPTIONS[0]
@@ -765,6 +915,46 @@ def render_labels_page() -> None:
             "shade_study_raw_labels.csv",
             "text/csv",
         )
+
+
+def render_review_label_section(
+    project_id: str,
+    stops: pd.DataFrame,
+    labels: pd.DataFrame,
+    taxonomy: list[dict[str, Any]],
+) -> None:
+    selected_stop_id, selected_stop = render_review_queue_selector(stops, labels)
+    if selected_stop_id and selected_stop is not None:
+        render_shared_label_reference_map(stops, selected_stop_id, taxonomy)
+        render_admin_review_decision(project_id, selected_stop_id, selected_stop, taxonomy)
+    render_review_audit_history(project_id, selected_stop_id)
+
+
+def render_labeling_summary(labels: pd.DataFrame, stops: pd.DataFrame) -> None:
+    st.subheader("Labeling Summary")
+    st.dataframe(raw_label_summary(labels, stops), width="stretch", hide_index=True)
+    render_agreement_metrics(labels, stops)
+
+
+def render_labels_page() -> None:
+    st.title("Labeling")
+    project_id = st.session_state.get("active_project_id")
+    stops = st.session_state.get("stops", pd.DataFrame())
+    taxonomy = st.session_state.get("taxonomy", [])
+    if not project_id:
+        st.warning("Save or load a project before collecting labels.")
+        return
+    if stops.empty:
+        st.warning("Import a stop dataset before collecting labels.")
+        return
+
+    labels = list_shade_labels(project_id)
+    workflow = render_label_workflow_toggle()
+    if workflow == "Review labels":
+        render_review_label_section(project_id, stops, labels, taxonomy)
+    else:
+        render_raw_label_collection(project_id, stops, labels, taxonomy)
+    render_labeling_summary(labels, stops)
 
 
 

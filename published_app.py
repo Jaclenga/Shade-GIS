@@ -58,6 +58,8 @@ FILTER_EXCLUDED_FIELDS = {
     "destination",
 }
 METRIC_REQUIREMENTS = {
+    "Shade sources": ["shade_sources"],
+    "Shade coverage": ["shade_coverage"],
     "Shade distribution": ["shading"],
     "Stops without shade": ["shading"],
     "Stops requiring review": ["shading"],
@@ -67,6 +69,33 @@ METRIC_REQUIREMENTS = {
     "Shade by neighborhood": ["municipality", "shading"],
     "Shade vs ridership": ["ridership", "shading"],
     "Priority stops": ["priority_score"],
+}
+DEFAULT_METRIC_CARDS = ["Shade sources", "Shade coverage"]
+LEGACY_DEFAULT_METRIC_CARDS = [
+    "Shade distribution",
+    "Stops without shade",
+    "Stops requiring review",
+    "Review status",
+    "Agreement metrics",
+    "Shade by route",
+    "Shade by neighborhood",
+    "Shade vs ridership",
+    "Priority stops",
+]
+SHADE_SOURCE_CHART_CODES = {"natural": "Natural", "constructed": "Constructed", "manmade": "Manmade"}
+SHADE_SOURCE_CHART_ALIASES = {
+    "intentional built": "Constructed",
+    "intentional constructed": "Constructed",
+    "constructed shade": "Constructed",
+    "incidental built": "Manmade",
+    "manmade shade": "Manmade",
+    "natural shade": "Natural",
+}
+SHADE_COVERAGE_CHART_CODES = {
+    "no shade": "No Shade",
+    "limited": "Limited",
+    "significant": "Significant",
+    "significant shade": "Significant",
 }
 
 
@@ -675,12 +704,15 @@ def chart_data(df: pd.DataFrame, chart: dict[str, Any]) -> tuple[pd.DataFrame, s
     aggregation = chart.get("aggregation", "Count")
     if x_field not in df.columns:
         return pd.DataFrame(), "", ""
+    working = normalize_chart_dimension_values(df, x_field)
+    if working.empty:
+        return pd.DataFrame(), "", ""
     if y_field == RECORD_COUNT_FIELD or aggregation == "Count":
-        data = df.groupby(x_field, dropna=False).size().reset_index(name="stops")
+        data = working.groupby(x_field, dropna=False).size().reset_index(name="stops")
         return data, x_field, "stops"
     if y_field not in df.columns:
         return pd.DataFrame(), "", ""
-    working = df.loc[:, [x_field, y_field]].copy()
+    working = working.loc[:, [x_field, y_field]].copy()
     working[y_field] = pd.to_numeric(working[y_field], errors="coerce")
     grouped = working.groupby(x_field, dropna=False)[y_field]
     if aggregation == "Average":
@@ -704,7 +736,7 @@ def render_custom_charts(df: pd.DataFrame, visualization: dict[str, Any]) -> Non
         if data.empty:
             continue
         with columns[index % 2]:
-            st.markdown(f"#### {chart.get('title') or 'Chart'}")
+            st.markdown(f"#### {custom_chart_title(chart, index)}")
             chart_type = chart.get("chart_type", "Bar")
             if chart_type == "Line":
                 st.line_chart(data, x=x_field, y=y_field)
@@ -733,7 +765,10 @@ def available_dashboard_sections(df: pd.DataFrame) -> list[str]:
 
 def selected_dashboard_sections(df: pd.DataFrame, visualization: dict[str, Any]) -> list[str]:
     available = available_dashboard_sections(df)
-    selected = [label for label in visualization.get("metric_cards", []) if label in available]
+    metric_cards = visualization.get("metric_cards", [])
+    if metric_cards == LEGACY_DEFAULT_METRIC_CARDS:
+        metric_cards = DEFAULT_METRIC_CARDS
+    selected = [label for label in metric_cards if label in available]
     return selected or available
 
 
@@ -741,10 +776,63 @@ def normalized_category_series(df: pd.DataFrame, column: str) -> pd.Series:
     return df[column].fillna("(blank)").astype(str).str.strip().replace("", "(blank)")
 
 
+def normalize_shade_source_chart_value(value: Any) -> str:
+    text = str(value or "").strip()
+    normalized = text.lower()
+    return SHADE_SOURCE_CHART_CODES.get(normalized) or SHADE_SOURCE_CHART_ALIASES.get(normalized, "")
+
+
+def normalize_shade_coverage_chart_value(value: Any) -> str:
+    text = str(value or "").strip()
+    return SHADE_COVERAGE_CHART_CODES.get(text.lower(), "")
+
+
+def explode_list_field(df: pd.DataFrame, column: str) -> pd.DataFrame:
+    if column != "shade_sources":
+        return df
+    rows = []
+    for _, row in df.iterrows():
+        pieces = re.split(r"\s*[;,]\s*", str(row.get(column, "") or ""))
+        normalized_values = []
+        for piece in pieces:
+            normalized = normalize_shade_source_chart_value(piece)
+            if normalized and normalized not in normalized_values:
+                normalized_values.append(normalized)
+        for normalized in normalized_values:
+            output = row.copy()
+            output[column] = normalized
+            rows.append(output)
+    return pd.DataFrame(rows, columns=df.columns)
+
+
+def normalize_chart_dimension_values(df: pd.DataFrame, column: str) -> pd.DataFrame:
+    if column == "shade_sources":
+        return explode_list_field(df, column)
+    if column == "shade_coverage":
+        working = df.copy()
+        working[column] = working[column].map(normalize_shade_coverage_chart_value)
+        return working[working[column] != ""].copy()
+    return df
+
+
+def custom_chart_title(chart: dict[str, Any], index: int) -> str:
+    title = str(chart.get("title", "") or "").strip()
+    if title.lower() in {"", "custom chart", f"custom chart {index + 1}"}:
+        x_field = chart.get("x")
+        if x_field == "shade_sources":
+            return "Shade Sources"
+        if x_field == "shade_coverage":
+            return "Shade Coverage"
+        return f"Custom chart {index + 1}"
+    return title
+
+
 def count_by_field(df: pd.DataFrame, column: str, count_name: str = "stops") -> pd.DataFrame:
     if df.empty or column not in df.columns:
         return pd.DataFrame(columns=[column, count_name])
-    working = df.copy()
+    working = normalize_chart_dimension_values(df, column)
+    if working.empty:
+        return pd.DataFrame(columns=[column, count_name])
     working[column] = normalized_category_series(working, column)
     return working.groupby(column, dropna=False).size().reset_index(name=count_name).sort_values(count_name, ascending=False)
 
@@ -818,19 +906,25 @@ def render_issue_analytics_dashboard(df: pd.DataFrame, visualization: dict[str, 
     st.markdown("#### Summary Statistics")
     render_metric_cards(df)
 
-    summary_cols = st.columns(2)
-    if "Shade distribution" in selected and "shading" in df.columns:
-        with summary_cols[0]:
-            st.markdown("#### Shade Distribution")
-            shade_counts = count_by_field(df, "shading")
-            st.bar_chart(shade_counts, x="shading", y="stops")
-            st.dataframe(shade_counts, width="stretch", hide_index=True)
-    if "Review status" in selected and "review_status" in df.columns:
-        with summary_cols[1]:
-            st.markdown("#### Review Status")
-            review_counts = count_by_field(df, "review_status")
-            st.bar_chart(review_counts, x="review_status", y="stops")
-            st.dataframe(review_counts, width="stretch", hide_index=True)
+    count_charts = [
+        ("Shade sources", "Shade Sources", "shade_sources"),
+        ("Shade coverage", "Shade Coverage", "shade_coverage"),
+        ("Shade distribution", "Shade Distribution", "shading"),
+        ("Review status", "Review Status", "review_status"),
+    ]
+    active_count_charts = [
+        (title, column)
+        for key, title, column in count_charts
+        if key in selected and column in df.columns
+    ]
+    if active_count_charts:
+        summary_cols = st.columns(2)
+        for index, (title, column) in enumerate(active_count_charts):
+            with summary_cols[index % 2]:
+                st.markdown(f"#### {title}")
+                counts = count_by_field(df, column)
+                st.bar_chart(counts, x=column, y="stops")
+                st.dataframe(counts, width="stretch", hide_index=True)
 
     queue_rows = []
     if "Stops without shade" in selected and "shading" in df.columns:

@@ -1,4 +1,5 @@
 import json
+import re
 import urllib.parse
 from typing import Any
 
@@ -11,13 +12,38 @@ from shade_gis.builder_imports import REQUIRED_STOP_FIELDS, hex_to_rgb, normaliz
 DEFAULT_DISPLAY_COLUMNS = ["stop_id", "stop_name", "routes", "shading", "review_status", "priority_score"]
 RECORD_COUNT_FIELD = "Record count"
 MAX_CUSTOM_CHARTS = 10
+DEFAULT_METRIC_CARDS = [
+    "Shade sources",
+    "Shade coverage",
+]
+LEGACY_DEFAULT_METRIC_CARDS = [
+    "Shade distribution",
+    "Stops without shade",
+    "Stops requiring review",
+    "Review status",
+    "Agreement metrics",
+    "Shade by route",
+    "Shade by neighborhood",
+    "Shade vs ridership",
+    "Priority stops",
+]
 DEFAULT_CUSTOM_CHART = {
-    "title": "Custom chart",
-    "x": "shading",
+    "title": "Shade Sources",
+    "x": "shade_sources",
     "y": RECORD_COUNT_FIELD,
     "aggregation": "Count",
     "chart_type": "Bar",
 }
+DEFAULT_CUSTOM_CHARTS = [
+    DEFAULT_CUSTOM_CHART,
+    {
+        "title": "Shade Coverage",
+        "x": "shade_coverage",
+        "y": RECORD_COUNT_FIELD,
+        "aggregation": "Count",
+        "chart_type": "Bar",
+    },
+]
 
 DEFAULT_VISUALIZATION = {
     "color_by": "Shade category",
@@ -33,17 +59,7 @@ DEFAULT_VISUALIZATION = {
         "high": "#ef4444",
     },
     "field_color_maps": {},
-    "metric_cards": [
-        "Shade distribution",
-        "Stops without shade",
-        "Stops requiring review",
-        "Review status",
-        "Agreement metrics",
-        "Shade by route",
-        "Shade by neighborhood",
-        "Shade vs ridership",
-        "Priority stops",
-    ],
+    "metric_cards": DEFAULT_METRIC_CARDS,
     "overlays": [],
     "gis_overlays": [],
     "priority_weights": {
@@ -53,7 +69,7 @@ DEFAULT_VISUALIZATION = {
     "show_legend": True,
     "show_downloads": True,
     "display_columns": DEFAULT_DISPLAY_COLUMNS,
-    "custom_charts": [DEFAULT_CUSTOM_CHART],
+    "custom_charts": DEFAULT_CUSTOM_CHARTS,
 }
 
 MARKER_SHAPES = ["Circle", "Pin", "Square", "Diamond", "Triangle"]
@@ -104,6 +120,8 @@ OVERLAY_REQUIREMENTS = {
 }
 
 METRIC_REQUIREMENTS = {
+    "Shade sources": ["shade_sources"],
+    "Shade coverage": ["shade_coverage"],
     "Shade distribution": ["shading"],
     "Stops without shade": ["shading"],
     "Stops requiring review": ["shading"],
@@ -117,6 +135,25 @@ METRIC_REQUIREMENTS = {
 
 CHART_TYPES = ["Bar", "Line", "Scatter"]
 CHART_AGGREGATIONS = ["Count", "Mean", "Sum", "Median", "Min", "Max"]
+SHADE_SOURCE_CHART_CODES = {"natural": "Natural", "constructed": "Constructed", "manmade": "Manmade"}
+SHADE_SOURCE_CHART_ALIASES = {
+    "intentional built": "Constructed",
+    "intentional constructed": "Constructed",
+    "constructed shade": "Constructed",
+    "incidental built": "Manmade",
+    "manmade shade": "Manmade",
+    "natural shade": "Natural",
+}
+SHADE_COVERAGE_CHART_CODES = {
+    "no shade": "No Shade",
+    "limited": "Limited",
+    "significant": "Significant",
+    "significant shade": "Significant",
+}
+DEFAULT_CHART_TITLES_BY_X = {
+    "shade_sources": "Shade Sources",
+    "shade_coverage": "Shade Coverage",
+}
 PRIORITY_FACTOR_DETAILS = {
     "ridership": (
         "Ridership",
@@ -247,7 +284,10 @@ def clean_selected_options(selected: list[str], options: list[str]) -> list[str]
 
 def selected_dashboard_sections(df: pd.DataFrame, visualization: dict[str, Any]) -> list[str]:
     available = get_available_metric_cards(df)
-    selected = clean_selected_options(visualization.get("metric_cards", []), available)
+    metric_cards = visualization.get("metric_cards", [])
+    if metric_cards == LEGACY_DEFAULT_METRIC_CARDS:
+        metric_cards = DEFAULT_METRIC_CARDS
+    selected = clean_selected_options(metric_cards, available)
     return selected or available
 
 
@@ -327,6 +367,8 @@ def ensure_custom_chart_defaults(df: pd.DataFrame, chart: dict[str, Any] | None 
     fallback_x = "shading" if "shading" in columns else (columns[0] if columns else "")
     if chart.get("x") not in columns:
         chart["x"] = fallback_x
+    if str(chart.get("title", "")).strip().lower() in {"", "custom chart", f"custom chart {index + 1}"}:
+        chart["title"] = DEFAULT_CHART_TITLES_BY_X.get(chart.get("x"), f"Custom chart {index + 1}")
     y_options = [RECORD_COUNT_FIELD] + columns
     if chart.get("y") not in y_options:
         chart["y"] = RECORD_COUNT_FIELD
@@ -337,19 +379,62 @@ def ensure_custom_chart_defaults(df: pd.DataFrame, chart: dict[str, Any] | None 
     return chart
 
 
+def default_custom_charts() -> list[dict[str, Any]]:
+    return json.loads(json.dumps(DEFAULT_CUSTOM_CHARTS))
+
+
+def normalize_shade_source_chart_value(value: Any) -> str:
+    text = str(value or "").strip()
+    normalized = text.lower()
+    return SHADE_SOURCE_CHART_CODES.get(normalized) or SHADE_SOURCE_CHART_ALIASES.get(normalized, "")
+
+
+def normalize_shade_coverage_chart_value(value: Any) -> str:
+    text = str(value or "").strip()
+    return SHADE_COVERAGE_CHART_CODES.get(text.lower(), "")
+
+
 def get_custom_charts(df: pd.DataFrame, visualization: dict[str, Any]) -> list[dict[str, Any]]:
     charts = visualization.get("custom_charts")
     if not isinstance(charts, list):
         legacy_chart = visualization.get("custom_chart")
-        charts = [legacy_chart] if isinstance(legacy_chart, dict) else [json.loads(json.dumps(DEFAULT_CUSTOM_CHART))]
+        charts = [legacy_chart] if isinstance(legacy_chart, dict) else default_custom_charts()
     if not charts:
-        charts = [json.loads(json.dumps(DEFAULT_CUSTOM_CHART))]
+        charts = default_custom_charts()
     charts = [
         ensure_custom_chart_defaults(df, chart if isinstance(chart, dict) else {}, index)
         for index, chart in enumerate(charts[:MAX_CUSTOM_CHARTS])
     ]
     visualization["custom_charts"] = charts
     return charts
+
+
+def explode_list_chart_values(df: pd.DataFrame, column: str) -> pd.DataFrame:
+    if column != "shade_sources":
+        return df
+    rows = []
+    for _, row in df.iterrows():
+        pieces = re.split(r"\s*[;,]\s*", str(row.get(column, "") or ""))
+        normalized_values = []
+        for piece in pieces:
+            normalized = normalize_shade_source_chart_value(piece)
+            if normalized and normalized not in normalized_values:
+                normalized_values.append(normalized)
+        for normalized in normalized_values:
+            output = row.copy()
+            output[column] = normalized
+            rows.append(output)
+    return pd.DataFrame(rows, columns=df.columns)
+
+
+def normalize_chart_dimension_values(df: pd.DataFrame, column: str) -> pd.DataFrame:
+    if column == "shade_sources":
+        return explode_list_chart_values(df, column)
+    if column == "shade_coverage":
+        working = df.copy()
+        working[column] = working[column].map(normalize_shade_coverage_chart_value)
+        return working[working[column] != ""].copy()
+    return df
 
 
 def build_custom_chart_data(df: pd.DataFrame, chart: dict[str, Any]) -> tuple[pd.DataFrame, str, str]:
@@ -360,7 +445,9 @@ def build_custom_chart_data(df: pd.DataFrame, chart: dict[str, Any]) -> tuple[pd
     if df.empty or x_column not in df.columns:
         return pd.DataFrame(), "", ""
 
-    working = df.copy()
+    working = normalize_chart_dimension_values(df, x_column)
+    if working.empty:
+        return pd.DataFrame(), "", ""
     working[x_column] = working[x_column].fillna("(blank)").astype(str).str.strip().replace("", "(blank)")
     if y_column == RECORD_COUNT_FIELD or y_column not in working.columns:
         chart_df = working.groupby(x_column, dropna=False).size().reset_index(name="records")

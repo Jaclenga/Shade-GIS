@@ -50,7 +50,14 @@ def test_raw_labels_conflict_and_majority_are_queryable(db_path, project, taxono
     assert len(labels) == 2
     assert bool(majority.loc[0, "disagreement_flag"]) is True
     assert bool(majority.loc[0, "tied_majority"]) is True
+    assert queue["stop_id"].tolist() == ["1001"]
     assert queue.loc[queue["stop_id"] == "1001", "label_count"].iloc[0] == 2
+
+
+def test_review_queue_excludes_stops_without_submitted_labels(minimal_stops):
+    queue = review_queue_table(minimal_stops, pd.DataFrame())
+
+    assert queue.empty
 
 
 def test_review_queue_display_uses_reviewer_friendly_columns(minimal_stops):
@@ -113,6 +120,29 @@ def test_raw_label_comparison_table_hides_storage_names():
     assert display.loc[0, "Confidence"] == "75%"
     assert display.loc[0, "Reviewer"] == "Jack Lenga (Reviewer)"
     assert display.loc[0, "Input"] == "Manual Review"
+
+
+def test_label_code_definition_tables_include_core_schema_terms(taxonomy):
+    tables = labels_page.label_code_definition_tables(taxonomy)
+
+    assert set(tables) == {
+        "Stored fields",
+        "Coverage codes",
+        "Source codes",
+        "Map label codes",
+        "Review status codes",
+    }
+    assert tables["Stored fields"]["Code"].tolist() == [
+        "shade_coverage",
+        "shade_sources",
+        "shading",
+        "review_status",
+        "confidence",
+    ]
+    assert tables["Coverage codes"]["Code"].tolist() == ["No Shade", "Limited", "Significant"]
+    assert tables["Source codes"]["Code"].tolist() == ["Natural", "Constructed", "Manmade"]
+    assert "Constructed Shade" in tables["Map label codes"]["Code"].tolist()
+    assert "Accepted" in tables["Review status codes"]["Code"].tolist()
 
 
 def test_agreement_metric_summary_value_column_is_arrow_safe(db_path, project, taxonomy, methodology, visualization, minimal_stops):

@@ -296,6 +296,10 @@ def review_queue_table(stops: pd.DataFrame, labels: pd.DataFrame) -> pd.DataFram
         if column not in queue.columns:
             queue[column] = fallback
         queue[column] = queue[column].fillna(fallback)
+    queue["label_count"] = pd.to_numeric(queue["label_count"], errors="coerce").fillna(0).astype(int)
+    queue = queue[queue["label_count"] > 0].copy()
+    if queue.empty:
+        return queue
 
     priority_rank = {status: index for index, status in enumerate(["Disputed", "Needs Review", "Unlabeled"])}
     queue["queue_rank"] = queue["review_status"].map(priority_rank).fillna(10)
@@ -325,4 +329,3 @@ def review_queue_label(row: pd.Series) -> str:
     else:
         review_state = "no labels yet"
     return f"{stop_picker_label(row)} | {status} | {review_state}"
-
