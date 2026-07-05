@@ -931,7 +931,7 @@ def render_review_label_section(
 
 
 def render_labeling_summary(labels: pd.DataFrame, stops: pd.DataFrame) -> None:
-    st.subheader("Labeling Summary")
+    st.subheader("Summary")
     st.dataframe(raw_label_summary(labels, stops), width="stretch", hide_index=True)
     render_agreement_metrics(labels, stops)
 
