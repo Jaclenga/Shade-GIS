@@ -12,6 +12,17 @@ REVIEW_STATUS_DEFINITIONS = {
 }
 
 LABEL_WORKFLOW_OPTIONS = ["Review labels", "Submit raw label"]
+CONFIDENCE_LEVEL_SCORES = {"Low": 0.35, "Medium": 0.7, "High": 1.0}
+
+
+def confidence_level_from_score(score: Any) -> str:
+    try:
+        numeric_score = float(score)
+    except (TypeError, ValueError):
+        return "Medium"
+    if pd.isna(numeric_score):
+        return "Medium"
+    return min(CONFIDENCE_LEVEL_SCORES, key=lambda label: abs(CONFIDENCE_LEVEL_SCORES[label] - numeric_score))
 
 
 def label_code_definition_tables(taxonomy: list[dict[str, Any]]) -> dict[str, pd.DataFrame]:
@@ -111,6 +122,17 @@ def render_label_workflow_toggle() -> str:
         horizontal=True,
         key="label_workflow_mode",
     )
+
+
+def render_confidence_level_buttons(label: str, default_score: Any, key: str) -> tuple[str, float]:
+    options = list(CONFIDENCE_LEVEL_SCORES)
+    default_label = confidence_level_from_score(default_score)
+    if hasattr(st, "segmented_control"):
+        selected = st.segmented_control(label, options, default=default_label, key=key)
+        selected = selected or default_label
+    else:
+        selected = st.radio(label, options, index=options.index(default_label), horizontal=True, key=key)
+    return selected, CONFIDENCE_LEVEL_SCORES[selected]
 
 
 def render_shared_label_reference_map(
@@ -271,7 +293,11 @@ def render_admin_review_decision(
                 key="review_final_status",
             )
         with decision_cols[1]:
-            final_confidence = st.slider("Decision confidence", 0.0, 1.0, confidence_default, 0.05, key="review_final_confidence")
+            _, final_confidence = render_confidence_level_buttons(
+                "Decision confidence",
+                confidence_default,
+                "review_final_confidence",
+            )
 
         lower_cols = st.columns([1, 1])
         with lower_cols[0]:
@@ -804,14 +830,7 @@ def render_raw_label_collection(
         shade_category = shade_category_from_coverage_and_sources(shade_coverage, shade_sources)
 
         st.markdown("##### Assessment")
-        confidence_choice = st.radio(
-            "Confidence",
-            ["Low", "Medium", "High"],
-            index=1,
-            horizontal=True,
-            key="label_confidence_level",
-        )
-        confidence = {"Low": 0.35, "Medium": 0.7, "High": 1.0}[confidence_choice]
+        _, confidence = render_confidence_level_buttons("Confidence", 0.7, "label_confidence_level")
 
         st.markdown("##### Optional")
         notes = st.text_area("Notes", key="label_notes", height=80)

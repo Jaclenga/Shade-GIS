@@ -783,14 +783,37 @@ def import_log_record(project_id: str, entry: dict[str, Any]) -> tuple[Any, ...]
 def clean_scalar(value: Any) -> Any:
     if value is None:
         return None
+    if isinstance(value, (dict, list, tuple, set)):
+        return json.dumps(clean_json_value(value), ensure_ascii=True)
     try:
         if pd.isna(value):
             return None
     except (TypeError, ValueError):
         pass
-    if isinstance(value, (dict, list, tuple)):
-        return json.dumps(value, ensure_ascii=True)
+    item = getattr(value, "item", None)
+    if callable(item):
+        try:
+            scalar = item()
+        except (TypeError, ValueError):
+            scalar = value
+        if scalar is not value:
+            return clean_scalar(scalar)
+    if isinstance(value, datetime):
+        return value.isoformat()
+    if isinstance(value, Path):
+        return str(value)
     return value
+
+
+def clean_json_value(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {str(clean_scalar(key)): clean_json_value(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple, set)):
+        return [clean_json_value(item) for item in value]
+    value = clean_scalar(value)
+    if isinstance(value, (str, int, float, bool)) or value is None:
+        return value
+    return str(value)
 
 
 def clean_optional_text(value: Any) -> str | None:

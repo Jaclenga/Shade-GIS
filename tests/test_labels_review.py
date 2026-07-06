@@ -219,6 +219,43 @@ def test_review_lifecycle_records_every_admin_action(db_path, project, taxonomy,
     assert archive["metadata_actor_role"] == "Expert"
 
 
+def test_review_event_accepts_pandas_scalar_metadata(db_path, project, taxonomy, methodology, visualization, minimal_stops):
+    project_id = create_project(project, taxonomy, methodology, visualization, minimal_stops, [], db_path)
+    selected_stop = pd.DataFrame(
+        {
+            "label_count": pd.Series([3], dtype="int64"),
+            "agreement_pct": pd.Series([0.75], dtype="float64"),
+            "confidence": pd.Series([1.0], dtype="float64"),
+        }
+    ).iloc[0]
+
+    add_review_event(
+        project_id,
+        {
+            "stop_id": "1001",
+            "actor_id": "expert1",
+            "actor_role": "Expert",
+            "action": "Resolve dispute",
+            "from_status": "Disputed",
+            "to_status": "Accepted",
+            "from_label": "Limited",
+            "to_label": "No Shade",
+            "from_confidence": selected_stop.get("confidence"),
+            "to_confidence": selected_stop.get("confidence"),
+            "agreement_pct": selected_stop.get("agreement_pct"),
+            "label_count": selected_stop.get("label_count"),
+            "notes": "Pandas scalar metadata regression test",
+        },
+        db_path,
+    )
+
+    history = list_review_history(project_id, "1001", db_path)
+
+    assert history.iloc[0]["metadata_label_count"] == 3
+    assert history.iloc[0]["metadata_agreement_pct"] == 0.75
+    assert history.iloc[0]["metadata_to_confidence"] == 1.0
+
+
 def test_apply_review_decision_updates_active_stop(monkeypatch):
     class FakeStreamlit:
         session_state = {
