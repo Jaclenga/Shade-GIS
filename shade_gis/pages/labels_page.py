@@ -142,15 +142,38 @@ def sync_review_queue_stop_picker(queue_records: pd.DataFrame) -> None:
         st.session_state["review_queue_stop_index"] = 0
 
 
+def filter_review_queue_records(
+    queue: pd.DataFrame,
+    selected_statuses: list[str],
+    queue_search: str = "",
+    only_conflicts: bool = False,
+) -> pd.DataFrame:
+    filtered = queue.copy()
+    if selected_statuses and "review_status" in filtered.columns:
+        filtered = filtered[filtered["review_status"].isin(selected_statuses)]
+    if queue_search.strip():
+        haystack = (
+            filtered["stop_id"].fillna("").astype(str)
+            + " "
+            + filtered["stop_name"].fillna("").astype(str)
+            + " "
+            + filtered["routes"].fillna("").astype(str)
+        ).str.lower()
+        filtered = filtered[haystack.str.contains(re.escape(queue_search.strip().lower()), na=False)]
+    if only_conflicts and "disagreement_flag" in filtered.columns:
+        filtered = filtered[filtered["disagreement_flag"].astype(bool)]
+    return filtered.copy()
+
+
 def render_review_queue_selector(
     stops: pd.DataFrame,
     labels: pd.DataFrame,
-) -> tuple[str | None, pd.Series | None]:
+) -> tuple[str | None, pd.Series | None, pd.DataFrame]:
     st.subheader("Admin Review Queue")
     queue = review_queue_table(stops, labels)
     if queue.empty:
         st.info("Submit raw labels before reviewing label decisions.")
-        return None, None
+        return None, None, pd.DataFrame()
 
     filter_cols = st.columns([1.2, 1.1, 1.1], vertical_alignment="bottom")
     status_options = list(REVIEW_STATUS_COLORS)
@@ -167,24 +190,11 @@ def render_review_queue_selector(
     with filter_cols[2]:
         only_conflicts = st.checkbox("Only disagreements", value=False, key="review_queue_conflicts_only")
 
-    filtered = queue
-    if selected_statuses:
-        filtered = filtered[filtered["review_status"].isin(selected_statuses)]
-    if queue_search.strip():
-        haystack = (
-            filtered["stop_id"].fillna("").astype(str)
-            + " "
-            + filtered["stop_name"].fillna("").astype(str)
-            + " "
-            + filtered["routes"].fillna("").astype(str)
-        ).str.lower()
-        filtered = filtered[haystack.str.contains(re.escape(queue_search.strip().lower()), na=False)]
-    if only_conflicts:
-        filtered = filtered[filtered["disagreement_flag"].astype(bool)]
+    filtered = filter_review_queue_records(queue, selected_statuses, queue_search, only_conflicts)
 
     if filtered.empty:
         st.info("No stops match the review queue filters.")
-        return None, None
+        return None, None, pd.DataFrame()
     st.dataframe(review_queue_display_table(filtered).head(200), width="stretch", hide_index=True)
 
     queue_records = filtered.reset_index(drop=True)
@@ -214,7 +224,7 @@ def render_review_queue_selector(
         st.markdown("#### Raw Label Comparison")
         st.dataframe(raw_label_comparison_table(stop_labels), width="stretch", hide_index=True)
 
-    return selected_stop_id, selected_stop
+    return selected_stop_id, selected_stop, queue_records
 
 
 def render_admin_review_decision(
@@ -325,9 +335,10 @@ def render_admin_review_decision(
 
 
 def render_review_queue(project_id: str, stops: pd.DataFrame, labels: pd.DataFrame, taxonomy: list[dict[str, Any]]) -> str | None:
-    selected_stop_id, selected_stop = render_review_queue_selector(stops, labels)
+    selected_stop_id, selected_stop, queue_records = render_review_queue_selector(stops, labels)
     if not selected_stop_id or selected_stop is None:
         return None
+    render_shared_label_reference_map(queue_records, selected_stop_id, taxonomy)
     render_admin_review_decision(project_id, selected_stop_id, selected_stop, taxonomy)
     return selected_stop_id
 
@@ -415,9 +426,24 @@ def build_stop_reference_deck(
     if mappable_stops.empty or selected_stop.empty:
         return None
 
+    configured_opacity = max(0.1, min(1.0, float(visualization.get("marker_opacity", 0.82))))
     map_visualization = dict(visualization)
     map_visualization["marker_size"] = min(8, max(5, int(map_visualization.get("marker_size", 7))))
-    return build_deck_chart(mappable_stops, taxonomy, map_visualization)
+    map_visualization["marker_opacity"] = max(0.1, configured_opacity * 0.35)
+    deck = build_deck_chart(mappable_stops, taxonomy, map_visualization)
+
+    marker_size = int(map_visualization.get("marker_size", 7))
+    selected_visualization = dict(map_visualization)
+    selected_visualization["marker_opacity"] = 1.0
+    selected_visualization["marker_size"] = min(48, max(marker_size + 4, int(marker_size * 1.8)))
+    selected_deck = build_deck_chart(selected_stop, taxonomy, selected_visualization)
+    selected_layers = [layer for layer in selected_deck.layers if getattr(layer, "id", "") == "stops_layer"]
+    if selected_layers:
+        selected_layer = selected_layers[-1]
+        selected_layer.id = "selected_reference_stop_layer"
+        selected_layer.pickable = False
+        deck.layers = [*deck.layers, selected_layer]
+    return deck
 
 
 
@@ -446,7 +472,7 @@ def render_stop_reference_map(
         height=320,
         on_select="rerun",
         selection_mode="single-object",
-        key=f"label_reference_map_{selected_stop_id}",
+        key="label_reference_map",
     )
     return stop_id_from_reference_map_selection(selection, mappable_stops)
 
@@ -898,9 +924,9 @@ def render_review_label_section(
     labels: pd.DataFrame,
     taxonomy: list[dict[str, Any]],
 ) -> None:
-    selected_stop_id, selected_stop = render_review_queue_selector(stops, labels)
+    selected_stop_id, selected_stop, queue_records = render_review_queue_selector(stops, labels)
     if selected_stop_id and selected_stop is not None:
-        render_shared_label_reference_map(stops, selected_stop_id, taxonomy)
+        render_shared_label_reference_map(queue_records, selected_stop_id, taxonomy)
         render_admin_review_decision(project_id, selected_stop_id, selected_stop, taxonomy)
     render_review_audit_history(project_id, selected_stop_id)
 

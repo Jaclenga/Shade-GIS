@@ -86,6 +86,22 @@ def test_review_queue_display_uses_reviewer_friendly_columns(minimal_stops):
     assert display.loc[0, "Needs attention"] == "Disagreement"
 
 
+def test_filter_review_queue_records_keeps_only_review_needed_defaults(minimal_stops):
+    queue = minimal_stops.copy()
+    queue["review_status"] = ["Needs Review", "Accepted"]
+    queue["label_count"] = [2, 2]
+    queue["agreement_pct"] = [50.0, 100.0]
+    queue["disagreement_flag"] = [True, False]
+    queue["tied_majority"] = [False, False]
+
+    filtered = labels_page.filter_review_queue_records(
+        queue,
+        ["Needs Review", "Disputed", "Unlabeled"],
+    )
+
+    assert filtered["stop_id"].tolist() == ["1001"]
+
+
 def test_review_queue_label_reads_like_review_task(minimal_stops):
     row = minimal_stops.iloc[0].copy()
     row["review_status"] = "Unlabeled"
@@ -268,12 +284,53 @@ def test_stop_reference_map_datasets_include_all_points_and_selected_point(minim
     assert selected["stop_id"].tolist() == ["1002"]
 
 
-def test_stop_reference_deck_uses_visuals_styling_without_selection_overlay(minimal_stops, taxonomy, visualization):
+def test_stop_reference_deck_uses_visuals_styling_for_selected_marker(minimal_stops, taxonomy, visualization):
     deck = labels_page.build_stop_reference_deck(minimal_stops, "1001", taxonomy, visualization)
 
     assert deck is not None
-    assert [layer.id for layer in deck.layers] == ["stops_layer"]
-    assert len(deck.layers[-1].data) == 2
+    assert [layer.id for layer in deck.layers] == ["stops_layer", "selected_reference_stop_layer"]
+    assert len(deck.layers[0].data) == 2
+    assert len(deck.layers[-1].data) == 1
+    assert deck.layers[-1].data[0]["stop_id"] == "1001"
+    assert deck.layers[-1].data[0]["marker_size"] > deck.layers[0].data[0]["marker_size"]
+    assert deck.layers[-1].data[0]["fill_color"] == deck.layers[0].data[0]["fill_color"]
+    assert deck.layers[-1].data[0]["fill_color"] != [255, 75, 75]
+    assert deck.layers[0].opacity < deck.layers[-1].opacity
+    assert deck.layers[0].opacity == 0.287
+    assert deck.layers[-1].opacity == 1.0
+
+
+def test_review_reference_deck_uses_filtered_queue_points(minimal_stops, taxonomy, visualization):
+    queue = minimal_stops.loc[minimal_stops["stop_id"] == "1001"].copy()
+
+    deck = labels_page.build_stop_reference_deck(queue, "1001", taxonomy, visualization)
+
+    assert deck is not None
+    assert len(deck.layers[0].data) == 1
+    assert deck.layers[0].data[0]["stop_id"] == "1001"
+
+
+def test_stop_reference_map_uses_preview_style_stable_selection_key(monkeypatch, minimal_stops, taxonomy, visualization):
+    pydeck_calls = []
+
+    class FakeStreamlit:
+        @staticmethod
+        def info(*args, **kwargs):
+            return None
+
+        @staticmethod
+        def pydeck_chart(*args, **kwargs):
+            pydeck_calls.append((args, kwargs))
+            return {"selection": {}}
+
+    monkeypatch.setattr(labels_page, "st", FakeStreamlit)
+
+    labels_page.render_stop_reference_map(minimal_stops, "1001", taxonomy, visualization)
+
+    assert pydeck_calls
+    assert pydeck_calls[0][1]["key"] == "label_reference_map"
+    assert pydeck_calls[0][1]["on_select"] == "rerun"
+    assert pydeck_calls[0][1]["selection_mode"] == "single-object"
 
 
 def test_reference_map_selection_returns_clicked_stop(minimal_stops):
