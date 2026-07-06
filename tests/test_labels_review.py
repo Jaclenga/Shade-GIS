@@ -268,12 +268,12 @@ def test_stop_reference_map_datasets_include_all_points_and_selected_point(minim
     assert selected["stop_id"].tolist() == ["1002"]
 
 
-def test_stop_reference_deck_adds_selected_highlight_layer(minimal_stops, taxonomy, visualization):
+def test_stop_reference_deck_uses_visuals_styling_without_selection_overlay(minimal_stops, taxonomy, visualization):
     deck = labels_page.build_stop_reference_deck(minimal_stops, "1001", taxonomy, visualization)
 
     assert deck is not None
-    assert deck.layers[-1].id == "selected_label_stop_layer"
-    assert len(deck.layers[-1].data) == 1
+    assert [layer.id for layer in deck.layers] == ["stops_layer"]
+    assert len(deck.layers[-1].data) == 2
 
 
 def test_reference_map_selection_returns_clicked_stop(minimal_stops):

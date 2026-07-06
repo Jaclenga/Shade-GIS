@@ -417,25 +417,7 @@ def build_stop_reference_deck(
 
     map_visualization = dict(visualization)
     map_visualization["marker_size"] = min(8, max(5, int(map_visualization.get("marker_size", 7))))
-    deck = build_deck_chart(mappable_stops, taxonomy, map_visualization)
-    highlight_layer = pdk.Layer(
-        "ScatterplotLayer",
-        data=selected_stop,
-        id="selected_label_stop_layer",
-        get_position="[stop_lon, stop_lat]",
-        get_fill_color=[255, 75, 75, 70],
-        get_line_color=[255, 75, 75],
-        get_radius=18,
-        radius_units="pixels",
-        radius_min_pixels=18,
-        radius_max_pixels=18,
-        stroked=True,
-        filled=True,
-        line_width_min_pixels=4,
-        pickable=False,
-    )
-    deck.layers = [*deck.layers, highlight_layer]
-    return deck
+    return build_deck_chart(mappable_stops, taxonomy, map_visualization)
 
 
 

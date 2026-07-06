@@ -1,7 +1,7 @@
-import base64
 import json
 import math
 import re
+import urllib.parse
 from pathlib import Path
 from typing import Any
 
@@ -34,14 +34,46 @@ LEGACY_COLOR_MODE_FIELDS = {"Shade category": "shading"}
 
 DEFAULT_DISPLAY_COLUMNS = ["stop_id", "stop_name", "routes", "shading", "review_status", "priority_score"]
 DEFAULT_PALETTE = [
-    "#2563eb", "#16a34a", "#dc2626", "#9333ea", "#d97706",
-    "#0891b2", "#be123c", "#4d7c0f", "#7c3aed", "#0f766e",
+    "#2563eb",
+    "#16a34a",
+    "#dc2626",
+    "#9333ea",
+    "#0891b2",
+    "#ea580c",
+    "#4f46e5",
+    "#65a30d",
+    "#db2777",
+    "#0f766e",
+    "#7c3aed",
+    "#ca8a04",
+    "#475569",
+    "#be123c",
+    "#0284c7",
+    "#15803d",
 ]
+MARKER_SHAPES = ["Circle", "Pin", "Square", "Diamond", "Triangle"]
 FILTER_FIELD_LABELS = {
     "shading": "Shade coverage",
     "review_status": "Review status",
     "confidence": "Confidence",
     "ridership": "Ridership",
+    "priority_score": "Priority score",
+}
+FIELD_LABELS = {
+    "stop_id": "Stop ID",
+    "stop_name": "Stop name",
+    "stop_lat": "Latitude",
+    "stop_lon": "Longitude",
+    "agency": "Agency",
+    "routes": "Routes",
+    "municipality": "Municipality",
+    "shading": "Shade coverage",
+    "shade_coverage": "Shade coverage",
+    "shade_sources": "Shade sources",
+    "review_status": "Review status",
+    "confidence": "Confidence",
+    "ridership": "Ridership",
+    "nearby_destinations": "Nearby destinations",
     "priority_score": "Priority score",
 }
 DESTINATION_FILTER_COLUMNS = ["nearby_destinations", "destinations", "destination"]
@@ -114,7 +146,13 @@ def normalize_hex_color(value: str, fallback: str = "#808080") -> str:
     text = str(value or "").strip()
     if not text.startswith("#"):
         text = f"#{text}"
-    return text if len(text) == 7 else fallback
+    if len(text) != 7:
+        return fallback
+    try:
+        int(text[1:], 16)
+    except ValueError:
+        return fallback
+    return text.lower()
 
 
 def hex_to_rgb(value: str) -> list[int]:
@@ -145,13 +183,33 @@ def calculate_priority_scores(df: pd.DataFrame, weights: dict[str, float]) -> pd
         weight_total += low_shade_weight
     if weight_total == 0:
         return pd.Series(0.0, index=df.index)
-    return (score / weight_total).round(4)
+    return ((score / weight_total) * 100).round(1)
 
 
 def get_selected_display_columns(df: pd.DataFrame, visualization: dict[str, Any]) -> list[str]:
     configured = visualization.get("display_columns") or DEFAULT_DISPLAY_COLUMNS
     columns = [column for column in configured if column in df.columns]
     return columns or [column for column in DEFAULT_DISPLAY_COLUMNS if column in df.columns] or list(df.columns[:8])
+
+
+def display_label(column: str) -> str:
+    return FIELD_LABELS.get(column, column.replace("_", " ").title())
+
+
+def field_values_for_colors(df: pd.DataFrame, field: str) -> list[str]:
+    if field not in df.columns:
+        return []
+    values = df[field].fillna("Unknown").astype(str).str.strip()
+    values = values.where(values != "", "Unknown")
+    return sorted(values.unique().tolist())[: len(DEFAULT_PALETTE)]
+
+
+def ensure_field_color_map(visualization: dict[str, Any], df: pd.DataFrame, field: str) -> dict[str, str]:
+    field_maps = visualization.setdefault("field_color_maps", {})
+    color_map = field_maps.setdefault(field, {})
+    for index, value in enumerate(field_values_for_colors(df, field)):
+        color_map.setdefault(value, DEFAULT_PALETTE[index % len(DEFAULT_PALETTE)])
+    return color_map
 
 
 def clean_gis_overlays(visualization: dict[str, Any]) -> list[dict[str, Any]]:
@@ -216,115 +274,163 @@ def build_gis_overlay_layers(visualization: dict[str, Any]) -> list[pdk.Layer]:
     return layers
 
 
-def color_lookup(df: pd.DataFrame, taxonomy: list[dict[str, Any]], visualization: dict[str, Any]) -> tuple[str, dict[str, list[int]]]:
-    label = visualization.get("color_by", "Shade coverage")
-    field = COLOR_MODE_FIELDS.get(label) or LEGACY_COLOR_MODE_FIELDS.get(label, label)
-    if field not in df.columns:
-        field = "shading" if "shading" in df.columns else df.columns[0]
-    if field == "priority_score":
-        colors = visualization.get("priority_colors", {})
-        return field, {
-            "low": hex_to_rgb(colors.get("low", "#34d399")),
-            "mid": hex_to_rgb(colors.get("mid", "#facc15")),
-            "high": hex_to_rgb(colors.get("high", "#ef4444")),
-        }
-    if field == "shading":
-        mapping = {
-            str(item.get("name", "")): hex_to_rgb(item.get("color", "#808080"))
-            for item in taxonomy
-        }
-    else:
-        stored = visualization.get("field_color_maps", {}).get(field, {})
-        values = sorted(str(value) for value in df[field].fillna("Unknown").unique())
-        mapping = {
-            value: hex_to_rgb(stored.get(value, DEFAULT_PALETTE[index % len(DEFAULT_PALETTE)]))
-            for index, value in enumerate(values)
-        }
-    mapping.setdefault("Unknown", [128, 128, 128])
-    return field, mapping
-
-
-def marker_color(row: pd.Series, field: str, mapping: dict[str, list[int]]) -> list[int]:
-    if field == "priority_score":
-        score = float(row.get("priority_score", 0) or 0)
-        if score >= 0.66:
-            return mapping["high"]
-        if score >= 0.33:
-            return mapping["mid"]
-        return mapping["low"]
-    return mapping.get(str(row.get(field, "Unknown")), mapping.get("Unknown", [128, 128, 128]))
-
-
 def build_tooltip_text(df: pd.DataFrame, visualization: dict[str, Any]) -> str:
     columns = get_selected_display_columns(df, visualization)[:8]
-    return "\n".join([f"{column}: {{{column}}}" for column in columns])
+    return "\n".join(f"{display_label(column)}: {{{column}}}" for column in columns)
 
 
-def marker_svg(shape: str, fill: list[int], stroke: str) -> str:
-    fill_hex = "#%02x%02x%02x" % tuple(fill)
-    stroke_hex = normalize_hex_color(stroke, "#141414")
-    if shape == "Square":
-        body = f"<rect x='6' y='6' width='52' height='52' rx='6' fill='{fill_hex}' stroke='{stroke_hex}' stroke-width='4'/>"
-    elif shape == "Diamond":
-        body = f"<path d='M32 4 L60 32 L32 60 L4 32 Z' fill='{fill_hex}' stroke='{stroke_hex}' stroke-width='4'/>"
-    elif shape == "Triangle":
-        body = f"<path d='M32 5 L60 58 L4 58 Z' fill='{fill_hex}' stroke='{stroke_hex}' stroke-width='4'/>"
+def get_color_options(df: pd.DataFrame) -> dict[str, str]:
+    options = COLOR_MODE_FIELDS.copy()
+    excluded = {"stop_id", "stop_name", "stop_lat", "stop_lon", "priority_score", "shading", "review_status"}
+    for column in df.columns:
+        if column in excluded:
+            continue
+        series = df[column].dropna().astype(str).str.strip()
+        unique_count = series[series != ""].nunique()
+        if 1 < unique_count <= len(DEFAULT_PALETTE):
+            options[f"Column: {FIELD_LABELS.get(column, column)}"] = column
+    return options
+
+
+def color_for_priority(value: Any, visualization: dict[str, Any]) -> list[int]:
+    numeric = pd.to_numeric(pd.Series([value]), errors="coerce").iloc[0]
+    score = 0.0 if pd.isna(numeric) else max(0.0, min(100.0, float(numeric)))
+    colors = visualization.get("priority_colors", {})
+    low = hex_to_rgb(colors.get("low", "#34d399"))
+    mid = hex_to_rgb(colors.get("mid", "#facc15"))
+    high = hex_to_rgb(colors.get("high", "#ef4444"))
+    if score <= 50:
+        start, end, fraction = low, mid, score / 50
     else:
-        body = f"<path d='M32 4 C18 4 7 15 7 29 C7 49 32 62 32 62 C32 62 57 49 57 29 C57 15 46 4 32 4 Z' fill='{fill_hex}' stroke='{stroke_hex}' stroke-width='4'/><circle cx='32' cy='29' r='9' fill='white' fill-opacity='0.85'/>"
-    svg = f"<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'>{body}</svg>"
-    encoded = base64.b64encode(svg.encode("utf-8")).decode("ascii")
-    return f"data:image/svg+xml;base64,{encoded}"
+        start, end, fraction = mid, high, (score - 50) / 50
+    return [int(start[channel] + (end[channel] - start[channel]) * fraction) for channel in range(3)]
+
+
+def color_dataset(df: pd.DataFrame, taxonomy: list[dict[str, Any]], visualization: dict[str, Any]) -> pd.DataFrame:
+    colored = df.copy()
+    color_options = get_color_options(colored)
+    color_by = visualization.get("color_by", "Shade coverage")
+    field = color_options.get(color_by) or LEGACY_COLOR_MODE_FIELDS.get(color_by, "shading")
+    if field == "review_status":
+        review_colors = visualization.get("review_status_colors", {})
+        colored["fill_color"] = colored["review_status"].map(
+            {status: hex_to_rgb(color) for status, color in review_colors.items()}
+        )
+    elif field == "priority_score":
+        colored["fill_color"] = colored["priority_score"].apply(lambda value: color_for_priority(value, visualization))
+    elif field == "shading":
+        color_map = {
+            str(item.get("name", "")).strip(): hex_to_rgb(str(item.get("color", "")))
+            for item in taxonomy
+            if str(item.get("name", "")).strip()
+        }
+        colored["fill_color"] = colored["shading"].map(color_map)
+    else:
+        color_map = ensure_field_color_map(visualization, colored, field)
+        values = colored[field].fillna("Unknown").astype(str).str.strip()
+        values = values.where(values != "", "Unknown")
+        colored["fill_color"] = values.map({value: hex_to_rgb(color) for value, color in color_map.items()})
+    colored["fill_color"] = colored["fill_color"].apply(lambda value: value if isinstance(value, list) else [128, 128, 128])
+    return colored
+
+
+def marker_icon_svg(
+    shape: str,
+    fill_color: list[int],
+    stroke_color: list[int],
+    opacity: float,
+    stroke_width: int,
+) -> str:
+    fill = f"rgb({fill_color[0]},{fill_color[1]},{fill_color[2]})"
+    stroke = f"rgb({stroke_color[0]},{stroke_color[1]},{stroke_color[2]})"
+    stroke_width = max(0, int(stroke_width))
+    base_attrs = f'fill="{fill}" fill-opacity="{opacity:.2f}" stroke="{stroke}" stroke-width="{stroke_width}"'
+    if shape == "Pin":
+        body = (
+            f'<path {base_attrs} d="M32 4C20.4 4 11 13.4 11 25c0 15.2 21 35 21 35s21-19.8 21-35C53 13.4 43.6 4 32 4z"/>'
+            f'<circle cx="32" cy="25" r="8" fill="#ffffff" fill-opacity="0.8" stroke="none"/>'
+        )
+    elif shape == "Square":
+        body = f'<rect {base_attrs} x="12" y="12" width="40" height="40" rx="4"/>'
+    elif shape == "Diamond":
+        body = f'<polygon {base_attrs} points="32,6 58,32 32,58 6,32"/>'
+    elif shape == "Triangle":
+        body = f'<polygon {base_attrs} points="32,7 58,55 6,55"/>'
+    else:
+        body = f'<circle {base_attrs} cx="32" cy="32" r="24"/>'
+    svg = f'<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">{body}</svg>'
+    return f"data:image/svg+xml;charset=utf-8,{urllib.parse.quote(svg)}"
+
+
+def add_marker_icons(map_df: pd.DataFrame, visualization: dict[str, Any]) -> pd.DataFrame:
+    shaped = map_df.copy()
+    shape = visualization.get("marker_shape", "Circle")
+    if shape not in MARKER_SHAPES:
+        shape = "Circle"
+    opacity = max(0.1, min(1.0, float(visualization.get("marker_opacity", 0.82))))
+    stroke_color = hex_to_rgb(visualization.get("marker_stroke_color", "#141414"))
+    stroke_width = int(visualization.get("marker_stroke_width", 1))
+    shaped["icon_data"] = shaped["fill_color"].apply(
+        lambda color: {
+            "url": marker_icon_svg(shape, color, stroke_color, opacity, stroke_width),
+            "width": 64,
+            "height": 64,
+            "anchorY": 64 if shape == "Pin" else 32,
+        }
+    )
+    shaped["marker_size"] = int(visualization.get("marker_size", 18))
+    return shaped
 
 
 def calculate_view_state(df: pd.DataFrame) -> pdk.ViewState:
+    if df.empty:
+        return pdk.ViewState(latitude=39.5, longitude=-98.35, zoom=3, min_zoom=2, max_zoom=18, pitch=0)
+    lat = pd.to_numeric(df["stop_lat"], errors="coerce")
+    lon = pd.to_numeric(df["stop_lon"], errors="coerce")
     return pdk.ViewState(
-        latitude=float(df["stop_lat"].mean()),
-        longitude=float(df["stop_lon"].mean()),
-        zoom=10,
+        latitude=float(lat.mean()),
+        longitude=float(lon.mean()),
+        zoom=10 if max(lat.max() - lat.min(), lon.max() - lon.min()) < 0.8 else 8,
+        min_zoom=2,
+        max_zoom=18,
         pitch=0,
     )
 
 
 def build_deck_chart(df: pd.DataFrame, taxonomy: list[dict[str, Any]], visualization: dict[str, Any]) -> pdk.Deck:
-    map_df = df.dropna(subset=["stop_lat", "stop_lon"]).copy()
-    field, colors = color_lookup(map_df, taxonomy, visualization)
-    map_df["marker_color"] = map_df.apply(lambda row: marker_color(row, field, colors), axis=1)
-    marker_size = int(visualization.get("marker_size", 7) or 7)
-    shape = visualization.get("marker_shape", "Circle")
-    if shape == "Circle":
+    map_df = color_dataset(df, taxonomy, visualization)
+    if visualization.get("marker_shape", "Circle") == "Circle":
+        marker_size = max(4, min(48, int(visualization.get("marker_size", 7))))
+        map_df["marker_size"] = marker_size
         layer = pdk.Layer(
             "ScatterplotLayer",
             data=map_df,
             id="stops_layer",
             get_position="[stop_lon, stop_lat]",
-            get_fill_color="marker_color",
-            get_radius=marker_size,
+            get_fill_color="fill_color",
+            get_radius="marker_size",
             radius_units="pixels",
             radius_min_pixels=4,
             radius_max_pixels=48,
-            opacity=float(visualization.get("marker_opacity", 0.82) or 0.82),
+            opacity=max(0.1, min(1.0, float(visualization.get("marker_opacity", 0.82)))),
             stroked=True,
             get_line_color=hex_to_rgb(visualization.get("marker_stroke_color", "#141414")),
-            line_width_min_pixels=int(visualization.get("marker_stroke_width", 1) or 1),
+            line_width_min_pixels=max(0, int(visualization.get("marker_stroke_width", 1))),
             pickable=True,
             auto_highlight=True,
         )
     else:
-        stroke = visualization.get("marker_stroke_color", "#141414")
-        map_df["icon_data"] = map_df["marker_color"].apply(
-            lambda color: {"url": marker_svg(shape, color, stroke), "width": 64, "height": 64, "anchorY": 64}
-        )
-        map_df["icon_size"] = marker_size * 4
+        map_df = add_marker_icons(map_df, visualization)
         layer = pdk.Layer(
             "IconLayer",
             data=map_df,
             id="stops_layer",
             get_icon="icon_data",
             get_position="[stop_lon, stop_lat]",
-            get_size="icon_size",
+            get_size="marker_size",
             size_units="pixels",
-            size_min_pixels=16,
-            size_max_pixels=96,
+            size_min_pixels=4,
+            size_max_pixels=48,
             pickable=True,
             auto_highlight=True,
         )

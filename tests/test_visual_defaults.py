@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import copy
+import json
+
 import pandas as pd
 
 import published_app
@@ -7,6 +10,7 @@ from shade_gis.builder_visuals import (
     DEFAULT_VISUALIZATION,
     LEGACY_DEFAULT_METRIC_CARDS,
     RECORD_COUNT_FIELD,
+    build_deck_chart,
     build_custom_chart_data,
     get_custom_charts,
     selected_dashboard_sections,
@@ -170,3 +174,51 @@ def test_published_source_count_chart_splits_semicolon_values():
 
     assert y_column == "stops"
     assert counts == {"Constructed": 2, "Natural": 1}
+
+
+def test_published_map_matches_visuals_map_renderer():
+    stops = pd.DataFrame(
+        [
+            {
+                "stop_id": "1001",
+                "stop_name": "Main St",
+                "stop_lat": 27.9506,
+                "stop_lon": -82.4572,
+                "shading": "No Shade",
+                "review_status": "Accepted",
+                "priority_score": 75,
+                "context_label": "High",
+            },
+            {
+                "stop_id": "1002",
+                "stop_name": "Central Ave",
+                "stop_lat": 27.9510,
+                "stop_lon": -82.4590,
+                "shading": "Limited",
+                "review_status": "Unlabeled",
+                "priority_score": 25,
+                "context_label": "Moderate",
+            },
+        ]
+    )
+    taxonomy = [
+        {"name": "No Shade", "color": "#dc143c", "sort_order": 1},
+        {"name": "Limited", "color": "#d69e2e", "sort_order": 2},
+    ]
+    visualization = copy.deepcopy(DEFAULT_VISUALIZATION)
+    visualization.update(
+        {
+            "color_by": "Column: context_label",
+            "marker_shape": "Diamond",
+            "marker_size": 13,
+            "marker_opacity": 0.65,
+            "marker_stroke_color": "#222222",
+            "marker_stroke_width": 2,
+            "map_style": "Dark",
+        }
+    )
+
+    visuals_deck = json.loads(build_deck_chart(stops, taxonomy, copy.deepcopy(visualization)).to_json())
+    published_deck = json.loads(published_app.build_deck_chart(stops, taxonomy, copy.deepcopy(visualization)).to_json())
+
+    assert published_deck == visuals_deck
