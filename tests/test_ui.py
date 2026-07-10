@@ -52,11 +52,22 @@ def wait_for_streamlit_health(port: int, timeout_seconds: int = 45) -> None:
 
 
 def wait_for_streamlit_idle(playwright_api, page, timeout_ms: int = 60_000) -> None:
-    # Streamlit delays its running indicator by 500 ms. Waiting past that
+    # Streamlit delays its running indicator by ~500 ms. Waiting past that
     # threshold distinguishes a rendered page from a fully completed script run.
+    #
+    # Newer Streamlit versions may keep the connection-status element mounted
+    # in the DOM and toggle its visibility / contents during reconnects. Tests
+    # should therefore check that the running icon is gone and that there is
+    # no visible "Connecting" text or active "Connection error" dialog.
     page.wait_for_timeout(700)
     playwright_api.expect(page.get_by_test_id("stStatusWidgetRunningIcon")).to_have_count(0, timeout=timeout_ms)
-    playwright_api.expect(page.get_by_test_id("stConnectionStatus")).to_have_count(0, timeout=timeout_ms)
+
+    # Ensure no visible "Connecting" status text remains.
+    playwright_api.expect(page.get_by_text("Connecting")).to_have_count(0, timeout=timeout_ms)
+
+    # Ensure no visible connection-error dialog or message remains.
+    playwright_api.expect(page.get_by_role("dialog", name="Connection error")).to_have_count(0, timeout=timeout_ms)
+    playwright_api.expect(page.get_by_text("Streamlit server is not responding")).to_have_count(0, timeout=timeout_ms)
 
 
 @pytest.fixture
@@ -160,9 +171,21 @@ def test_builder_navigation_pages_render(playwright_api, streamlit_server: Strea
         chart_warnings = []
         chart_events: list[tuple[str, str]] = []
         current_surface = {"name": "Data"}
-        # Capture all console messages and page errors for later debugging.
+        # Capture all console messages, page errors, failed requests, and
+        # websocket events for later debugging in CI.
         page.on("console", lambda message: chart_events.append((message.type, message.text)))
         page.on("pageerror", lambda error: chart_events.append(("pageerror", str(error))))
+        # Record failed network requests
+        page.on("requestfailed", lambda request: chart_events.append(("requestfailed", request.url)))
+        # Record websocket connections and closures (Playwright exposes a WebSocket object)
+        def _on_ws(ws):
+            try:
+                chart_events.append(("websocket", getattr(ws, "url", "")))
+                ws.on("close", lambda _: chart_events.append(("websocket_closed", getattr(ws, "url", ""))))
+            except Exception:
+                pass
+
+        page.on("websocket", _on_ws)
         # Keep the original targeted warnings separate for assertions.
         page.on(
             "console",
