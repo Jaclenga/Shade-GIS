@@ -59,6 +59,7 @@ def test_export_csv_geojson_raw_labels_and_config(db_path, project, taxonomy, me
     with zipfile.ZipFile(io.BytesIO(bundle_bytes)) as bundle:
         assert "public_voting.py" in bundle.namelist()
         assert "psycopg[binary]>=3.2,<4" in bundle.read("requirements.txt").decode("utf-8")
+        assert "altair>=6,<7" in bundle.read("requirements.txt").decode("utf-8")
         assert "*.sqlite3" in bundle.read(".gitignore").decode("utf-8")
         deployed_config = json.loads(bundle.read("shade_study_config.json"))
         assert deployed_config["visualization"]["voting"]["enabled"] is False

@@ -5,6 +5,24 @@ import pandas as pd
 import published_app
 
 
+def test_safe_chart_has_no_scale_binding_and_drops_non_finite_values() -> None:
+    data = pd.DataFrame(
+        {
+            "shade_sources": ["Natural", "Constructed", "Unknown"],
+            "stops": [12, float("inf"), float("nan")],
+        }
+    )
+
+    chart = published_app.build_safe_chart(data, "shade_sources", "stops")
+
+    assert chart is not None
+    spec = chart.to_dict()
+    assert "params" not in spec
+    assert spec["data"]["name"]
+    assert len(chart.data) == 1
+    assert chart.data.iloc[0]["shade_sources"] == "Natural"
+
+
 def test_published_app_separates_legacy_coverage_and_source_labels():
     legacy = pd.DataFrame(
         [

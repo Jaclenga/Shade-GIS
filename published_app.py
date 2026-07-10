@@ -5,6 +5,7 @@ import urllib.parse
 from pathlib import Path
 from typing import Any
 
+import altair as alt
 import pandas as pd
 import pydeck as pdk
 import streamlit as st
@@ -895,6 +896,74 @@ def chart_data(df: pd.DataFrame, chart: dict[str, Any]) -> tuple[pd.DataFrame, s
     return data, x_field, y_field
 
 
+def build_safe_chart(
+    data: pd.DataFrame,
+    x_field: str,
+    y_field: str,
+    chart_type: str = "Bar",
+    color_field: str | None = None,
+) -> alt.Chart | None:
+    """Build a finite-data chart without Streamlit's categorical scale binding."""
+    required = [x_field, y_field] + ([color_field] if color_field else [])
+    if data.empty or any(field not in data.columns for field in required):
+        return None
+
+    chart_data = data.loc[:, required].copy()
+    chart_data[y_field] = pd.to_numeric(chart_data[y_field], errors="coerce")
+    chart_data = chart_data.loc[
+        chart_data[y_field].notna() & chart_data[y_field].map(lambda value: math.isfinite(float(value)))
+    ]
+    if chart_data.empty:
+        return None
+
+    chart_data[x_field] = chart_data[x_field].fillna("(blank)")
+    x_is_numeric = chart_type == "Scatter" and pd.api.types.is_numeric_dtype(chart_data[x_field])
+    x_type = "quantitative" if x_is_numeric else "nominal"
+    x_sort = "-y" if chart_type == "Bar" and not x_is_numeric else None
+    encoding: dict[str, Any] = {
+        "x": alt.X(field=x_field, type=x_type, sort=x_sort, title=FIELD_LABELS.get(x_field, x_field.replace("_", " ").title())),
+        "y": alt.Y(field=y_field, type="quantitative", title=FIELD_LABELS.get(y_field, y_field.replace("_", " ").title())),
+        "tooltip": [
+            alt.Tooltip(field=x_field, type=x_type, title=FIELD_LABELS.get(x_field, x_field.replace("_", " ").title())),
+            alt.Tooltip(field=y_field, type="quantitative", title=FIELD_LABELS.get(y_field, y_field.replace("_", " ").title())),
+        ],
+    }
+    if color_field:
+        chart_data[color_field] = chart_data[color_field].fillna("(blank)").astype(str)
+        encoding["color"] = alt.Color(field=color_field, type="nominal", title=FIELD_LABELS.get(color_field, color_field.replace("_", " ").title()))
+        encoding["tooltip"].insert(1, alt.Tooltip(field=color_field, type="nominal", title=FIELD_LABELS.get(color_field, color_field.replace("_", " ").title())))
+
+    base = alt.Chart(chart_data)
+    if chart_type == "Line":
+        return base.mark_line(point=True).encode(**encoding)
+    if chart_type == "Area":
+        return base.mark_area().encode(**encoding)
+    if chart_type == "Scatter":
+        return base.mark_circle(size=70).encode(**encoding)
+    return base.mark_bar().encode(**encoding)
+
+
+def render_safe_chart(
+    data: pd.DataFrame,
+    x_field: str,
+    y_field: str,
+    chart_type: str = "Bar",
+    color_field: str | None = None,
+) -> None:
+    chart = build_safe_chart(data, x_field, y_field, chart_type, color_field)
+    if chart is not None:
+        st.altair_chart(chart, width="stretch")
+
+
+def wide_chart_data(data: pd.DataFrame, value_name: str = "stops") -> tuple[pd.DataFrame, str, str]:
+    if data.empty:
+        return pd.DataFrame(), "", ""
+    index_field = str(data.index.name or "group")
+    wide = data.rename_axis(index_field).reset_index()
+    long = wide.melt(id_vars=[index_field], var_name="series", value_name=value_name)
+    return long, index_field, "series"
+
+
 def render_custom_charts(df: pd.DataFrame, visualization: dict[str, Any]) -> None:
     charts = visualization.get("custom_charts") or []
     if not charts:
@@ -907,14 +976,7 @@ def render_custom_charts(df: pd.DataFrame, visualization: dict[str, Any]) -> Non
         with columns[index % 2]:
             st.markdown(f"#### {custom_chart_title(chart, index)}")
             chart_type = chart.get("chart_type", "Bar")
-            if chart_type == "Line":
-                st.line_chart(data, x=x_field, y=y_field)
-            elif chart_type == "Area":
-                st.area_chart(data, x=x_field, y=y_field)
-            elif chart_type == "Scatter":
-                st.scatter_chart(data, x=x_field, y=y_field)
-            else:
-                st.bar_chart(data, x=x_field, y=y_field)
+            render_safe_chart(data, x_field, y_field, chart_type)
 
 
 def has_column_data(df: pd.DataFrame, column: str) -> bool:
@@ -1025,7 +1087,8 @@ def render_route_shade_dashboard(df: pd.DataFrame) -> None:
     grouped = grouped[grouped["route"].isin(top_routes)]
     pivot = grouped.pivot_table(index="route", columns="shading", values="stops", fill_value=0, aggfunc="sum")
     st.markdown("#### Shade By Route")
-    st.bar_chart(pivot)
+    chart_rows, x_field, color_field = wide_chart_data(pivot)
+    render_safe_chart(chart_rows, x_field, "stops", color_field=color_field)
     st.dataframe(grouped.sort_values(["stops", "route"], ascending=[False, True]), width="stretch", hide_index=True)
 
 
@@ -1042,7 +1105,8 @@ def render_grouped_shade_dashboard(df: pd.DataFrame, group_column: str, title: s
         return
     pivot = grouped.pivot_table(index=group_column, columns="shading", values="stops", fill_value=0, aggfunc="sum")
     st.markdown(f"#### {title}")
-    st.bar_chart(pivot)
+    chart_rows, x_field, color_field = wide_chart_data(pivot)
+    render_safe_chart(chart_rows, x_field, "stops", color_field=color_field)
     st.dataframe(grouped.sort_values(["stops", group_column], ascending=[False, True]), width="stretch", hide_index=True)
 
 
@@ -1062,7 +1126,7 @@ def render_numeric_by_shade_dashboard(df: pd.DataFrame, numeric_column: str, val
         .sort_values(f"Mean {value_label}", ascending=False)
     )
     st.markdown(f"#### {title}")
-    st.bar_chart(summary, x="shading", y=f"Mean {value_label}")
+    render_safe_chart(summary, "shading", f"Mean {value_label}")
     st.dataframe(summary, width="stretch", hide_index=True)
 
 
@@ -1092,7 +1156,7 @@ def render_issue_analytics_dashboard(df: pd.DataFrame, visualization: dict[str, 
             with summary_cols[index % 2]:
                 st.markdown(f"#### {title}")
                 counts = count_by_field(df, column)
-                st.bar_chart(counts, x=column, y="stops")
+                render_safe_chart(counts, column, "stops")
                 st.dataframe(counts, width="stretch", hide_index=True)
 
     queue_rows = []

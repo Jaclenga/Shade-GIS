@@ -7,6 +7,7 @@ import pandas as pd
 import pydeck as pdk
 import streamlit as st
 
+import published_app
 from public_voting import DEFAULT_VOTING_CONFIG
 
 from shade_gis.builder_imports import REQUIRED_STOP_FIELDS, hex_to_rgb, normalize_hex_color
@@ -494,12 +495,14 @@ def render_custom_chart(df: pd.DataFrame, chart: dict[str, Any]) -> None:
     if chart_df.empty or not x_column or not y_column:
         st.info("No data is available for the selected chart columns.")
         return
-    if chart.get("chart_type") == "Line":
-        st.line_chart(chart_df, x=x_column, y=y_column)
-    elif chart.get("chart_type") == "Scatter":
-        st.scatter_chart(chart_df, x=x_column, y=y_column)
-    else:
-        st.bar_chart(chart_df, x=x_column, y=y_column)
+    chart_spec = published_app.build_safe_chart(
+        chart_df,
+        x_column,
+        y_column,
+        chart.get("chart_type", "Bar"),
+    )
+    if chart_spec is not None:
+        st.altair_chart(chart_spec, width="stretch")
 
 
 def render_custom_charts(df: pd.DataFrame, visualization: dict[str, Any]) -> None:
