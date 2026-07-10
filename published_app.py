@@ -1333,8 +1333,6 @@ def main() -> None:
         filters["selected_routes"],
         filters,
     )
-    render_metric_cards(visible_stops)
-
     tabs = st.tabs(["Map", "Analytics", "Methodology", "Downloads"])
     with tabs[0]:
         if visible_stops.empty:

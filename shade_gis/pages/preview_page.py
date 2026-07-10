@@ -26,7 +26,6 @@ def render_preview_page() -> None:
         filters,
     )
 
-    published_app.render_metric_cards(visible_stops)
     tabs = st.tabs(["Map", "Analytics", "Methodology", "Exports"])
     with tabs[0]:
         if visible_stops.empty:

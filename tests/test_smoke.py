@@ -11,6 +11,7 @@ def test_core_modules_compile_without_bytecode_writes():
         "published_app.py",
         "public_voting.py",
         "shade_gis/shade_dimensions.py",
+        "shade_gis/pages/preview_page.py",
         "shade_gis/pages/voting_page.py",
     ]:
         source = Path(filename).read_text(encoding="utf-8")
@@ -27,3 +28,11 @@ def test_app_py_is_builder_entrypoint():
     import app
 
     assert app.main.__module__ == "builder_app"
+
+
+def test_summary_metrics_only_render_in_analytics():
+    published_source = Path("published_app.py").read_text(encoding="utf-8")
+    preview_source = Path("shade_gis/pages/preview_page.py").read_text(encoding="utf-8")
+
+    assert published_source.count("render_metric_cards(df)") == 1
+    assert "published_app.render_metric_cards(visible_stops)" not in preview_source
