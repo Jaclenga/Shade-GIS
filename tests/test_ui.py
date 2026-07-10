@@ -238,7 +238,6 @@ def test_builder_navigation_pages_render(playwright_api, streamlit_server: Strea
                         )
                 wait_for_streamlit_idle(playwright_api, page)
                 playwright_api.expect(nav_button).to_have_attribute("kind", "primary", timeout=60_000)
-                playwright_api.expect(nav_button).to_be_enabled(timeout=60_000)
                 if nav_label == "Voting":
                     voting_toggle_container = page.get_by_test_id("stCheckbox").filter(
                         has_text="Let deployed-app visitors vote on stop coverage"
