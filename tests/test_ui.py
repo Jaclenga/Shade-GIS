@@ -216,45 +216,41 @@ def test_builder_navigation_pages_render(playwright_api, streamlit_server: Strea
                 target_heading = page.get_by_role("heading", name=heading, exact=True)
 
                 for attempt in range(2):
-                    # Streamlit may temporarily disable the nav button while a rerun is
-                    # in progress. The relevant signal is whether the target page renders,
-                    # so wait for the control to become visible and then click it.
-                    nav_button.wait_for(state="visible", timeout=15_000)
+                    navigation_error: Exception | None = None
                     try:
-                        nav_button.click()
-                    except Exception:
-                        # Playwright will raise if the element is not ready;
-                        # allow retry logic below to handle it.
-                        raise
-
-                    try:
+                        # Streamlit mounts the next page's header before its rerun has
+                        # necessarily finished. During that window the nav buttons are
+                        # visible but disabled, so visibility alone is not a safe signal
+                        # that another navigation click can be accepted.
+                        nav_button.wait_for(state="visible", timeout=15_000)
+                        playwright_api.expect(nav_button).to_be_enabled(timeout=60_000)
+                        nav_button.click(timeout=60_000)
                         playwright_api.expect(target_heading).to_be_visible(timeout=30_000)
                         break
-                    except AssertionError:
-                        if attempt == 1:
-                            raise
+                    except Exception as error:
+                        navigation_error = error
 
-                        # Avoid a full `page.reload()` (can cause ERR_CONNECTION_REFUSED
-                        # in CI if the server briefly stops accepting connections).
-                        # Instead, wait for the Streamlit health endpoint to respond
-                        # and then re-find the nav button.
-                        try:
-                            # Extract port from fixture URL like http://127.0.0.1:12345
-                            port = int(streamlit_server.url.rsplit(":", 1)[1])
-                            wait_for_streamlit_health(port, timeout_seconds=30)
-                        except Exception:
-                            # If health check fails, fall back to a short wait so
-                            # Playwright can stabilize before retrying the click.
-                            page.wait_for_timeout(1000)
+                    if attempt == 1:
+                        assert navigation_error is not None
+                        raise navigation_error
 
-                        page.locator(
-                            ".builder-brand",
-                            has_text="Shade-GIS",
-                        ).wait_for(timeout=30_000)
+                    # Avoid a full `page.reload()` (it can create a new Streamlit
+                    # session). Wait for the server and current session to stabilize,
+                    # then resolve a fresh locator before the second attempt.
+                    try:
+                        port = int(streamlit_server.url.rsplit(":", 1)[1])
+                        wait_for_streamlit_health(port, timeout_seconds=30)
+                    except Exception:
+                        page.wait_for_timeout(1000)
 
-                        nav_button = (
-                            page.get_by_test_id("stMainBlockContainer").get_by_role("button", name=nav_label, exact=True)
-                        )
+                    page.locator(
+                        ".builder-brand",
+                        has_text="Shade-GIS",
+                    ).wait_for(timeout=30_000)
+
+                    nav_button = (
+                        page.get_by_test_id("stMainBlockContainer").get_by_role("button", name=nav_label, exact=True)
+                    )
                 wait_for_streamlit_idle(playwright_api, page)
                 playwright_api.expect(nav_button).to_have_attribute("kind", "primary", timeout=60_000)
                 if nav_label == "Voting":
