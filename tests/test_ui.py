@@ -226,8 +226,19 @@ def test_builder_navigation_pages_render(playwright_api, streamlit_server: Strea
                         if attempt == 1:
                             raise
 
-                        # Reload and re-find the nav button, then retry.
-                        page.reload(wait_until="domcontentloaded")
+                        # Avoid a full `page.reload()` (can cause ERR_CONNECTION_REFUSED
+                        # in CI if the server briefly stops accepting connections).
+                        # Instead, wait for the Streamlit health endpoint to respond
+                        # and then re-find the nav button.
+                        try:
+                            # Extract port from fixture URL like http://127.0.0.1:12345
+                            port = int(streamlit_server.url.rsplit(":", 1)[1])
+                            wait_for_streamlit_health(port, timeout_seconds=30)
+                        except Exception:
+                            # If health check fails, fall back to a short wait so
+                            # Playwright can stabilize before retrying the click.
+                            page.wait_for_timeout(1000)
+
                         page.locator(
                             ".builder-brand",
                             has_text="Shade-GIS",
