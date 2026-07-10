@@ -231,3 +231,38 @@ def test_published_map_matches_visuals_map_renderer():
     published_deck = json.loads(published_app.build_deck_chart(stops, taxonomy, copy.deepcopy(visualization)).to_json())
 
     assert published_deck == visuals_deck
+
+
+def test_marker_slider_sizes_serialize_as_literal_pixels_and_scale_linearly():
+    stops = pd.DataFrame(
+        [
+            {
+                "stop_id": "1001",
+                "stop_name": "Main St",
+                "stop_lat": 27.9506,
+                "stop_lon": -82.4572,
+                "shading": "No Shade",
+                "review_status": "Unlabeled",
+                "priority_score": 0,
+            }
+        ]
+    )
+    slider_sizes = [4, 24, 48]
+
+    for chart_builder in (build_deck_chart, published_app.build_deck_chart):
+        rendered_circle_sizes = []
+        for marker_size in slider_sizes:
+            visualization = copy.deepcopy(DEFAULT_VISUALIZATION)
+            visualization.update({"marker_shape": "Circle", "marker_size": marker_size})
+            layer = json.loads(chart_builder(stops, [], visualization).to_json())["layers"][-1]
+
+            assert layer["radiusUnits"] == "pixels"
+            rendered_circle_sizes.append(layer["data"][0]["marker_size"])
+
+        assert rendered_circle_sizes == slider_sizes
+
+        visualization = copy.deepcopy(DEFAULT_VISUALIZATION)
+        visualization.update({"marker_shape": "Diamond", "marker_size": 24})
+        icon_layer = json.loads(chart_builder(stops, [], visualization).to_json())["layers"][-1]
+        assert icon_layer["sizeUnits"] == "pixels"
+        assert icon_layer["data"][0]["marker_size"] == 24
