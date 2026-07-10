@@ -115,23 +115,23 @@ def streamlit_server(playwright_api):
     output_thread.start()
     try:
         wait_for_streamlit_health(port)
-        # Wait for the root page to return the app HTML. This avoids a flaky
-        # client "Connection" state where the server's health endpoint is
-        # available but the app frontend hasn't finished initializing.
+        # Ensure the root page is responding with HTTP 200. The Streamlit app
+        # frontend is rendered client-side via JS and WebSocket; a successful
+        # HTTP response is sufficient here. The test itself uses Playwright to
+        # wait for rendered content.
         root_url = f"http://127.0.0.1:{port}/"
         root_deadline = time.time() + 45
         last_error: Exception | None = None
         while time.time() < root_deadline:
             try:
                 with urllib.request.urlopen(root_url, timeout=2) as response:
-                    body = response.read(4096).decode("utf-8", errors="ignore")
-                    if "Shade-GIS" in body or "Project Data" in body:
+                    if getattr(response, "status", None) == 200:
                         break
             except Exception as error:
                 last_error = error
             time.sleep(0.5)
         else:
-            raise RuntimeError(f"Streamlit root page did not return app HTML: {last_error}")
+            raise RuntimeError(f"Streamlit root page did not become available: {last_error}")
         yield StreamlitServer(f"http://127.0.0.1:{port}", process, output)
     finally:
         process.terminate()
