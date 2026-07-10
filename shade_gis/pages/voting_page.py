@@ -1,5 +1,10 @@
 from builder_app import *
-from public_voting import PUBLIC_COVERAGE_OPTIONS, PUBLIC_SOURCE_OPTIONS, normalize_voting_config
+from public_voting import (
+    PUBLIC_COVERAGE_OPTIONS,
+    PUBLIC_SOURCE_OPTIONS,
+    normalize_voting_config,
+    source_taxonomy_help,
+)
 
 
 def render_voting_controls(
@@ -102,13 +107,22 @@ def render_voting_preview(voting: dict[str, Any]) -> None:
             st.markdown(str(voting["description"]))
         options = voting.get("options", [])
         if options:
-            st.radio(str(voting["question"]), options, disabled=True, key="voting_interface_preview_choice")
-            st.markdown("##### Shade source(s)")
+            st.radio(
+                str(voting["question"]),
+                options,
+                disabled=True,
+                key="voting_interface_preview_choice",
+            )
+            st.markdown("##### Shade source(s)", help=source_taxonomy_help())
             st.caption(str(voting["source_question"]))
             source_columns = st.columns(len(PUBLIC_SOURCE_OPTIONS))
             for index, source in enumerate(PUBLIC_SOURCE_OPTIONS):
                 with source_columns[index]:
-                    st.checkbox(source, disabled=True, key=f"voting_interface_preview_source_{source.lower()}")
+                    st.checkbox(
+                        source,
+                        disabled=True,
+                        key=f"voting_interface_preview_source_{source.lower()}",
+                    )
             st.button(str(voting["submit_label"]), disabled=True, key="voting_interface_preview_submit")
         else:
             st.warning("Choose at least one coverage option to complete the interface.")

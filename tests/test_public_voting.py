@@ -6,12 +6,14 @@ import pandas as pd
 
 import published_app
 from public_voting import (
+    PUBLIC_SOURCE_DEFINITIONS,
     community_result,
     get_existing_vote,
     get_existing_vote_details,
     get_vote_counts,
     normalize_voting_config,
     save_vote,
+    source_taxonomy_help,
 )
 
 
@@ -117,6 +119,12 @@ def test_voting_coverage_choices_never_include_source_or_review_categories():
     config = normalize_voting_config(None, mixed_taxonomy)
 
     assert config["options"] == ["No Shade", "Limited Shade", "Significant Shade"]
+
+
+def test_source_heading_tooltip_explains_all_source_categories():
+    all_sources_help = source_taxonomy_help()
+    for source, definition in PUBLIC_SOURCE_DEFINITIONS.items():
+        assert f"**{source}:** {definition}" in all_sources_help
 
 
 def test_sqlite_vote_store_upserts_one_vote_per_browser_session(db_path):

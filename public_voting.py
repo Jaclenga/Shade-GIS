@@ -15,6 +15,14 @@ import streamlit as st
 
 PUBLIC_COVERAGE_OPTIONS = ["No Shade", "Limited Shade", "Significant Shade"]
 PUBLIC_SOURCE_OPTIONS = ["Natural", "Constructed", "Manmade"]
+PUBLIC_SOURCE_DEFINITIONS = {
+    "Natural": "Trees, palms, hedges, or other vegetation visibly shade the waiting area.",
+    "Constructed": (
+        "A designated, purpose-built bus shelter, awning, canopy, overhang, or similar passenger shelter "
+        "visibly shades the waiting area."
+    ),
+    "Manmade": "A nearby building or other non-shelter built feature visibly shades the waiting area.",
+}
 _PUBLIC_COVERAGE_ALIASES = {
     "no shade": "No Shade",
     "limited": "Limited Shade",
@@ -79,6 +87,18 @@ def normalize_vote_sources(value: Any) -> list[str]:
         if source and source not in sources:
             sources.append(source)
     return sources
+
+
+def taxonomy_help_text(options: list[str], definitions: dict[str, str]) -> str:
+    return "\n\n".join(
+        f"**{option}:** {definitions[option]}"
+        for option in options
+        if option in definitions and definitions[option]
+    )
+
+
+def source_taxonomy_help() -> str:
+    return taxonomy_help_text(PUBLIC_SOURCE_OPTIONS, PUBLIC_SOURCE_DEFINITIONS)
 
 
 def normalize_voting_config(
@@ -421,7 +441,7 @@ def render_voting_panel(
         if selected_status == "No Shade":
             for source_key in source_keys.values():
                 st.session_state[source_key] = False
-        st.markdown("##### Shade source(s)")
+        st.markdown("##### Shade source(s)", help=source_taxonomy_help())
         selected_sources = []
         source_columns = st.columns(len(PUBLIC_SOURCE_OPTIONS))
         for index, source in enumerate(PUBLIC_SOURCE_OPTIONS):
