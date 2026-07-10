@@ -5,7 +5,6 @@ import urllib.parse
 from pathlib import Path
 from typing import Any
 
-import altair as alt
 import pandas as pd
 import pydeck as pdk
 import streamlit as st
@@ -18,7 +17,8 @@ CONFIG_PATH = APP_DIR / "shade_study_config.json"
 DATA_PATH = APP_DIR / "shade_study_stops.csv"
 RAW_LABELS_PATH = APP_DIR / "shade_study_raw_labels.csv"
 RECORD_COUNT_FIELD = "Record count"
-STOP_DETAIL_PANEL_HEIGHT = 500
+MAP_PANEL_HEIGHT = 620
+STOP_DETAIL_PANEL_HEIGHT = MAP_PANEL_HEIGHT
 
 MAP_STYLES = {
     "Light": pdk.map_styles.CARTO_LIGHT,
@@ -745,6 +745,9 @@ def render_stop_detail_workflow(
     df: pd.DataFrame,
     visualization: dict[str, Any],
     key_prefix: str,
+    *,
+    show_details: bool = True,
+    show_selection_summary: bool = True,
 ) -> pd.Series | None:
     if df.empty:
         st.info("No stop is available for the active map filters.")
@@ -776,7 +779,11 @@ def render_stop_detail_workflow(
     )
     selected_stop = options.iloc[int(picked_index)]
     st.session_state[selected_key] = str(selected_stop.get("stop_id", ""))
-    st.markdown(f"**{stop_picker_label(selected_stop)}**")
+    if show_selection_summary:
+        st.markdown(f"**{stop_picker_label(selected_stop)}**")
+
+    if not show_details:
+        return selected_stop
 
     st.markdown("#### Stop Details")
     priority = pd.to_numeric(pd.Series([selected_stop.get("priority_score")]), errors="coerce").iloc[0]
@@ -816,6 +823,48 @@ def render_metric_cards(df: pd.DataFrame) -> None:
             delta_color="off",
             help=metric["help"],
         )
+
+
+def render_stop_and_voting_panel(
+    stops: pd.DataFrame,
+    visualization: dict[str, Any],
+    state_prefix: str,
+    study_id: str,
+    taxonomy: list[dict[str, Any]],
+    voting: dict[str, Any] | None,
+    *,
+    app_dir: Path | None = None,
+) -> Any:
+    voting_config = normalize_voting_config(voting, taxonomy)
+    if not voting_config["enabled"] or stops.empty:
+        return render_stop_detail_workflow(stops, visualization, state_prefix)
+
+    panel_tabs = st.tabs(
+        ["Voting", "Stop details"],
+        default="Voting",
+        key=f"{state_prefix}_panel_tabs",
+        on_change="rerun",
+    )
+    if panel_tabs[0].open:
+        with panel_tabs[0]:
+            selected_stop = render_stop_detail_workflow(
+                stops,
+                visualization,
+                state_prefix,
+                show_details=False,
+                show_selection_summary=False,
+            )
+            render_voting_panel(
+                selected_stop,
+                study_id,
+                taxonomy,
+                voting_config,
+                app_dir=app_dir or APP_DIR,
+            )
+            return selected_stop
+
+    with panel_tabs[1]:
+        return render_stop_detail_workflow(stops, visualization, state_prefix)
 
 
 def format_summary_percent(numerator: int, denominator: int) -> str:
@@ -902,7 +951,7 @@ def build_safe_chart(
     y_field: str,
     chart_type: str = "Bar",
     color_field: str | None = None,
-) -> alt.Chart | None:
+) -> dict[str, Any] | None:
     """Build a finite-data chart without Streamlit's categorical scale binding."""
     required = [x_field, y_field] + ([color_field] if color_field else [])
     if data.empty or any(field not in data.columns for field in required):
@@ -920,27 +969,63 @@ def build_safe_chart(
     x_is_numeric = chart_type == "Scatter" and pd.api.types.is_numeric_dtype(chart_data[x_field])
     x_type = "quantitative" if x_is_numeric else "nominal"
     x_sort = "-y" if chart_type == "Bar" and not x_is_numeric else None
+    y_min = float(chart_data[y_field].min())
+    y_max = float(chart_data[y_field].max())
+    if chart_type in {"Bar", "Area"}:
+        y_min = min(0.0, y_min)
+        y_max = max(0.0, y_max)
+    if y_min == y_max:
+        y_max = y_min + 1.0
+    x_encoding: dict[str, Any] = {
+        "field": x_field,
+        "type": x_type,
+        "title": FIELD_LABELS.get(x_field, x_field.replace("_", " ").title()),
+    }
+    if x_sort is not None:
+        x_encoding["sort"] = x_sort
     encoding: dict[str, Any] = {
-        "x": alt.X(field=x_field, type=x_type, sort=x_sort, title=FIELD_LABELS.get(x_field, x_field.replace("_", " ").title())),
-        "y": alt.Y(field=y_field, type="quantitative", title=FIELD_LABELS.get(y_field, y_field.replace("_", " ").title())),
+        "x": x_encoding,
+        "y": {
+            "field": y_field,
+            "type": "quantitative",
+            "title": FIELD_LABELS.get(y_field, y_field.replace("_", " ").title()),
+            "scale": {"domain": [y_min, y_max]},
+        },
         "tooltip": [
-            alt.Tooltip(field=x_field, type=x_type, title=FIELD_LABELS.get(x_field, x_field.replace("_", " ").title())),
-            alt.Tooltip(field=y_field, type="quantitative", title=FIELD_LABELS.get(y_field, y_field.replace("_", " ").title())),
+            {"field": x_field, "type": x_type, "title": FIELD_LABELS.get(x_field, x_field.replace("_", " ").title())},
+            {"field": y_field, "type": "quantitative", "title": FIELD_LABELS.get(y_field, y_field.replace("_", " ").title())},
         ],
     }
+    if chart_type == "Bar":
+        encoding["y"]["stack"] = None
     if color_field:
         chart_data[color_field] = chart_data[color_field].fillna("(blank)").astype(str)
-        encoding["color"] = alt.Color(field=color_field, type="nominal", title=FIELD_LABELS.get(color_field, color_field.replace("_", " ").title()))
-        encoding["tooltip"].insert(1, alt.Tooltip(field=color_field, type="nominal", title=FIELD_LABELS.get(color_field, color_field.replace("_", " ").title())))
+        encoding["color"] = {
+            "field": color_field,
+            "type": "nominal",
+            "title": FIELD_LABELS.get(color_field, color_field.replace("_", " ").title()),
+        }
+        encoding["tooltip"].insert(
+            1,
+            {"field": color_field, "type": "nominal", "title": FIELD_LABELS.get(color_field, color_field.replace("_", " ").title())},
+        )
+        if chart_type == "Bar":
+            encoding["xOffset"] = {"field": color_field, "type": "nominal"}
 
-    base = alt.Chart(chart_data)
+    inline_values = chart_data.astype(object).where(pd.notna(chart_data), None).to_dict(orient="records")
+    mark: dict[str, Any] = {"type": "bar"}
     if chart_type == "Line":
-        return base.mark_line(point=True).encode(**encoding)
-    if chart_type == "Area":
-        return base.mark_area().encode(**encoding)
-    if chart_type == "Scatter":
-        return base.mark_circle(size=70).encode(**encoding)
-    return base.mark_bar().encode(**encoding)
+        mark = {"type": "line", "point": True}
+    elif chart_type == "Area":
+        mark = {"type": "area"}
+    elif chart_type == "Scatter":
+        mark = {"type": "circle", "size": 70}
+    return {
+        "$schema": "https://vega.github.io/schema/vega-lite/v6.json",
+        "data": {"values": inline_values},
+        "mark": mark,
+        "encoding": encoding,
+    }
 
 
 def render_safe_chart(
@@ -952,7 +1037,7 @@ def render_safe_chart(
 ) -> None:
     chart = build_safe_chart(data, x_field, y_field, chart_type, color_field)
     if chart is not None:
-        st.altair_chart(chart, width="stretch")
+        st.vega_lite_chart(spec=chart, width="stretch")
 
 
 def wide_chart_data(data: pd.DataFrame, value_name: str = "stops") -> tuple[pd.DataFrame, str, str]:
@@ -1397,52 +1482,61 @@ def main() -> None:
         filters["selected_routes"],
         filters,
     )
-    tabs = st.tabs(["Map", "Analytics", "Methodology", "Downloads"])
-    with tabs[0]:
-        if visible_stops.empty:
-            st.info("No stops match the current visibility settings.")
-        else:
-            map_cols = st.columns([2, 1])
-            with map_cols[0]:
-                map_selection = st.pydeck_chart(
-                    build_deck_chart(visible_stops, taxonomy, visualization),
-                    width="stretch",
-                    on_select="rerun",
-                    selection_mode="single-object",
-                    key="published_stops_map",
-                )
-                selected_stop_id = selected_stop_id_from_map_selection(map_selection, visible_stops)
-                if selected_stop_id:
-                    st.session_state["published_selected_stop_id"] = selected_stop_id
-            with map_cols[1]:
-                panel_height = 780 if voting["enabled"] else STOP_DETAIL_PANEL_HEIGHT
-                with st.container(height=panel_height, border=False):
-                    selected_stop = render_stop_detail_workflow(visible_stops, visualization, "published")
-                    render_voting_panel(
-                        selected_stop,
-                        study_id,
-                        taxonomy,
-                        voting,
-                        app_dir=APP_DIR,
+    tabs = st.tabs(
+        ["Map", "Analytics", "Methodology", "Downloads"],
+        key="published_tabs",
+        on_change="rerun",
+    )
+    if tabs[0].open:
+        with tabs[0]:
+            if visible_stops.empty:
+                st.info("No stops match the current visibility settings.")
+            else:
+                map_cols = st.columns([2, 1])
+                with map_cols[0]:
+                    map_selection = st.pydeck_chart(
+                        build_deck_chart(visible_stops, taxonomy, visualization),
+                        width="stretch",
+                        height=MAP_PANEL_HEIGHT,
+                        on_select="rerun",
+                        selection_mode="single-object",
+                        key="published_stops_map",
                     )
-        st.caption(f"{len(visible_stops):,} of {len(stops):,} stops match the active map filters.")
-        render_map_filter_controls(stops, "published")
-        if visualization.get("show_legend", True) and taxonomy:
-            legend = pd.DataFrame(taxonomy)
-            columns = [column for column in ["name", "description", "color"] if column in legend.columns]
-            st.dataframe(legend.loc[:, columns], width="stretch", hide_index=True)
-    with tabs[1]:
-        render_issue_analytics_dashboard(visible_stops, visualization, raw_labels)
-        render_custom_charts(visible_stops, visualization)
-    with tabs[2]:
-        render_methodology(config)
-    with tabs[3]:
-        if visualization.get("show_downloads", True):
-            st.download_button("Download stops CSV", stops.to_csv(index=False).encode("utf-8"), "shade_study_stops.csv", "text/csv")
-            st.download_button("Download stops GeoJSON", dataframe_to_geojson(stops).encode("utf-8"), "shade_study_stops.geojson", "application/geo+json")
-            st.download_button("Download study configuration", json.dumps(config, indent=2).encode("utf-8"), "shade_study_config.json", "application/json")
-            if not raw_labels.empty:
-                st.download_button("Download raw labels CSV", raw_labels.to_csv(index=False).encode("utf-8"), "shade_study_raw_labels.csv", "text/csv")
+                    selected_stop_id = selected_stop_id_from_map_selection(map_selection, visible_stops)
+                    if selected_stop_id:
+                        st.session_state["published_selected_stop_id"] = selected_stop_id
+                with map_cols[1]:
+                    with st.container(height=MAP_PANEL_HEIGHT, border=False):
+                        render_stop_and_voting_panel(
+                            visible_stops,
+                            visualization,
+                            "published",
+                            study_id,
+                            taxonomy,
+                            voting,
+                            app_dir=APP_DIR,
+                        )
+            st.caption(f"{len(visible_stops):,} of {len(stops):,} stops match the active map filters.")
+            render_map_filter_controls(stops, "published")
+            if visualization.get("show_legend", True) and taxonomy:
+                legend = pd.DataFrame(taxonomy)
+                columns = [column for column in ["name", "description", "color"] if column in legend.columns]
+                st.dataframe(legend.loc[:, columns], width="stretch", hide_index=True)
+    elif tabs[1].open:
+        with tabs[1]:
+            render_issue_analytics_dashboard(visible_stops, visualization, raw_labels)
+            render_custom_charts(visible_stops, visualization)
+    elif tabs[2].open:
+        with tabs[2]:
+            render_methodology(config)
+    elif tabs[3].open:
+        with tabs[3]:
+            if visualization.get("show_downloads", True):
+                st.download_button("Download stops CSV", stops.to_csv(index=False).encode("utf-8"), "shade_study_stops.csv", "text/csv")
+                st.download_button("Download stops GeoJSON", dataframe_to_geojson(stops).encode("utf-8"), "shade_study_stops.geojson", "application/geo+json")
+                st.download_button("Download study configuration", json.dumps(config, indent=2).encode("utf-8"), "shade_study_config.json", "application/json")
+                if not raw_labels.empty:
+                    st.download_button("Download raw labels CSV", raw_labels.to_csv(index=False).encode("utf-8"), "shade_study_raw_labels.csv", "text/csv")
 
 
 if __name__ == "__main__":

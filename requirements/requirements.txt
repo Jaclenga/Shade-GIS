@@ -1,5 +1,4 @@
 streamlit>=1.57,<2
-altair>=6,<7
 pandas>=2,<4
 pydeck>=0.8,<1
 pyshp>=2.3,<3

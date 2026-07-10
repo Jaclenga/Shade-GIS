@@ -389,7 +389,6 @@ def render_voting_panel(
         st.warning("Voting is enabled, but the project has no public coverage options.")
         return
 
-    st.divider()
     st.markdown(f"#### {config['title']}")
     if config.get("description"):
         st.markdown(str(config["description"]))

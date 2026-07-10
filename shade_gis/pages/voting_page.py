@@ -14,7 +14,7 @@ def render_voting_controls(
         "Let deployed-app visitors vote on stop coverage",
         value=voting["enabled"],
         key=f"{key_prefix}_enabled",
-        help="Adds the voting interface to the selected-stop panel in the generated public app.",
+        help="Adds the voting interface to the selected-stop panel in Preview and the generated public app.",
     )
     voting["title"] = st.text_input(
         "Voting heading",

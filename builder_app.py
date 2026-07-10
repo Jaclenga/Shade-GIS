@@ -937,7 +937,7 @@ def build_github_deploy_bundle(repo_name: str, deploy_mode: str = "existing") ->
             bundle.writestr("shade_study_raw_labels.csv", raw_labels.to_csv(index=False))
         bundle.writestr(
             "requirements.txt",
-            "streamlit>=1.57,<2\naltair>=6,<7\npandas>=2,<4\npydeck>=0.8,<1\npsycopg[binary]>=3.2,<4\n",
+            "streamlit>=1.57,<2\npandas>=2,<4\npydeck>=0.8,<1\npsycopg[binary]>=3.2,<4\n",
         )
         bundle.writestr(".streamlit/config.toml", "[server]\nheadless = true\n\n[browser]\ngatherUsageStats = false\n")
         bundle.writestr(

@@ -502,7 +502,7 @@ def render_custom_chart(df: pd.DataFrame, chart: dict[str, Any]) -> None:
         chart.get("chart_type", "Bar"),
     )
     if chart_spec is not None:
-        st.altair_chart(chart_spec, width="stretch")
+        st.vega_lite_chart(spec=chart_spec, width="stretch")
 
 
 def render_custom_charts(df: pd.DataFrame, visualization: dict[str, Any]) -> None:

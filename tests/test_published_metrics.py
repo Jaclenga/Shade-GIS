@@ -16,11 +16,10 @@ def test_safe_chart_has_no_scale_binding_and_drops_non_finite_values() -> None:
     chart = published_app.build_safe_chart(data, "shade_sources", "stops")
 
     assert chart is not None
-    spec = chart.to_dict()
-    assert "params" not in spec
-    assert spec["data"]["name"]
-    assert len(chart.data) == 1
-    assert chart.data.iloc[0]["shade_sources"] == "Natural"
+    assert "params" not in chart
+    assert chart["data"]["values"] == [{"shade_sources": "Natural", "stops": 12.0}]
+    assert chart["encoding"]["y"]["stack"] is None
+    assert chart["encoding"]["y"]["scale"]["domain"] == [0.0, 12.0]
 
 
 def test_published_app_separates_legacy_coverage_and_source_labels():

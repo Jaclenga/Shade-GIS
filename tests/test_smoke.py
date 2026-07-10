@@ -36,3 +36,9 @@ def test_summary_metrics_only_render_in_analytics():
 
     assert published_source.count("render_metric_cards(df)") == 1
     assert "published_app.render_metric_cards(visible_stops)" not in preview_source
+
+
+def test_preview_uses_the_shared_stop_and_voting_panel():
+    preview_source = Path("shade_gis/pages/preview_page.py").read_text(encoding="utf-8")
+
+    assert "published_app.render_stop_and_voting_panel(" in preview_source

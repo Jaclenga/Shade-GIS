@@ -50,6 +50,14 @@ def wait_for_streamlit_health(port: int, timeout_seconds: int = 45) -> None:
     raise RuntimeError(f"Streamlit health check did not pass at {url}: {last_error}")
 
 
+def wait_for_streamlit_idle(playwright_api, page, timeout_ms: int = 60_000) -> None:
+    # Streamlit delays its running indicator by 500 ms. Waiting past that
+    # threshold distinguishes a rendered page from a fully completed script run.
+    page.wait_for_timeout(700)
+    playwright_api.expect(page.get_by_test_id("stStatusWidgetRunningIcon")).to_have_count(0, timeout=timeout_ms)
+    playwright_api.expect(page.get_by_test_id("stConnectionStatus")).to_have_count(0, timeout=timeout_ms)
+
+
 @pytest.fixture
 def playwright_api():
     return pytest.importorskip("playwright.sync_api")
@@ -64,6 +72,7 @@ def streamlit_server(playwright_api):
     env.update(
         {
             "SHADE_GIS_DB_PATH": str(temp_root / "shade-gis-ui.sqlite3"),
+            "SHADE_GIS_VOTE_DB_PATH": str(temp_root / "shade-gis-votes-ui.sqlite3"),
             "STREAMLIT_BROWSER_GATHER_USAGE_STATS": "false",
             "STREAMLIT_SERVER_HEADLESS": "true",
         }
@@ -130,9 +139,10 @@ def test_builder_navigation_pages_render(playwright_api, streamlit_server: Strea
         browser = playwright.chromium.launch()
         page = browser.new_page(viewport={"width": 1440, "height": 1000})
         chart_warnings = []
+        current_surface = {"name": "Data"}
         page.on(
             "console",
-            lambda message: chart_warnings.append(message.text)
+            lambda message: chart_warnings.append(f"{current_surface['name']}: {message.text}")
             if "Scale bindings are currently only supported" in message.text
             or "Infinite extent for field" in message.text
             else None,
@@ -142,16 +152,58 @@ def test_builder_navigation_pages_render(playwright_api, streamlit_server: Strea
             page.locator(".builder-brand", has_text="Shade-GIS").wait_for(timeout=30_000)
             page.get_by_role("heading", name="Project Data", exact=True).wait_for(timeout=30_000)
             playwright_api.expect(page.get_by_role("button", name="Data", exact=True)).to_be_enabled(timeout=30_000)
-            playwright_api.expect(page.get_by_test_id("stConnectionStatus")).to_have_count(0, timeout=30_000)
+            wait_for_streamlit_idle(playwright_api, page)
 
             for nav_label, heading in expected_pages.items():
+                current_surface["name"] = nav_label
                 nav_button = page.get_by_test_id("stMainBlockContainer").get_by_role("button", name=nav_label, exact=True)
-                playwright_api.expect(nav_button).to_be_enabled(timeout=30_000)
+                wait_for_streamlit_idle(playwright_api, page)
+                playwright_api.expect(nav_button).to_be_enabled(timeout=60_000)
                 nav_button.click()
-                playwright_api.expect(nav_button).to_have_attribute("kind", "primary", timeout=30_000)
-                playwright_api.expect(page.get_by_role("heading", name=heading, exact=True)).to_be_visible(timeout=30_000)
-                playwright_api.expect(nav_button).to_be_enabled(timeout=30_000)
-                playwright_api.expect(page.get_by_test_id("stConnectionStatus")).to_have_count(0, timeout=30_000)
+                playwright_api.expect(page.get_by_role("heading", name=heading, exact=True)).to_be_visible(timeout=60_000)
+                wait_for_streamlit_idle(playwright_api, page)
+                playwright_api.expect(nav_button).to_have_attribute("kind", "primary", timeout=60_000)
+                playwright_api.expect(nav_button).to_be_enabled(timeout=60_000)
+                if nav_label == "Voting":
+                    voting_toggle_container = page.get_by_test_id("stCheckbox").filter(
+                        has_text="Let deployed-app visitors vote on stop coverage"
+                    )
+                    voting_toggle = voting_toggle_container.get_by_role("checkbox")
+                    voting_toggle_container.click()
+                    playwright_api.expect(voting_toggle).to_be_checked(timeout=30_000)
+                    playwright_api.expect(
+                        page.get_by_text(
+                            "Voting is currently hidden in the deployed app. Enable it to publish this interface.",
+                            exact=True,
+                        )
+                    ).to_have_count(0, timeout=60_000)
+                    wait_for_streamlit_idle(playwright_api, page)
+                elif nav_label == "Preview":
+                    voting_tab = page.get_by_role("tab", name="Voting", exact=True)
+                    stop_details_tab = page.get_by_role("tab", name="Stop details", exact=True)
+                    playwright_api.expect(voting_tab).to_be_visible(timeout=60_000)
+                    playwright_api.expect(stop_details_tab).to_be_visible(timeout=60_000)
+                    voting_tab.click()
+                    playwright_api.expect(voting_tab).to_have_attribute("aria-selected", "true", timeout=60_000)
+                    playwright_api.expect(
+                        page.get_by_role("heading", name="Help document this stop", exact=True)
+                    ).to_be_visible(timeout=60_000)
+                    stop_details_tab.click()
+                    playwright_api.expect(stop_details_tab).to_have_attribute("aria-selected", "true", timeout=60_000)
+                    playwright_api.expect(
+                        page.get_by_role("heading", name="Stop Details", exact=True)
+                    ).to_be_visible(timeout=60_000)
+                    voting_tab.click()
+                    playwright_api.expect(
+                        page.get_by_role("heading", name="Help document this stop", exact=True)
+                    ).to_be_visible(timeout=60_000)
+                    analytics_tab = page.get_by_role("tab", name="Analytics", exact=True)
+                    analytics_tab.click()
+                    playwright_api.expect(analytics_tab).to_have_attribute("aria-selected", "true", timeout=60_000)
+                    playwright_api.expect(
+                        page.get_by_role("heading", name="Summary Statistics", exact=True)
+                    ).to_be_visible(timeout=60_000)
+                    wait_for_streamlit_idle(playwright_api, page)
 
             assert chart_warnings == []
             assert streamlit_server.process.poll() is None

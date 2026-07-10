@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import sqlite3
 
+import pandas as pd
+
+import published_app
 from public_voting import (
     community_result,
     get_existing_vote,
@@ -10,6 +13,81 @@ from public_voting import (
     normalize_voting_config,
     save_vote,
 )
+
+
+def test_shared_stop_panel_renders_voting_for_the_selected_stop(monkeypatch):
+    selected_stop = {"stop_id": "1001", "stop_name": "Main Street"}
+    captured = {}
+
+    class FakeTab:
+        def __init__(self, open_state):
+            self.open = open_state
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+    class FakeStreamlit:
+        @staticmethod
+        def tabs(labels, **kwargs):
+            captured["tabs"] = {"labels": labels, **kwargs}
+            return [FakeTab(True), FakeTab(False)]
+
+    monkeypatch.setattr(published_app, "st", FakeStreamlit)
+
+    monkeypatch.setattr(
+        published_app,
+        "render_stop_detail_workflow",
+        lambda stops, visualization, state_prefix, *, show_details, show_selection_summary: (
+            captured.update(
+                show_details=show_details,
+                show_selection_summary=show_selection_summary,
+            )
+            or selected_stop
+        ),
+    )
+
+    def capture_voting(stop, study_id, taxonomy, voting, *, app_dir):
+        captured.update(
+            stop=stop,
+            study_id=study_id,
+            taxonomy=taxonomy,
+            voting=voting,
+            app_dir=app_dir,
+        )
+
+    monkeypatch.setattr(published_app, "render_voting_panel", capture_voting)
+    voting = {"enabled": True}
+    taxonomy = [{"name": "No Shade"}]
+
+    result = published_app.render_stop_and_voting_panel(
+        pd.DataFrame([selected_stop]),
+        {},
+        "preview",
+        "study-a",
+        taxonomy,
+        voting,
+        app_dir=published_app.APP_DIR,
+    )
+
+    assert result == selected_stop
+    assert captured["tabs"] == {
+        "labels": ["Voting", "Stop details"],
+        "default": "Voting",
+        "key": "preview_panel_tabs",
+        "on_change": "rerun",
+    }
+    assert captured["show_details"] is False
+    assert captured["show_selection_summary"] is False
+    assert {key: captured[key] for key in ["stop", "study_id", "taxonomy", "voting", "app_dir"]} == {
+        "stop": selected_stop,
+        "study_id": "study-a",
+        "taxonomy": taxonomy,
+        "voting": normalize_voting_config(voting, taxonomy),
+        "app_dir": published_app.APP_DIR,
+    }
 
 
 def test_voting_config_uses_taxonomy_and_preserves_admin_copy(taxonomy):
