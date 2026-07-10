@@ -2,3 +2,4 @@ streamlit>=1.57,<2
 pandas>=2,<4
 pydeck>=0.8,<1
 pyshp>=2.3,<3
+psycopg[binary]>=3.2,<4

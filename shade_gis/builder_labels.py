@@ -5,6 +5,8 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
+from shade_gis.shade_dimensions import normalize_shade_coverage, split_shade_sources
+
 
 REVIEW_STATUS_NAMES = {
     "Unlabeled",
@@ -61,7 +63,13 @@ def clean_label_values(labels: pd.DataFrame, label_column: str = "shade_category
         return pd.DataFrame(columns=list(labels.columns) if not labels.empty else ["stop_id", label_column])
     clean = labels.copy()
     clean["stop_id"] = clean["stop_id"].fillna("").astype(str).str.strip()
-    clean[label_column] = clean[label_column].fillna("").astype(str).str.strip()
+    label_values = clean[label_column].fillna("").astype(str)
+    if label_column == "shade_category" and "shade_coverage" in clean.columns:
+        coverage_values = clean["shade_coverage"].fillna("").astype(str).str.strip()
+        label_values = coverage_values.where(coverage_values != "", label_values)
+    clean[label_column] = label_values.map(
+        lambda value: normalize_shade_coverage(value, "")
+    )
     clean = clean[(clean["stop_id"] != "") & (clean[label_column] != "")]
     return clean
 
@@ -260,10 +268,17 @@ def split_list_field(value: Any) -> list[str]:
 
 
 def stop_review_snapshot(stop: pd.Series | dict[str, Any]) -> dict[str, Any]:
+    raw_coverage = stop.get("shade_coverage", "")
+    if pd.isna(raw_coverage) or not str(raw_coverage).strip():
+        raw_coverage = stop.get("shading", "")
+    coverage = normalize_shade_coverage(
+        raw_coverage,
+        "Needs Review",
+    )
     return {
-        "shade_category": str(stop.get("shading", "") or ""),
-        "shade_coverage": str(stop.get("shade_coverage", "") or ""),
-        "shade_sources": str(stop.get("shade_sources", "") or ""),
+        "shade_category": coverage,
+        "shade_coverage": coverage,
+        "shade_sources": "; ".join(split_shade_sources(stop.get("shade_sources", ""))),
         "confidence": stop.get("confidence", None),
         "review_status": str(stop.get("review_status", "Unlabeled") or "Unlabeled"),
     }

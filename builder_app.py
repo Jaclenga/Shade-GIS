@@ -19,6 +19,7 @@ import streamlit as st
 
 import published_app
 from builder_about_page import render_builder_about_page
+from public_voting import normalize_voting_config
 from platform_store import (
     add_review_event,
     add_shade_label,
@@ -140,6 +141,14 @@ from shade_gis.builder_visuals import (
     rgba_from_hex,
     selected_dashboard_sections,
 )
+from shade_gis.shade_dimensions import (
+    DEFAULT_COVERAGE_TAXONOMY,
+    SHADE_COVERAGE_OPTIONS as CORE_SHADE_COVERAGE_OPTIONS,
+    SHADE_COVERAGE_TAXONOMY as CORE_SHADE_COVERAGE_TAXONOMY,
+    SHADE_SOURCE_OPTIONS as CORE_SHADE_SOURCE_OPTIONS,
+    SHADE_SOURCE_TAXONOMY as CORE_SHADE_SOURCE_TAXONOMY,
+    normalize_coverage_taxonomy,
+)
 
 
 APP_DIR = Path(__file__).parent
@@ -174,65 +183,9 @@ DEFAULT_PROJECT = {
     "source_url": "",
 }
 
-DEFAULT_TAXONOMY = [
-    {
-        "name": "No Shade",
-        "description": "No shade visibly reaches the waiting area.",
-        "color": "#dc143c",
-        "sort_order": 1,
-    },
-    {
-        "name": "Limited",
-        "description": "Shade visibly reaches part of the waiting area, but not most of it.",
-        "color": "#d69e2e",
-        "sort_order": 2,
-    },
-    {
-        "name": "Significant",
-        "description": "Shade visibly covers most of the waiting area or seating area.",
-        "color": "#228b22",
-        "sort_order": 3,
-    },
-    {
-        "name": "Needs Review",
-        "description": "The stop needs imagery, review, or disagreement resolution.",
-        "color": "#808080",
-        "sort_order": 4,
-    },
-]
-
-SHADE_SOURCE_TAXONOMY = [
-    {
-        "shade_source": "Natural",
-        "operational_definition": "Trees, palms, hedges, or other vegetation visibly shade the waiting area.",
-    },
-    {
-        "shade_source": "Constructed",
-        "operational_definition": (
-            "A designated, purpose-built bus shelter, awning, canopy, overhang, or similar passenger shelter "
-            "visibly shades the waiting area."
-        ),
-    },
-    {
-        "shade_source": "Manmade",
-        "operational_definition": "A nearby building or other non-shelter built feature visibly shades the waiting area.",
-    },
-]
-
-SHADE_COVERAGE_TAXONOMY = [
-    {
-        "shade_coverage": "No Shade",
-        "operational_definition": "No shade visibly reaches the waiting area.",
-    },
-    {
-        "shade_coverage": "Limited",
-        "operational_definition": "Shade visibly reaches part of the waiting area, but does not cover most of it.",
-    },
-    {
-        "shade_coverage": "Significant",
-        "operational_definition": "Shade visibly covers most of the waiting area or seating area.",
-    },
-]
+DEFAULT_TAXONOMY = [dict(item) for item in DEFAULT_COVERAGE_TAXONOMY]
+SHADE_SOURCE_TAXONOMY = [dict(item) for item in CORE_SHADE_SOURCE_TAXONOMY]
+SHADE_COVERAGE_TAXONOMY = [dict(item) for item in CORE_SHADE_COVERAGE_TAXONOMY]
 
 DEFAULT_METHODOLOGY = {
     "title": "Bus Stop Shade Study",
@@ -259,8 +212,8 @@ DEFAULT_METHODOLOGY = {
         "not what might shade it at another time.\n\n"
         "Manual review records separate fields for `shade_coverage` and `shade_sources`. The derived "
         "`shading` field mirrors the coverage code for coloring, filtering, summaries, and public display.\n\n"
-        "Shade coverage definitions: `No Shade` means no shade visibly reaches the waiting area; `Limited` "
-        "means shade visibly reaches part of the waiting area, but does not cover most of it; `Significant` "
+        "Shade coverage definitions: `No Shade` means no shade visibly reaches the waiting area; `Limited Shade` "
+        "means shade visibly reaches part of the waiting area, but does not cover most of it; `Significant Shade` "
         "means shade visibly covers most of the waiting area or seating area.\n\n"
         "Shade source definitions: `Natural` means trees, palms, hedges, or other vegetation visibly shade "
         "the waiting area; `Constructed` means a designated, purpose-built bus shelter, awning, canopy, "
@@ -354,9 +307,9 @@ LABELER_ROLE_OPTIONS = [
     "Model",
 ]
 
-SHADE_SOURCE_OPTIONS = [item["shade_source"] for item in SHADE_SOURCE_TAXONOMY]
+SHADE_SOURCE_OPTIONS = list(CORE_SHADE_SOURCE_OPTIONS)
 
-SHADE_COVERAGE_OPTIONS = [item["shade_coverage"] for item in SHADE_COVERAGE_TAXONOMY]
+SHADE_COVERAGE_OPTIONS = list(CORE_SHADE_COVERAGE_OPTIONS)
 
 
 def rgb_to_hex(value: list[int]) -> str:
@@ -417,6 +370,10 @@ def ensure_visualization_defaults() -> None:
         priority_colors.setdefault(key, color)
 
     clean_gis_overlays(visualization)
+    visualization["voting"] = normalize_voting_config(
+        visualization.get("voting"),
+        st.session_state.get("taxonomy", []),
+    )
 
 
 def create_seed_project() -> str:
@@ -439,7 +396,7 @@ def create_seed_project() -> str:
 def load_project_into_session(project_id: str) -> None:
     bundle = load_project_bundle(project_id)
     project = with_default_project_values(bundle["project"])
-    taxonomy = bundle["taxonomy"] or [item.copy() for item in DEFAULT_TAXONOMY]
+    taxonomy = normalize_coverage_taxonomy(bundle["taxonomy"] or DEFAULT_TAXONOMY)
     methodology = with_default_methodology_values(bundle["methodology"])
     visualization = with_default_visualization_values(bundle["visualization"])
     stops = bundle["stops"]
@@ -513,6 +470,20 @@ def ensure_state() -> None:
 
     if st.session_state.get("loaded_project_id") != active_project_id:
         load_project_into_session(active_project_id)
+        return
+
+    current_taxonomy = st.session_state.get("taxonomy", DEFAULT_TAXONOMY)
+    normalized_taxonomy = normalize_coverage_taxonomy(current_taxonomy)
+    if current_taxonomy != normalized_taxonomy:
+        st.session_state["taxonomy"] = normalized_taxonomy
+        stops = st.session_state.get("stops", empty_stop_dataset())
+        if not stops.empty:
+            st.session_state["stops"] = prepare_stop_dataset(
+                stops,
+                st.session_state.get("project", DEFAULT_PROJECT),
+                normalized_taxonomy,
+            )
+    ensure_visualization_defaults()
 
 
 def dataframe_to_geojson(df: pd.DataFrame) -> str:
@@ -535,6 +506,8 @@ def study_config_json() -> str:
 
 def study_config_payload() -> dict[str, Any]:
     return {
+        "study_id": st.session_state.get("active_project_id")
+        or slugify_repo_name(st.session_state["project"].get("name", "shade-study")),
         "project": st.session_state["project"],
         "taxonomy": st.session_state["taxonomy"],
         "methodology": st.session_state["methodology"],
@@ -566,10 +539,15 @@ def github_new_repo_url(project: dict[str, Any], repo_name: str) -> str:
 
 
 PUBLISHED_APP_SOURCE_PATH = APP_DIR / "published_app.py"
+PUBLIC_VOTING_SOURCE_PATH = APP_DIR / "public_voting.py"
 
 
 def published_app_source() -> str:
     return PUBLISHED_APP_SOURCE_PATH.read_text(encoding="utf-8")
+
+
+def public_voting_source() -> str:
+    return PUBLIC_VOTING_SOURCE_PATH.read_text(encoding="utf-8")
 
 
 def deploy_readme(repo_name: str, project: dict[str, Any], deploy_mode: str = "existing") -> str:
@@ -590,10 +568,29 @@ This repository was generated by Shade Study Builder. It contains a published St
 ## Files
 
 - `app.py`: public Streamlit app.
+- `public_voting.py`: voting interface and SQLite/PostgreSQL vote storage.
 - `shade_study_stops.csv`: published stop dataset.
 - `shade_study_raw_labels.csv`: raw submitted labels, included when labels have been collected.
 - `shade_study_config.json`: project metadata, methodology, taxonomy, visualization settings, uploaded GIS overlays, and import log.
 - `requirements.txt`: Python dependencies for Streamlit deployment.
+
+## Crowd Voting Storage
+
+If voting is enabled in the builder, visitors can submit one coverage assessment plus zero or more
+shade-source checkboxes per browser session and stop. The app keeps the community result separate
+from the admin-reviewed stop dataset, and the configured threshold controls when a unique leading
+coverage status is reported.
+
+The app works locally with a generated `.shade_gis_votes.sqlite3` database. A hosted app should use
+a shared PostgreSQL database so votes survive app restarts and remain consistent across instances.
+Add this secret in the Streamlit deployment settings; do not commit it to Git:
+
+```toml
+SHADE_GIS_VOTE_DATABASE_URL = "postgresql://USER:PASSWORD@HOST:5432/DATABASE?sslmode=require"
+```
+
+The `shade_votes` table is created automatically. Without that secret, Streamlit Community Cloud
+uses the local SQLite fallback, whose files are ephemeral and may be lost when the app restarts.
 
 ## After Downloading The Zip
 
@@ -795,6 +792,7 @@ function Copy-SafeBundleFiles {{
     param([string]$Destination)
     $items = @(
         "app.py",
+        "public_voting.py",
         "shade_study_stops.csv",
         "shade_study_raw_labels.csv",
         "shade_study_config.json",
@@ -859,6 +857,7 @@ if ($Mode -eq "existing") {{
     $publishDir = Join-Path $env:TEMP ("_shade_gis_publish_" + [guid]::NewGuid().ToString("N"))
     $existingPublishFiles = @(
         "app.py",
+        "public_voting.py",
         "shade_study_stops.csv",
         "shade_study_raw_labels.csv",
         "shade_study_config.json",
@@ -907,6 +906,7 @@ if (-not (Test-Path ".git")) {{
 
 $newRepoFiles = @(
     "app.py",
+    "public_voting.py",
     "shade_study_stops.csv",
     "shade_study_raw_labels.csv",
     "shade_study_config.json",
@@ -930,13 +930,20 @@ def build_github_deploy_bundle(repo_name: str, deploy_mode: str = "existing") ->
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as bundle:
         bundle.writestr("app.py", published_app_source())
+        bundle.writestr("public_voting.py", public_voting_source())
         bundle.writestr("shade_study_stops.csv", stops.to_csv(index=False))
         bundle.writestr("shade_study_config.json", config_json)
         if not raw_labels.empty:
             bundle.writestr("shade_study_raw_labels.csv", raw_labels.to_csv(index=False))
-        bundle.writestr("requirements.txt", "streamlit>=1.57,<2\npandas>=2,<4\npydeck>=0.8,<1\n")
+        bundle.writestr(
+            "requirements.txt",
+            "streamlit>=1.57,<2\npandas>=2,<4\npydeck>=0.8,<1\npsycopg[binary]>=3.2,<4\n",
+        )
         bundle.writestr(".streamlit/config.toml", "[server]\nheadless = true\n\n[browser]\ngatherUsageStats = false\n")
-        bundle.writestr(".gitignore", "__pycache__/\n*.pyc\n.streamlit/secrets.toml\n_shade_gis_publish_*/\n")
+        bundle.writestr(
+            ".gitignore",
+            "__pycache__/\n*.pyc\n*.sqlite3\n.streamlit/secrets.toml\n_shade_gis_publish_*/\n",
+        )
         bundle.writestr("README.md", deploy_readme(repo_name, st.session_state["project"], deploy_mode))
         bundle.writestr("deploy_to_github.ps1", deploy_script(repo_name))
     return buffer.getvalue()
@@ -958,7 +965,7 @@ def set_page(page: str) -> None:
 
 
 def render_header() -> str:
-    pages = ["Data", "Labels", "Visuals", "Docs", "Preview", "Deploy"]
+    pages = ["Data", "Labels", "Visuals", "Voting", "Docs", "Preview", "Deploy"]
     if st.session_state.get("page") not in pages:
         st.session_state["page"] = "Data"
     st.markdown(
@@ -1008,7 +1015,7 @@ def render_header() -> str:
         unsafe_allow_html=True,
     )
     st.markdown("<div class='builder-topbar'>", unsafe_allow_html=True)
-    cols = st.columns([3.3, 0.9, 0.9, 1, 1, 1, 1, 1], gap="small", vertical_alignment="center")
+    cols = st.columns([3.1, 0.35, 0.9, 0.9, 1, 0.9, 0.9, 0.9, 0.9], gap="small", vertical_alignment="center")
     with cols[0]:
         st.markdown("<div class='builder-brand'>Shade-GIS</div>", unsafe_allow_html=True)
     for index, page in enumerate(pages, start=2):
@@ -1032,6 +1039,7 @@ def main() -> None:
     from shade_gis.pages.labels_page import render_labels_page
     from shade_gis.pages.preview_page import render_preview_page
     from shade_gis.pages.visuals_page import render_visuals_page
+    from shade_gis.pages.voting_page import render_voting_page
 
     st.set_page_config(page_title=APP_TITLE, layout="wide")
     ensure_state()
@@ -1042,6 +1050,8 @@ def main() -> None:
         render_labels_page()
     elif page == "Visuals":
         render_visuals_page()
+    elif page == "Voting":
+        render_voting_page()
     elif page == "Docs":
         render_methodology_page()
     elif page == "Preview":

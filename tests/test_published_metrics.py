@@ -3,6 +3,21 @@ from __future__ import annotations
 import pandas as pd
 
 import published_app
+
+
+def test_published_app_separates_legacy_coverage_and_source_labels():
+    legacy = pd.DataFrame(
+        [
+            {"shading": "Significant Natural Shade", "shade_coverage": "", "shade_sources": ""},
+            {"shading": "Intentional Built Shade", "shade_coverage": "Significant", "shade_sources": ""},
+        ]
+    )
+
+    normalized = published_app.normalize_published_stop_dimensions(legacy)
+
+    assert normalized["shading"].tolist() == ["Significant Shade", "Significant Shade"]
+    assert normalized["shade_coverage"].tolist() == ["Significant Shade", "Significant Shade"]
+    assert normalized["shade_sources"].tolist() == ["Natural", "Constructed"]
 from published_app import summary_metric_cards
 
 

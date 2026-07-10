@@ -2,11 +2,18 @@ from __future__ import annotations
 
 import io
 import json
+import zipfile
 
 import pandas as pd
 
 import builder_app
-from builder_app import dataframe_to_geojson, deploy_readme, deploy_script, study_config_json
+from builder_app import (
+    build_github_deploy_bundle,
+    dataframe_to_geojson,
+    deploy_readme,
+    deploy_script,
+    study_config_json,
+)
 from platform_store import add_shade_label, create_project, list_shade_labels
 
 
@@ -30,6 +37,7 @@ def test_export_csv_geojson_raw_labels_and_config(db_path, project, taxonomy, me
     builder_app.st.session_state["taxonomy"] = taxonomy
     builder_app.st.session_state["methodology"] = methodology
     builder_app.st.session_state["visualization"] = visualization
+    builder_app.st.session_state["stops"] = minimal_stops
     builder_app.st.session_state["import_log"] = [{"source": "pytest", "format": "CSV", "rows": 2}]
 
     stops_csv = minimal_stops.to_csv(index=False)
@@ -43,8 +51,22 @@ def test_export_csv_geojson_raw_labels_and_config(db_path, project, taxonomy, me
     assert len(geojson["features"]) == 2
     assert geojson["features"][0]["properties"]["stop_id"] == "1001"
     assert config["project"]["name"] == "Test Shade Study"
+    assert config["study_id"] == project_id
     assert config["taxonomy"][0]["name"] == taxonomy[0]["name"]
     assert config["import_log"][0]["rows"] == 2
+
+    bundle_bytes = build_github_deploy_bundle("owner/test-shade-study")
+    with zipfile.ZipFile(io.BytesIO(bundle_bytes)) as bundle:
+        assert "public_voting.py" in bundle.namelist()
+        assert "psycopg[binary]>=3.2,<4" in bundle.read("requirements.txt").decode("utf-8")
+        assert "*.sqlite3" in bundle.read(".gitignore").decode("utf-8")
+        deployed_config = json.loads(bundle.read("shade_study_config.json"))
+        assert deployed_config["visualization"]["voting"]["enabled"] is False
+        assert deployed_config["visualization"]["voting"]["options"] == [
+            "No Shade",
+            "Limited Shade",
+            "Significant Shade",
+        ]
 
 
 def test_deploy_script_supports_existing_private_repositories():
@@ -67,6 +89,7 @@ def test_deploy_script_supports_existing_private_repositories():
     assert 'Copy-SafeBundleFiles -Destination $publishDir' in script
     assert 'README.md' in script
     assert '.env.*' in script
+    assert '"public_voting.py"' in script
     assert 'Invoke-Native "git" @("status")' in script
     assert 'Invoke-Native "git" @("diff", "--stat")' in script
     assert 'Invoke-Native "git" @("diff", "--cached", "--stat")' in script
@@ -100,6 +123,8 @@ def test_deploy_readme_documents_existing_private_repo_flow(project):
     assert "PUBLISH" in readme
     assert "-AllowPublicTarget" in readme
     assert ".env*" in readme
+    assert "SHADE_GIS_VOTE_DATABASE_URL" in readme
+    assert "local SQLite fallback" in readme
 
 
 def test_deploy_readme_create_mode_does_not_verify_missing_repo(project):

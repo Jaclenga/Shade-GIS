@@ -98,6 +98,7 @@ def test_builder_navigation_pages_render(playwright_api, streamlit_server: str):
         "Data": "Project Data",
         "Labels": "Labeling",
         "Visuals": "Metrics And Visualizations",
+        "Voting": "Public Voting",
         "Docs": "Project Documentation",
         "Preview": "Tampa Bus Stop Shade Study",
         "Deploy": "Deploy",

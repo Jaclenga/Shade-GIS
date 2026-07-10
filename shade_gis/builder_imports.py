@@ -15,6 +15,12 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
+from shade_gis.shade_dimensions import (
+    infer_sources_from_legacy_category,
+    normalize_shade_coverage,
+    split_shade_sources,
+)
+
 
 DEFAULT_MAX_UPLOAD_BYTES = 50 * 1024 * 1024
 DEFAULT_MAX_API_BYTES = 15 * 1024 * 1024
@@ -24,16 +30,6 @@ DEFAULT_MAX_ZIP_UNCOMPRESSED_BYTES = 150 * 1024 * 1024
 DEFAULT_PRIORITY_WEIGHTS = {"ridership": 0.5, "low_shade": 0.5}
 API_FETCH_TIMEOUT_SECONDS = 30
 
-SHADE_ALIASES = {
-    "Limited Natural Shade": "Limited",
-    "Significant Natural Shade": "Significant",
-    "Natural Shade": "Needs Review",
-    "Constructed Shade": "Needs Review",
-    "Intentional Built Shade": "Needs Review",
-    "Manmade Shade": "Needs Review",
-    "Incidental Built Shade": "Needs Review",
-    "Unknown": "Needs Review",
-}
 REVIEW_STATUS_NAMES = {
     "Unlabeled",
     "Needs Review",
@@ -102,15 +98,16 @@ def normalize_hex_color(value: Any, fallback: str = "#808080") -> str:
 
 
 def normalize_category(value: Any, taxonomy: list[dict[str, Any]]) -> str:
-    categories = [str(item.get("name", "")).strip() for item in taxonomy if str(item.get("name", "")).strip()]
+    categories = [
+        normalize_shade_coverage(item.get("name", ""), "")
+        for item in taxonomy
+        if normalize_shade_coverage(item.get("name", ""), "")
+    ]
     fallback = "Needs Review" if "Needs Review" in categories else (categories[-1] if categories else "Needs Review")
     if pd.isna(value):
         return fallback
-    text = str(value).strip()
-    if not text:
-        return fallback
-    text = SHADE_ALIASES.get(text, text)
-    return text if text in categories else fallback
+    coverage = normalize_shade_coverage(value, fallback)
+    return coverage if coverage in categories else fallback
 
 
 def normalize_review_status(value: Any) -> str:
@@ -661,7 +658,9 @@ def calculate_priority_scores(df: pd.DataFrame, weights: dict[str, float] | None
 
     low_shade_weight = float(weights.get("low_shade", 0.0))
     if low_shade_weight > 0 and "shading" in df.columns:
-        low_shade = df.get("shading", pd.Series(index=df.index, dtype=str)).isin(["No Shade", "Limited", "Limited Natural Shade", "Needs Review"]).astype(float)
+        low_shade = df.get("shading", pd.Series(index=df.index, dtype=str)).isin(
+            ["No Shade", "Limited Shade", "Limited", "Limited Natural Shade", "Needs Review"]
+        ).astype(float)
         score_parts.append((low_shade_weight, low_shade))
 
     total_weight = sum(weight for weight, _ in score_parts)
@@ -688,7 +687,26 @@ def prepare_stop_dataset(raw: pd.DataFrame, project: dict[str, Any], taxonomy: l
     df["agency"] = df["agency"].fillna("").replace("", project.get("agency", ""))
     df["routes"] = df["routes"].fillna("").astype(str)
     df["municipality"] = df["municipality"].fillna("").astype(str)
-    df["shading"] = df["shading"].apply(lambda value: normalize_category(value, taxonomy))
+    legacy_shading = df["shading"].copy()
+
+    def coverage_for_row(row: pd.Series) -> str:
+        explicit_coverage = row.get("shade_coverage", "")
+        coverage_text = "" if pd.isna(explicit_coverage) else str(explicit_coverage).strip()
+        candidate = explicit_coverage if coverage_text else row.get("shading", "")
+        return normalize_category(candidate, taxonomy)
+
+    df["shade_coverage"] = df.apply(coverage_for_row, axis=1)
+    df["shading"] = df["shade_coverage"]
+
+    def sources_for_row(index: Any, value: Any) -> str:
+        sources = split_shade_sources(value)
+        if not sources:
+            sources = infer_sources_from_legacy_category(legacy_shading.loc[index])
+        if df.at[index, "shade_coverage"] == "No Shade":
+            sources = []
+        return "; ".join(sources)
+
+    df["shade_sources"] = [sources_for_row(index, value) for index, value in df["shade_sources"].items()]
     df["review_status"] = df["review_status"].apply(normalize_review_status)
 
     numeric_fields = ["confidence", "ridership"]

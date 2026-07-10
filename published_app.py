@@ -9,6 +9,8 @@ import pandas as pd
 import pydeck as pdk
 import streamlit as st
 
+from public_voting import normalize_voting_config, render_voting_panel
+
 
 APP_DIR = Path(__file__).parent
 CONFIG_PATH = APP_DIR / "shade_study_config.json"
@@ -126,9 +128,12 @@ SHADE_SOURCE_CHART_ALIASES = {
 }
 SHADE_COVERAGE_CHART_CODES = {
     "no shade": "No Shade",
-    "limited": "Limited",
-    "significant": "Significant",
-    "significant shade": "Significant",
+    "limited": "Limited Shade",
+    "limited shade": "Limited Shade",
+    "limited natural shade": "Limited Shade",
+    "significant": "Significant Shade",
+    "significant shade": "Significant Shade",
+    "significant natural shade": "Significant Shade",
 }
 
 
@@ -136,10 +141,56 @@ def load_study() -> tuple[dict[str, Any], pd.DataFrame, pd.DataFrame]:
     config = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
     stops = pd.read_csv(DATA_PATH)
     raw_labels = pd.read_csv(RAW_LABELS_PATH) if RAW_LABELS_PATH.exists() else pd.DataFrame()
+    stops = normalize_published_stop_dimensions(stops)
     stops["priority_score"] = calculate_priority_scores(
         stops, config.get("visualization", {}).get("priority_weights", {})
     )
     return config, stops, raw_labels
+
+
+def normalize_published_stop_dimensions(stops: pd.DataFrame) -> pd.DataFrame:
+    normalized = stops.copy()
+    if "shading" not in normalized.columns:
+        normalized["shading"] = ""
+    if "shade_coverage" not in normalized.columns:
+        normalized["shade_coverage"] = ""
+    if "shade_sources" not in normalized.columns:
+        normalized["shade_sources"] = ""
+
+    legacy_shading = normalized["shading"].fillna("").astype(str)
+    explicit_coverage = normalized["shade_coverage"].fillna("").astype(str).str.strip()
+    coverage_candidates = explicit_coverage.where(explicit_coverage != "", legacy_shading)
+    normalized["shade_coverage"] = coverage_candidates.map(
+        lambda value: normalize_shade_coverage_chart_value(value) or "Needs Review"
+    )
+    normalized["shading"] = normalized["shade_coverage"]
+
+    def normalize_sources(value: Any, legacy_value: Any, coverage: str) -> str:
+        sources = []
+        for part in re.split(r"[;,|]", str(value or "")):
+            source = normalize_shade_source_chart_value(part)
+            if source and source not in sources:
+                sources.append(source)
+        legacy_text = str(legacy_value or "").lower()
+        if not sources:
+            if any(token in legacy_text for token in ["natural", "tree", "vegetation"]):
+                sources.append("Natural")
+            if any(token in legacy_text for token in ["constructed", "intentional", "shelter", "canopy"]):
+                sources.append("Constructed")
+            if any(token in legacy_text for token in ["manmade", "incidental", "building"]):
+                sources.append("Manmade")
+        return "" if coverage == "No Shade" else "; ".join(sources)
+
+    normalized["shade_sources"] = [
+        normalize_sources(source, legacy, coverage)
+        for source, legacy, coverage in zip(
+            normalized["shade_sources"],
+            legacy_shading,
+            normalized["shade_coverage"],
+            strict=False,
+        )
+    ]
+    return normalized
 
 
 def normalize_hex_color(value: str, fallback: str = "#808080") -> str:
@@ -178,7 +229,9 @@ def calculate_priority_scores(df: pd.DataFrame, weights: dict[str, float]) -> pd
             low_shade_values = df["shade_coverage"].fillna("").astype(str).str.strip()
         else:
             low_shade_values = df["shading"].fillna("").astype(str).str.strip()
-        low_shade = low_shade_values.isin(["No Shade", "Limited", "Limited Natural Shade", "Needs Review"]).astype(float)
+        low_shade = low_shade_values.isin(
+            ["No Shade", "Limited Shade", "Limited", "Limited Natural Shade", "Needs Review"]
+        ).astype(float)
         score += low_shade_weight * low_shade
         weight_total += low_shade_weight
     if weight_total == 0:
@@ -687,10 +740,14 @@ def stop_picker_label(row: pd.Series) -> str:
     return f"{stop_name} ({stop_id}){suffix}"
 
 
-def render_stop_detail_workflow(df: pd.DataFrame, visualization: dict[str, Any], key_prefix: str) -> None:
+def render_stop_detail_workflow(
+    df: pd.DataFrame,
+    visualization: dict[str, Any],
+    key_prefix: str,
+) -> pd.Series | None:
     if df.empty:
         st.info("No stop is available for the active map filters.")
-        return
+        return None
 
     options = df.reset_index(drop=True)
     stop_ids = options["stop_id"].astype(str).tolist() if "stop_id" in options.columns else []
@@ -744,6 +801,7 @@ def render_stop_detail_workflow(df: pd.DataFrame, visualization: dict[str, Any],
     for row in detail_rows:
         value = str(row["Value"] if pd.notna(row["Value"]) else "")
         st.markdown(f"**{row['Field']}**  \n{value}")
+    return selected_stop
 
 
 def render_metric_cards(df: pd.DataFrame) -> None:
@@ -1260,6 +1318,8 @@ def main() -> None:
     methodology = config.get("methodology", {})
     visualization = config.get("visualization", {})
     taxonomy = config.get("taxonomy", [])
+    voting = normalize_voting_config(visualization.get("voting"), taxonomy)
+    study_id = str(config.get("study_id") or project.get("name") or "shade-study").strip()
 
     st.set_page_config(page_title=project.get("name", "Shade Study"), layout="wide")
     st.title(project.get("name", "Shade Study"))
@@ -1293,8 +1353,16 @@ def main() -> None:
                 if selected_stop_id:
                     st.session_state["published_selected_stop_id"] = selected_stop_id
             with map_cols[1]:
-                with st.container(height=STOP_DETAIL_PANEL_HEIGHT, border=False):
-                    render_stop_detail_workflow(visible_stops, visualization, "published")
+                panel_height = 780 if voting["enabled"] else STOP_DETAIL_PANEL_HEIGHT
+                with st.container(height=panel_height, border=False):
+                    selected_stop = render_stop_detail_workflow(visible_stops, visualization, "published")
+                    render_voting_panel(
+                        selected_stop,
+                        study_id,
+                        taxonomy,
+                        voting,
+                        app_dir=APP_DIR,
+                    )
         st.caption(f"{len(visible_stops):,} of {len(stops):,} stops match the active map filters.")
         render_map_filter_controls(stops, "published")
         if visualization.get("show_legend", True) and taxonomy:

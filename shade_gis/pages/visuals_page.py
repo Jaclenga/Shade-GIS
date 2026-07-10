@@ -444,7 +444,6 @@ def render_visuals_page() -> None:
                 width="stretch",
                 height=VISUAL_MAP_HEIGHT,
             )
-
     st.subheader("Custom Chart Preview")
     if stops.empty:
         st.info("Import a dataset to preview a custom chart.")

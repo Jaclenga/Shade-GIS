@@ -7,6 +7,8 @@ import pandas as pd
 import pydeck as pdk
 import streamlit as st
 
+from public_voting import DEFAULT_VOTING_CONFIG
+
 from shade_gis.builder_imports import REQUIRED_STOP_FIELDS, hex_to_rgb, normalize_hex_color
 
 DEFAULT_DISPLAY_COLUMNS = ["stop_id", "stop_name", "routes", "shading", "review_status", "priority_score"]
@@ -68,6 +70,7 @@ DEFAULT_VISUALIZATION = {
     },
     "show_legend": True,
     "show_downloads": True,
+    "voting": DEFAULT_VOTING_CONFIG,
     "display_columns": DEFAULT_DISPLAY_COLUMNS,
     "custom_charts": DEFAULT_CUSTOM_CHARTS,
 }
@@ -147,9 +150,12 @@ SHADE_SOURCE_CHART_ALIASES = {
 }
 SHADE_COVERAGE_CHART_CODES = {
     "no shade": "No Shade",
-    "limited": "Limited",
-    "significant": "Significant",
-    "significant shade": "Significant",
+    "limited": "Limited Shade",
+    "limited shade": "Limited Shade",
+    "limited natural shade": "Limited Shade",
+    "significant": "Significant Shade",
+    "significant shade": "Significant Shade",
+    "significant natural shade": "Significant Shade",
 }
 DEFAULT_CHART_TITLES_BY_X = {
     "shade_sources": "Shade Sources",
@@ -162,7 +168,7 @@ PRIORITY_FACTOR_DETAILS = {
     ),
     "low_shade": (
         "Low shade",
-        "Stops with No Shade, Limited coverage, or Needs Review receive more priority.",
+        "Stops with No Shade, Limited Shade, or Needs Review receive more priority.",
     ),
 }
 

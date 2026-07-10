@@ -59,6 +59,20 @@ CREATE TABLE IF NOT EXISTS stops (
   UNIQUE (project_id, stop_id)
 );
 
+-- Generated public apps can use this table in a shared PostgreSQL database.
+-- It intentionally does not require a projects row because the voting store may be deployed alone.
+CREATE TABLE IF NOT EXISTS shade_votes (
+  id BIGSERIAL PRIMARY KEY,
+  study_id TEXT NOT NULL,
+  stop_id TEXT NOT NULL,
+  voter_id TEXT NOT NULL,
+  coverage_status TEXT NOT NULL,
+  shade_sources TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (study_id, stop_id, voter_id)
+);
+
 CREATE TABLE IF NOT EXISTS images (
   id TEXT PRIMARY KEY,
   project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,

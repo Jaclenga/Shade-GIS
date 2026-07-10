@@ -17,6 +17,15 @@ from shade_gis.builder_visuals import (
 )
 
 
+def test_public_voting_is_off_by_default_but_fully_configured():
+    voting = DEFAULT_VISUALIZATION["voting"]
+
+    assert voting["enabled"] is False
+    assert voting["options"] == ["No Shade", "Limited Shade", "Significant Shade"]
+    assert voting["minimum_votes_for_result"] == 5
+    assert voting["allow_vote_changes"] is True
+
+
 def test_default_custom_charts_count_sources_and_coverage():
     stops = pd.DataFrame(
         [
@@ -130,7 +139,7 @@ def test_coverage_count_chart_uses_schema_codes():
     counts = dict(zip(data[x_column], data[y_column], strict=True))
 
     assert y_column == "records"
-    assert counts == {"Limited": 1, "Significant": 1}
+    assert counts == {"Limited Shade": 1, "Significant Shade": 1}
 
 
 def test_defaultish_custom_chart_titles_follow_schema_columns():

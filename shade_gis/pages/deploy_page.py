@@ -46,6 +46,13 @@ def render_deploy_page() -> None:
         st.metric("Stops included", f"{len(stops_for_export):,}")
         st.metric("Dataset version", project.get("dataset_version", "draft"))
 
+    if visualization.get("voting", {}).get("enabled", False):
+        st.info(
+            "Public voting is enabled. Configure `SHADE_GIS_VOTE_DATABASE_URL` as a Streamlit secret "
+            "for durable PostgreSQL storage; the included local SQLite fallback is not durable on "
+            "Streamlit Community Cloud."
+        )
+
     bundle_name = f"{repo_for_bundle}.zip"
     deploy_mode = "existing" if target_mode == "Existing private repository" else "create"
     st.download_button(
@@ -107,6 +114,7 @@ def render_deploy_page() -> None:
         pd.DataFrame(
             [
                 ("app.py", "Public Streamlit app rendered from the current builder state"),
+                ("public_voting.py", "Crowd voting interface and SQLite/PostgreSQL vote storage"),
                 ("shade_study_stops.csv", "Published stop dataset"),
                 ("shade_study_raw_labels.csv", "Raw label submissions, included when labels have been collected"),
                 ("shade_study_config.json", "Project, methodology, taxonomy, visualization, and import-log settings"),

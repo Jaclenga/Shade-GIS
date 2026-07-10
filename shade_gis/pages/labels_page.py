@@ -1,4 +1,10 @@
 from builder_app import *
+from shade_gis.shade_dimensions import (
+    infer_sources_from_legacy_category,
+    normalize_shade_coverage,
+    normalize_shade_source as normalize_source_dimension,
+    split_shade_sources as split_source_dimension,
+)
 
 
 REVIEW_STATUS_DEFINITIONS = {
@@ -528,17 +534,7 @@ def normalize_shade_category_label(value: Any) -> str:
         return "; ".join(
             normalized for part in text.split(";") if (normalized := normalize_shade_category_label(part))
         )
-    aliases = {
-        "Intentional Built Shade": "Constructed",
-        "Incidental Built Shade": "Manmade",
-        "Limited Natural Shade": "Limited",
-        "Significant Natural Shade": "Significant",
-        "Constructed Shade": "Constructed",
-        "Manmade Shade": "Manmade",
-        "Natural Shade": "Natural",
-        "Unknown": "Needs Review",
-    }
-    return aliases.get(text, text)
+    return normalize_shade_coverage(text, "Needs Review")
 
 
 def format_review_source(value: Any) -> str:
@@ -611,11 +607,18 @@ def review_queue_display_table(queue: pd.DataFrame) -> pd.DataFrame:
 def raw_label_comparison_table(stop_labels: pd.DataFrame) -> pd.DataFrame:
     records = []
     for _, row in stop_labels.iterrows():
+        raw_coverage = row.get("shade_coverage", "")
+        if pd.isna(raw_coverage) or not str(raw_coverage).strip():
+            raw_coverage = row.get("shade_category", "")
+        coverage = normalize_shade_coverage(
+            raw_coverage,
+            "Needs Review",
+        )
         records.append(
             {
                 "Submitted": format_submitted_at(row.get("created_at", "")),
-                "Label": normalize_shade_category_label(row.get("shade_category", "")),
-                "Coverage": str(row.get("shade_coverage", "") or ""),
+                "Label": coverage,
+                "Coverage": coverage,
                 "Sources": source_display(row.get("shade_sources", "")),
                 "Confidence": format_confidence(row.get("confidence", "")),
                 "Reviewer": reviewer_display(row),
@@ -631,55 +634,20 @@ def raw_label_comparison_table(stop_labels: pd.DataFrame) -> pd.DataFrame:
 
 
 def infer_shade_sources_from_category(shade_category: str) -> str:
-    normalized = str(shade_category or "").strip().lower()
-    if not normalized or "no shade" in normalized or "needs review" in normalized:
-        return ""
-    if "natural" in normalized or "tree" in normalized or "vegetation" in normalized:
-        return "Natural"
-    if "constructed" in normalized or "intentional" in normalized or "shelter" in normalized or "canopy" in normalized:
-        return "Constructed"
-    if "manmade" in normalized or "incidental" in normalized or "building" in normalized or "built" in normalized:
-        return "Manmade"
-    return ""
+    sources = infer_sources_from_legacy_category(shade_category)
+    return sources[0] if sources else ""
 
 
 def normalize_shade_source(value: str) -> str:
-    normalized = str(value or "").strip().lower()
-    if normalized == "natural":
-        return "Natural"
-    if normalized in {"constructed", "intentional built", "intentional constructed"}:
-        return "Constructed"
-    if normalized in {"manmade", "incidental built"}:
-        return "Manmade"
-    return ""
+    return normalize_source_dimension(value)
 
 
 def normalized_shade_sources(value: Any) -> list[str]:
-    sources: list[str] = []
-    for source in split_list_field(value):
-        normalized = normalize_shade_source(source)
-        if normalized and normalized not in sources:
-            sources.append(normalized)
-    return sources
+    return split_source_dimension(value)
 
 
 def shade_type_from_category(shade_category: str) -> str:
-    normalized = str(shade_category or "").strip().lower()
-    if not normalized or "needs review" in normalized:
-        return "Needs Review"
-    if "no shade" in normalized:
-        return "No Shade"
-    if "limited" in normalized:
-        return "Limited"
-    if "significant" in normalized:
-        return "Significant"
-    if "natural" in normalized or "tree" in normalized or "vegetation" in normalized:
-        return "Natural"
-    if "constructed" in normalized or "intentional" in normalized or "shelter" in normalized or "canopy" in normalized:
-        return "Constructed"
-    if "manmade" in normalized or "incidental" in normalized or "building" in normalized or "built" in normalized:
-        return "Manmade"
-    return str(shade_category or "").strip() or "Needs Review"
+    return normalize_shade_coverage(shade_category, "Needs Review")
 
 
 def shade_type_options(taxonomy: list[dict[str, Any]]) -> list[str]:
@@ -688,31 +656,25 @@ def shade_type_options(taxonomy: list[dict[str, Any]]) -> list[str]:
         shade_type = shade_type_from_category(category)
         if shade_type not in options:
             options.append(shade_type)
-    for shade_type in ["No Shade", "Limited", "Significant", "Natural", "Constructed", "Manmade", "Needs Review"]:
+    for shade_type in [*SHADE_COVERAGE_OPTIONS, "Needs Review"]:
         if shade_type not in options:
             options.append(shade_type)
     return options
 
 
 def coverage_from_category(shade_category: str, fallback: str = "") -> str:
-    normalized = str(shade_category or "").strip().lower()
-    if str(fallback or "").strip() in {"No Shade", "Limited", "Significant"}:
-        return str(fallback).strip()
-    if "no shade" in normalized:
-        return "No Shade"
-    if "limited" in normalized:
-        return "Limited"
-    if "significant" in normalized:
-        return "Significant"
-    return "Limited"
+    normalized_fallback = normalize_shade_coverage(fallback, "")
+    if normalized_fallback in SHADE_COVERAGE_OPTIONS:
+        return normalized_fallback
+    return normalize_shade_coverage(shade_category, "Limited Shade")
 
 
 def shade_category_from_type(shade_type: str, shade_coverage: str) -> str:
-    return shade_coverage if shade_coverage in SHADE_COVERAGE_OPTIONS else "Needs Review"
+    return normalize_shade_coverage(shade_coverage, "Needs Review")
 
 
 def shade_category_from_coverage_and_sources(shade_coverage: str, shade_sources: list[str]) -> str:
-    return shade_coverage if shade_coverage in SHADE_COVERAGE_OPTIONS else "Needs Review"
+    return normalize_shade_coverage(shade_coverage, "Needs Review")
 
 
 
@@ -800,14 +762,13 @@ def render_raw_label_collection(
         default_role = "Reviewer" if "Reviewer" in LABELER_ROLE_OPTIONS else LABELER_ROLE_OPTIONS[0]
 
         st.markdown("##### Label")
-        coverage_labels = ["Limited", "No Shade", "Significant"]
-        coverage_values = {"Limited": "Limited", "No Shade": "No Shade", "Significant": "Significant"}
+        coverage_labels = SHADE_COVERAGE_OPTIONS
         current_coverage = str(selected_stop.get("shade_coverage", "") or "")
         coverage_default = coverage_from_category(current_category, current_coverage)
         coverage_label_default = coverage_default
         coverage_index = coverage_labels.index(coverage_label_default) if coverage_label_default in coverage_labels else 0
         coverage_label = st.selectbox("Coverage", coverage_labels, index=coverage_index, key="label_coverage")
-        shade_coverage = coverage_values[coverage_label]
+        shade_coverage = coverage_label
 
         existing_sources = normalized_shade_sources(selected_stop.get("shade_sources", ""))
         if not existing_sources:

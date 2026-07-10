@@ -31,7 +31,7 @@ Shade studies often combine transit feeds, local imagery review, community obser
 
 Shade-GIS addresses those recurring needs by providing:
 
-- A reusable Streamlit builder for configuring study metadata, source data, shade source and coverage taxonomies, methodology copy, visualizations, and exports.
+- A reusable Streamlit builder for configuring study metadata, source data, shade source and coverage taxonomies, methodology copy, visualizations, optional public crowd voting, and exports.
 - Flexible import paths for GTFS, CSV, GeoJSON, zipped Shapefiles, API-hosted files, and manually entered records.
 - A raw labeling and admin review workflow that preserves submissions, agreement metrics, final labels, and audit history.
 - Project-scoped durable storage through SQLite by default, with a Postgres-ready relational schema for shared deployments.
@@ -50,12 +50,12 @@ Shade-GIS consists of the following layers:
 
 - **Builder app** - The main Streamlit interface for importing data, editing project settings, reviewing labels, configuring visualizations, previewing the public app, and exporting deployment bundles.
 - **Platform store** - A durable SQLite-backed project store that saves metadata, taxonomy, methodology, visualization settings, stops, import logs, raw labels, and review history.
-- **Public app template** - The tested `published_app.py` module used by the builder preview and copied into generated study bundles.
+- **Public app template** - The tested `published_app.py` experience plus the `public_voting.py` runtime copied into generated study bundles.
 - **Schema and docs** - A Postgres-ready schema plus platform documentation for teams that want to move beyond local SQLite.
 
 ### Builder App
 
-The builder starts with the bundled Tampa/HART starter dataset, or with a new imported dataset. Project teams can configure metadata, import logs, source licensing, shade source and coverage taxonomies, review workflow, map styling, dashboard sections, custom charts, public table columns, map hover fields, GIS overlays, and methodology content.
+The builder starts with the bundled Tampa/HART starter dataset, or with a new imported dataset. Project teams can configure metadata, import logs, source licensing, shade source and coverage taxonomies, review workflow, map styling, dashboard sections, custom charts, public voting, public table columns, map hover fields, GIS overlays, and methodology content.
 
 The main app entrypoint is intentionally small:
 
@@ -86,10 +86,25 @@ Set `SHADE_GIS_DB_PATH` to point the builder at another writable SQLite database
 The `Preview` page renders the public-facing study experience for the active project. The `Deploy` page exports a GitHub-ready bundle containing:
 
 - `app.py`: standalone public Streamlit app copied from `published_app.py`.
+- `public_voting.py`: public voting interface and SQLite/PostgreSQL vote storage.
 - `shade_study_stops.csv`: exported stop dataset with current priority scores.
 - `shade_study_raw_labels.csv`: raw labels when labels have been collected.
 - `shade_study_config.json`: project metadata, taxonomy, methodology, visualization settings, and import log.
 - `requirements.txt`, `.streamlit/config.toml`, generated `README.md`, and `deploy_to_github.ps1`.
+
+The dedicated `Voting` page includes the Public Voting editor. An admin can enable or hide voting, choose the
+coverage categories visitors may submit, edit all visible voting copy including the separate shade-source
+checkbox prompt, control whether repeat votes
+from the same browser session may be changed, show or hide totals, and set the minimum vote count
+before a unique leading status is reported. Community results stay separate from the reviewed stop
+dataset so public input does not silently overwrite an admin-approved classification.
+
+Generated apps use a local `.shade_gis_votes.sqlite3` file by default. That is useful for local
+testing, but hosted deployments should set the Streamlit secret
+`SHADE_GIS_VOTE_DATABASE_URL = "postgresql://..."` because Streamlit Community Cloud local files
+are ephemeral. The generated bundle README contains the complete setup note, and the app creates its
+`shade_votes` table automatically. Voter identifiers are random browser-session IDs rather than
+names or email addresses; this is lightweight crowdsourcing, not authenticated identity verification.
 
 ## Getting Started
 
@@ -173,15 +188,16 @@ The reviewed example records focus on three shade fields:
 
 | Field | Meaning in the example dataset |
 | --- | --- |
-| `shade_coverage` | The amount of visible shade reaching the waiting area: `No Shade`, `Limited`, or `Significant`. |
+| `shade_coverage` | The amount of visible shade reaching the waiting area: `No Shade`, `Limited Shade`, or `Significant Shade`. |
 | `shade_sources` | The visible source of shade reaching the waiting area, such as `Natural`, `Constructed`, `Manmade`, or combined labels when multiple sources are present. |
 | `shading` | The derived coverage category used for coloring, filtering, summaries, and public display. |
 
 Manual coding used the visible waiting area as the unit of analysis. Reviewers should code what appears to shade the place where a rider would reasonably stand or sit while waiting, rather than nearby objects that do not visibly shade that space.
 
-The example labels distinguish source and coverage separately. Use `shade_sources` for what creates
-the shade and `shade_coverage` for how much of the waiting area is shaded. The derived `shading`
-field mirrors the coverage code so map filters do not combine source and coverage into one label.
+The example labels distinguish source and coverage as separate dimensions. Use `shade_sources` for
+what creates the shade and `shade_coverage` for how much of the waiting area is shaded. The derived
+`shading` field mirrors the coverage code, and source values never appear as coverage choices or map
+coverage labels.
 
 Shade source definitions:
 
@@ -196,8 +212,8 @@ Shade coverage definitions:
 | Shade coverage | Operational definition |
 | --- | --- |
 | `No Shade` | No shade visibly reaches the waiting area. |
-| `Limited` | Shade visibly reaches part of the waiting area, but does not cover most of it. |
-| `Significant` | Shade visibly covers most of the waiting area or seating area. |
+| `Limited Shade` | Shade visibly reaches part of the waiting area, but does not cover most of it. |
+| `Significant Shade` | Shade visibly covers most of the waiting area or seating area. |
 
 Because the example was created from Google Maps imagery, it should be treated as a demonstration dataset with known limitations. Image dates, camera angle, season, time of day, temporary obstructions, and incomplete street-level coverage can all affect what shade is visible. The sample is useful for testing the platform workflow, previewing maps and review tools, and illustrating a reproducible coding approach; project teams should perform their own review before publishing a local study.
 
@@ -342,7 +358,7 @@ Before committing, the helper prints `git status`, `git diff --stat`, and a stag
 
 In existing-repository mode, the helper verifies private repo visibility when it can, clones the target repo into a temporary `_shade_gis_publish_*` folder under PowerShell's temp path, checks out the selected branch, copies only generated app/runtime files into that checkout, commits changes, pushes back to GitHub, and cleans up the temporary folder. It does not copy protected files such as `.git/`, `.github/`, `README.md`, `LICENSE`, `.env*`, or `secrets.toml`. In new-repository mode, it initializes Git in the extracted bundle, stages only generated app files, creates the GitHub repository, and pushes the branch. Public publishing requires the explicit `-AllowPublicTarget` flag.
 
-The generated repository can then be connected to Streamlit Community Cloud or another Streamlit host with `app.py` as the main file. Private repositories require the deployment host to have access to the repository.
+The generated repository can then be connected to Streamlit Community Cloud or another Streamlit host with `app.py` as the main file. Private repositories require the deployment host to have access to the repository. When public voting is enabled, add a PostgreSQL connection URL as the `SHADE_GIS_VOTE_DATABASE_URL` deployment secret before relying on vote persistence.
 
 ## License and Citation
 

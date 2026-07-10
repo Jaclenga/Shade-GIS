@@ -22,6 +22,7 @@ The canonical relational shape is:
 | `project_settings` | JSON methodology and visualization settings for each project. |
 | `shade_taxonomy` | Editable derived map category names, definitions, colors, and sort order. |
 | `stops` | Per-project stop records, priority scores, review fields, and extra imported columns. |
+| `shade_votes` | Deployed-app coverage votes and separate shade-source selections, isolated by study, stop, and browser-session voter ID. |
 | `images` | Uploaded or referenced imagery associated with projects and stops. |
 | `shade_labels` | Raw expert, crowd, imported, or model-assisted label submissions. |
 | `review_history` | Status transitions, reviewer actions, notes, and audit metadata. |
@@ -90,7 +91,7 @@ Optional fields:
 | `routes` | Semicolon-separated route labels serving the stop. |
 | `municipality` | Local jurisdiction or neighborhood label. |
 | `shading` | Current derived coverage category used by maps and filters. |
-| `shade_coverage` | Coverage dimension: `No Shade`, `Limited`, or `Significant`. |
+| `shade_coverage` | Coverage dimension: `No Shade`, `Limited Shade`, or `Significant Shade`. |
 | `shade_sources` | Semicolon-separated source dimension: `Natural`, `Constructed`, `Manmade`, or multiple values. |
 | `review_status` | Workflow status such as unlabeled, accepted, or disputed. |
 | `confidence` | Reviewer or model confidence. |
@@ -117,12 +118,12 @@ The core coverage taxonomy is:
 | Shade Coverage | Operational Definition |
 | --- | --- |
 | `No Shade` | No shade visibly reaches the waiting area. |
-| `Limited` | Shade visibly reaches part of the waiting area, but does not cover most of it. |
-| `Significant` | Shade visibly covers most of the waiting area or seating area. |
+| `Limited Shade` | Shade visibly reaches part of the waiting area, but does not cover most of it. |
+| `Significant Shade` | Shade visibly covers most of the waiting area or seating area. |
 
 The `shading` field remains a derived map category for coloring, filtering, summaries, and public
-display. It mirrors `shade_coverage`; source labels stay in `shade_sources` so source and coverage
-are not collapsed into a single display value.
+display. It mirrors `shade_coverage`; source labels stay only in `shade_sources` so source and
+coverage are independently queryable and never appear in the same choice list.
 
 ## Raw Shade Labels
 
@@ -166,6 +167,20 @@ selections, up to 10 custom X/Y chart settings, advanced dashboard sections, pub
 table/map-hover columns, and priority weights. Dataset-specific attributes are discovered from the
 active stop table and remain project data, not schema-level platform fields.
 
+`visualization.voting` stores the generated app's crowd-voting controls: enabled state, editable
+heading/instructions/coverage-question/source-question/button/confirmation/result copy, allowed canonical coverage choices,
+result visibility, minimum votes required before reporting a unique leader, and whether a browser
+session may revise its vote. These controls and their deployed-interface preview live on the
+builder's dedicated `Voting` page. Voting is hidden by default. Public consensus remains a separate signal
+and does not overwrite the reviewed stop classification.
+
+The generated app writes public observations to a `shade_votes` table keyed by `study_id`, `stop_id`,
+and a random browser-session `voter_id`, with separate `coverage_status` and `shade_sources` values.
+It uses `SHADE_GIS_VOTE_DATABASE_URL` for shared PostgreSQL
+storage when configured and otherwise falls back to `.shade_gis_votes.sqlite3` beside the app.
+Hosted deployments should configure PostgreSQL because Streamlit Community Cloud local files are
+ephemeral. The runtime creates the table automatically and never exports database credentials.
+
 Uploaded GIS overlays live under `visualization.gis_overlays`. Each overlay stores a name,
 category, source, license, original filename, format, style settings, import timestamp, summary
 metadata, and a GeoJSON FeatureCollection. GeoJSON files are preserved as GeoJSON, while zipped
@@ -196,6 +211,7 @@ Streamlit source is maintained in `published_app.py`, which the builder preview 
 deploy bundle copies as its standalone `app.py`. The bundle includes:
 
 - Standalone `app.py` for the public Streamlit experience.
+- `public_voting.py` with the configured crowd interface and vote-store implementation.
 - `shade_study_stops.csv` with the active stop dataset and current priority scores.
 - `shade_study_raw_labels.csv` with raw label submissions, when labels have been collected.
 - `shade_study_config.json` with project metadata, taxonomy, methodology copy, visualization settings, and import log.

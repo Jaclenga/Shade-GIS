@@ -95,6 +95,35 @@ def test_bad_csv_missing_coordinates_drops_rows(project, taxonomy):
     assert prepared.empty
 
 
+def test_legacy_combined_labels_are_split_into_coverage_and_sources(project, taxonomy):
+    raw = pd.DataFrame(
+        [
+            {
+                "stop_id": "legacy-1",
+                "stop_name": "Legacy natural",
+                "stop_lat": 27.95,
+                "stop_lon": -82.45,
+                "shading": "Limited Natural Shade",
+            },
+            {
+                "stop_id": "legacy-2",
+                "stop_name": "Legacy shelter",
+                "stop_lat": 27.96,
+                "stop_lon": -82.46,
+                "shading": "Intentional Built Shade",
+            },
+        ]
+    )
+
+    prepared = prepare_stop_dataset(raw, project, taxonomy).set_index("stop_id")
+
+    assert prepared.loc["legacy-1", "shade_coverage"] == "Limited Shade"
+    assert prepared.loc["legacy-1", "shading"] == "Limited Shade"
+    assert prepared.loc["legacy-1", "shade_sources"] == "Natural"
+    assert prepared.loc["legacy-2", "shade_coverage"] == "Needs Review"
+    assert prepared.loc["legacy-2", "shade_sources"] == "Constructed"
+
+
 def test_api_url_guard_blocks_private_and_credentialed_urls(monkeypatch):
     monkeypatch.delenv("SHADE_GIS_ALLOW_PRIVATE_API_URLS", raising=False)
     monkeypatch.delenv("SHADE_GIS_ALLOWED_API_HOSTS", raising=False)
