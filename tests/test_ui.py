@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
+import tempfile
 
 
 pytestmark = pytest.mark.ui
@@ -157,7 +158,12 @@ def test_builder_navigation_pages_render(playwright_api, streamlit_server: Strea
         browser = playwright.chromium.launch()
         page = browser.new_page(viewport={"width": 1440, "height": 1000})
         chart_warnings = []
+        chart_events: list[tuple[str, str]] = []
         current_surface = {"name": "Data"}
+        # Capture all console messages and page errors for later debugging.
+        page.on("console", lambda message: chart_events.append((message.type, message.text)))
+        page.on("pageerror", lambda error: chart_events.append(("pageerror", str(error))))
+        # Keep the original targeted warnings separate for assertions.
         page.on(
             "console",
             lambda message: chart_warnings.append(f"{current_surface['name']}: {message.text}")
@@ -226,6 +232,26 @@ def test_builder_navigation_pages_render(playwright_api, streamlit_server: Strea
             assert chart_warnings == []
             assert streamlit_server.process.poll() is None
         except Exception as error:
+            # Save debugging artifacts: screenshot, full HTML, body text, and console log.
+            try:
+                dump_dir = Path(tempfile.gettempdir()) / "shade_gis_ui_failure_logs"
+                dump_dir.mkdir(parents=True, exist_ok=True)
+                basename = f"ui_failure_{int(time.time())}_{uuid.uuid4().hex}"
+                screenshot_path = dump_dir / f"{basename}.png"
+                page.screenshot(path=str(screenshot_path), full_page=True)
+                html_path = dump_dir / f"{basename}.html"
+                with open(html_path, "w", encoding="utf-8") as f:
+                    f.write(page.content())
+                text_path = dump_dir / f"{basename}.txt"
+                with open(text_path, "w", encoding="utf-8") as f:
+                    f.write(page.locator("body").inner_text())
+                console_path = dump_dir / f"{basename}_console.txt"
+                with open(console_path, "w", encoding="utf-8") as f:
+                    for kind, msg in chart_events:
+                        f.write(f"{kind}: {msg}\n")
+            except Exception:
+                # Best-effort debug dump; ignore failures here to not hide original error.
+                pass
             raise AssertionError(f"{error}\n\nStreamlit server log tail:\n{streamlit_server.log_tail()}") from error
         finally:
             browser.close()
