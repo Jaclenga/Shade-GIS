@@ -213,19 +213,15 @@ def test_builder_navigation_pages_render(playwright_api, streamlit_server: Strea
                 current_surface["name"] = nav_label
                 nav_button = page.get_by_test_id("stMainBlockContainer").get_by_role("button", name=nav_label, exact=True)
                 wait_for_streamlit_idle(playwright_api, page)
-                playwright_api.expect(nav_button).to_be_enabled(timeout=60_000)
                 target_heading = page.get_by_role("heading", name=heading, exact=True)
 
                 for attempt in range(2):
-                    # Some CI environments or UI states may render the nav
-                    # button as disabled even though clicking it should still
-                    # navigate. Prefer a normal click when enabled, but fall
-                    # back to a forced click when disabled to avoid flakes.
+                    # Streamlit may temporarily disable the nav button while a rerun is
+                    # in progress. The relevant signal is whether the target page renders,
+                    # so wait for the control to become visible and then click it.
+                    nav_button.wait_for(state="visible", timeout=15_000)
                     try:
-                        if nav_button.is_enabled():
-                            nav_button.click()
-                        else:
-                            nav_button.click(force=True)
+                        nav_button.click()
                     except Exception:
                         # Playwright will raise if the element is not ready;
                         # allow retry logic below to handle it.

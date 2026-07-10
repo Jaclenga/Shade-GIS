@@ -963,13 +963,9 @@ def validation_summary(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def set_page(page: str) -> None:
-    previous_page = st.session_state.get("page")
+    if st.session_state.get("page") == page:
+        return
     st.session_state["page"] = page
-    if previous_page != page:
-        try:
-            st.rerun()
-        except Exception:
-            pass
 
 
 def render_header() -> str:
