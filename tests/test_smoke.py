@@ -30,6 +30,20 @@ def test_app_py_is_builder_entrypoint():
     assert app.main.__module__ == "builder_app"
 
 
+def test_ui_smoke_can_disable_expensive_automatic_persistence(monkeypatch):
+    import builder_app
+
+    monkeypatch.setenv("SHADE_GIS_TEST_DISABLE_AUTO_SAVE", "1")
+    monkeypatch.setattr(builder_app, "st", type("FakeStreamlit", (), {"session_state": {"active_project_id": "ui-test"}}))
+    monkeypatch.setattr(
+        builder_app,
+        "save_project_bundle",
+        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("auto-save should be skipped")),
+    )
+
+    builder_app.save_active_project_to_store()
+
+
 def test_summary_metrics_only_render_in_analytics():
     published_source = Path("published_app.py").read_text(encoding="utf-8")
     preview_source = Path("shade_gis/pages/preview_page.py").read_text(encoding="utf-8")

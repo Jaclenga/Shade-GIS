@@ -417,6 +417,8 @@ def load_project_into_session(project_id: str) -> None:
 
 
 def save_active_project_to_store() -> None:
+    if os.environ.get("SHADE_GIS_TEST_DISABLE_AUTO_SAVE", "").strip() == "1":
+        return
     project_id = st.session_state.get("active_project_id")
     if not project_id:
         return

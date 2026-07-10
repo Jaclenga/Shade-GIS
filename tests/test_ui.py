@@ -73,6 +73,7 @@ def streamlit_server(playwright_api):
         {
             "SHADE_GIS_DB_PATH": str(temp_root / "shade-gis-ui.sqlite3"),
             "SHADE_GIS_VOTE_DB_PATH": str(temp_root / "shade-gis-votes-ui.sqlite3"),
+            "SHADE_GIS_TEST_DISABLE_AUTO_SAVE": "1",
             "STREAMLIT_BROWSER_GATHER_USAGE_STATS": "false",
             "STREAMLIT_SERVER_HEADLESS": "true",
         }
