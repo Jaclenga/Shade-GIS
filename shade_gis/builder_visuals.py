@@ -658,7 +658,7 @@ def add_marker_icons(map_df: pd.DataFrame, visualization: dict[str, Any]) -> pd.
             "anchorY": 64 if shape == "Pin" else 32,
         }
     )
-    shaped["marker_size"] = int(visualization.get("marker_size", 18))
+    shaped["marker_size"] = int(visualization.get("marker_size", DEFAULT_VISUALIZATION["marker_size"]))
     return shaped
 
 
