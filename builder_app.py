@@ -385,6 +385,13 @@ def create_seed_project() -> str:
     methodology = DEFAULT_METHODOLOGY.copy()
     visualization = json.loads(json.dumps(DEFAULT_VISUALIZATION))
     stops = load_seed_dataset(taxonomy, project)
+    test_seed_limit = os.environ.get("SHADE_GIS_TEST_MAX_SEED_ROWS", "").strip()
+    if test_seed_limit:
+        try:
+            limit = max(int(test_seed_limit), 1)
+        except ValueError:
+            limit = len(stops)
+        stops = stops.head(limit).copy()
     import_log = [
         {
             "source": "Seed Tampa GTFS and shade CSV",

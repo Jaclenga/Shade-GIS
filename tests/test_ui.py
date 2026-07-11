@@ -78,6 +78,26 @@ def wait_for_streamlit_idle(playwright_api, page, timeout_ms: int = 60_000) -> N
             pass
 
 
+def reconnect_streamlit_page(page, streamlit_server: StreamlitServer, attempts: int = 3) -> None:
+    """Reconnect after a wedged frontend, retrying transient server unavailability."""
+    last_error: Exception | None = None
+    port = int(streamlit_server.url.rsplit(":", 1)[1])
+    for _ in range(attempts):
+        if streamlit_server.process.poll() is not None:
+            raise RuntimeError(
+                f"Streamlit server exited with code {streamlit_server.process.returncode}.\n"
+                f"Server log tail:\n{streamlit_server.log_tail()}"
+            )
+        try:
+            wait_for_streamlit_health(port, timeout_seconds=15)
+            page.goto(streamlit_server.url, wait_until="domcontentloaded", timeout=30_000)
+            return
+        except Exception as error:
+            last_error = error
+            page.wait_for_timeout(1000)
+    raise RuntimeError(f"Could not reconnect to the Streamlit test server: {last_error}") from last_error
+
+
 @pytest.fixture
 def playwright_api():
     return pytest.importorskip("playwright.sync_api")
@@ -94,6 +114,7 @@ def streamlit_server(playwright_api):
             "SHADE_GIS_DB_PATH": str(temp_root / "shade-gis-ui.sqlite3"),
             "SHADE_GIS_VOTE_DB_PATH": str(temp_root / "shade-gis-votes-ui.sqlite3"),
             "SHADE_GIS_TEST_DISABLE_AUTO_SAVE": "1",
+            "SHADE_GIS_TEST_MAX_SEED_ROWS": "100",
             "STREAMLIT_BROWSER_GATHER_USAGE_STATS": "false",
             "STREAMLIT_SERVER_HEADLESS": "true",
         }
@@ -241,13 +262,7 @@ def test_builder_navigation_pages_render(playwright_api, streamlit_server: Strea
                     # resolving a fresh locator for the second attempt. The UI fixture
                     # uses a temporary durable project store, so a replacement frontend
                     # session still loads the same test project.
-                    try:
-                        port = int(streamlit_server.url.rsplit(":", 1)[1])
-                        wait_for_streamlit_health(port, timeout_seconds=30)
-                    except Exception:
-                        page.wait_for_timeout(1000)
-
-                    page.reload(wait_until="domcontentloaded")
+                    reconnect_streamlit_page(page, streamlit_server)
                     page.locator(
                         ".builder-brand",
                         has_text="Shade-GIS",

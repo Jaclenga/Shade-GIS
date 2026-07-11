@@ -83,6 +83,11 @@ canonical coverage/source decision. That decision marks the stop `Accepted` and 
 Generated public apps show the compact summary and filtered disagreement queue without admin write
 controls.
 
+The Preview `Exports` tab and generated app downloads use a compact Export Files catalog instead of
+stacked buttons. Every file row includes its purpose, record count, generated file size, relevant
+data date, and download action. Import sources and timestamps appear separately below the catalog in
+`Dataset Provenance`.
+
 ### Platform Store
 
 The Streamlit builder uses SQLite by default. On Windows, the database is created under:

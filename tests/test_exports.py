@@ -7,6 +7,7 @@ import zipfile
 import pandas as pd
 
 import builder_app
+import published_app
 from builder_app import (
     build_github_deploy_bundle,
     dataframe_to_geojson,
@@ -67,6 +68,55 @@ def test_export_csv_geojson_raw_labels_and_config(db_path, project, taxonomy, me
             "Limited Shade",
             "Significant Shade",
         ]
+
+
+def test_export_file_catalog_describes_files_and_metadata(minimal_stops):
+    raw_labels = pd.DataFrame(
+        [
+            {
+                "stop_id": "1001",
+                "shade_category": "No Shade",
+                "created_at": "2026-07-09T14:30:00-04:00",
+            }
+        ]
+    )
+    config = {"project": {"name": "Test"}, "import_log": []}
+    import_log = [
+        {
+            "source": "Test GTFS",
+            "format": "GTFS",
+            "rows": 2,
+            "imported_at": "2026-07-08T10:15:00-04:00",
+        }
+    ]
+
+    catalog = published_app.export_file_catalog(minimal_stops, raw_labels, config, import_log)
+
+    assert [item["name"] for item in catalog] == [
+        "Stops CSV",
+        "Stops GeoJSON",
+        "Raw Labels CSV",
+        "Study Configuration",
+    ]
+    assert [item["records"] for item in catalog] == [2, 2, 1, 1]
+    assert all(item["description"] for item in catalog)
+    assert all(item["size"].endswith(("B", "KB", "MB", "GB")) for item in catalog)
+    assert catalog[0]["updated"] == "2026-07-08 10:15"
+    assert catalog[2]["updated"] == "2026-07-09 14:30"
+    assert json.loads(catalog[1]["data"])["type"] == "FeatureCollection"
+
+
+def test_raw_label_export_remains_visible_but_disabled_without_labels(minimal_stops):
+    catalog = published_app.export_file_catalog(
+        minimal_stops,
+        pd.DataFrame(),
+        {"import_log": []},
+    )
+    raw_labels = next(item for item in catalog if item["name"] == "Raw Labels CSV")
+
+    assert raw_labels["records"] == 0
+    assert raw_labels["available"] is False
+    assert raw_labels["updated"] == "No labels"
 
 
 def test_deploy_script_supports_existing_private_repositories():

@@ -45,6 +45,27 @@ def test_ui_smoke_can_disable_expensive_automatic_persistence(monkeypatch):
     builder_app.save_active_project_to_store()
 
 
+def test_ui_seed_limit_is_test_only(monkeypatch, taxonomy, project):
+    import builder_app
+
+    full_seed = builder_app.load_seed_dataset(taxonomy, project)
+    monkeypatch.setenv("SHADE_GIS_TEST_MAX_SEED_ROWS", "25")
+    monkeypatch.setattr(builder_app, "load_seed_dataset", lambda *args: full_seed)
+    captured = {}
+    monkeypatch.setattr(
+        builder_app,
+        "create_project",
+        lambda project, taxonomy, methodology, visualization, stops, import_log: captured.update(
+            {"stops": stops, "rows": import_log[0]["rows"]}
+        )
+        or "ui-seed",
+    )
+
+    assert builder_app.create_seed_project() == "ui-seed"
+    assert len(captured["stops"]) == 25
+    assert captured["rows"] == 25
+
+
 def test_summary_metrics_only_render_in_analytics():
     published_source = Path("published_app.py").read_text(encoding="utf-8")
     preview_source = Path("shade_gis/pages/preview_page.py").read_text(encoding="utf-8")
@@ -79,3 +100,12 @@ def test_data_page_uses_progress_dashboard_and_collapsed_dataset_preview():
     assert "st.dataframe(visible_stops" in source
     assert "st.dataframe(stops," not in source
     assert 'st.subheader("Dataset Health")' not in source
+
+
+def test_preview_exports_use_catalog_and_provenance_sections():
+    source = Path("shade_gis/pages/preview_page.py").read_text(encoding="utf-8")
+
+    assert "published_app.render_export_files(" in source
+    assert "published_app.render_dataset_provenance(" in source
+    assert 'st.dataframe(pd.DataFrame(st.session_state["import_log"])' not in source
+    assert '"Download stops CSV"' not in source

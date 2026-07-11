@@ -1565,6 +1565,150 @@ def render_agreement_metrics(labels: pd.DataFrame) -> None:
     st.dataframe(display, width="stretch", hide_index=True)
 
 
+def readable_file_size(size_bytes: int) -> str:
+    size = max(int(size_bytes), 0)
+    units = ["B", "KB", "MB", "GB"]
+    value = float(size)
+    for unit in units:
+        if value < 1024 or unit == units[-1]:
+            return f"{int(value)} {unit}" if unit == "B" else f"{value:.1f} {unit}"
+        value /= 1024
+    return f"{size} B"
+
+
+def compact_timestamp(value: Any, fallback: str = "Current project") -> str:
+    text = str(value or "").strip()
+    if not text:
+        return fallback
+    return text.replace("T", " ")[:16]
+
+
+def latest_import_timestamp(import_log: list[dict[str, Any]]) -> str:
+    timestamps = [str(item.get("imported_at", "") or "").strip() for item in import_log]
+    timestamps = [timestamp for timestamp in timestamps if timestamp]
+    return max(timestamps) if timestamps else ""
+
+
+def export_file_catalog(
+    stops: pd.DataFrame,
+    raw_labels: pd.DataFrame,
+    config: dict[str, Any],
+    import_log: list[dict[str, Any]] | None = None,
+) -> list[dict[str, Any]]:
+    provenance = import_log if import_log is not None else list(config.get("import_log") or [])
+    imported_at = compact_timestamp(latest_import_timestamp(provenance))
+    latest_label_at = ""
+    if not raw_labels.empty and "created_at" in raw_labels.columns:
+        label_dates = raw_labels["created_at"].dropna().astype(str).str.strip()
+        if not label_dates.empty:
+            latest_label_at = label_dates.max()
+
+    stops_csv = stops.to_csv(index=False).encode("utf-8")
+    stops_geojson = dataframe_to_geojson(stops).encode("utf-8")
+    labels_csv = raw_labels.to_csv(index=False).encode("utf-8") if not raw_labels.empty else b""
+    config_json = json.dumps(config, indent=2, default=str).encode("utf-8")
+    return [
+        {
+            "name": "Stops CSV",
+            "description": "All stop records and current shade, review, route, and project fields.",
+            "records": len(stops),
+            "data": stops_csv,
+            "size": readable_file_size(len(stops_csv)),
+            "updated": imported_at,
+            "file_name": "shade_study_stops.csv",
+            "mime": "text/csv",
+            "available": True,
+        },
+        {
+            "name": "Stops GeoJSON",
+            "description": "Mapped stop features with coordinates and stop attributes for GIS software.",
+            "records": len(stops),
+            "data": stops_geojson,
+            "size": readable_file_size(len(stops_geojson)),
+            "updated": imported_at,
+            "file_name": "shade_study_stops.geojson",
+            "mime": "application/geo+json",
+            "available": True,
+        },
+        {
+            "name": "Raw Labels CSV",
+            "description": "Every submitted annotation, reviewer reference, confidence, source, and note.",
+            "records": len(raw_labels),
+            "data": labels_csv,
+            "size": readable_file_size(len(labels_csv)),
+            "updated": compact_timestamp(latest_label_at, "No labels"),
+            "file_name": "shade_study_raw_labels.csv",
+            "mime": "text/csv",
+            "available": not raw_labels.empty,
+        },
+        {
+            "name": "Study Configuration",
+            "description": "Project metadata, taxonomy, methodology, visualization settings, and import log.",
+            "records": 1,
+            "data": config_json,
+            "size": readable_file_size(len(config_json)),
+            "updated": imported_at,
+            "file_name": "shade_study_config.json",
+            "mime": "application/json",
+            "available": True,
+        },
+    ]
+
+
+def render_export_files(
+    stops: pd.DataFrame,
+    raw_labels: pd.DataFrame,
+    config: dict[str, Any],
+    import_log: list[dict[str, Any]] | None = None,
+    key_prefix: str = "published",
+) -> None:
+    st.markdown("#### Export Files")
+    st.caption("Download analysis-ready data, GIS features, annotation history, or reproducibility settings.")
+    catalog = export_file_catalog(stops, raw_labels, config, import_log)
+    with st.container(border=True):
+        header = st.columns([1.15, 2.5, .65, .7, 1.05, .75], vertical_alignment="center")
+        for column, label in zip(header, ["File", "Contents", "Records", "Size", "Updated", ""]):
+            column.markdown(f"**{label}**")
+        for index, export in enumerate(catalog):
+            if index:
+                st.divider()
+            columns = st.columns([1.15, 2.5, .65, .7, 1.05, .75], vertical_alignment="center")
+            columns[0].markdown(f"**{export['name']}**")
+            columns[1].caption(str(export["description"]))
+            columns[2].write(f"{int(export['records']):,}")
+            columns[3].write(str(export["size"]))
+            columns[4].caption(str(export["updated"]))
+            columns[5].download_button(
+                "Download",
+                data=export["data"],
+                file_name=str(export["file_name"]),
+                mime=str(export["mime"]),
+                key=f"{key_prefix}_export_{index}",
+                disabled=not bool(export["available"]),
+                width="stretch",
+            )
+
+
+def render_dataset_provenance(import_log: list[dict[str, Any]]) -> None:
+    st.markdown("#### Dataset Provenance")
+    st.caption("Sources and import events used to assemble the current project dataset.")
+    if not import_log:
+        st.info("No dataset import provenance has been recorded.")
+        return
+    with st.container(border=True):
+        header = st.columns([2.4, .8, .7, 1.3])
+        for column, label in zip(header, ["Source", "Format", "Records", "Imported"]):
+            column.markdown(f"**{label}**")
+        for index, entry in enumerate(reversed(import_log)):
+            if index:
+                st.divider()
+            columns = st.columns([2.4, .8, .7, 1.3], vertical_alignment="center")
+            columns[0].write(str(entry.get("source", "Unknown source") or "Unknown source"))
+            columns[1].write(str(entry.get("format", "Unknown") or "Unknown"))
+            columns[2].write(f"{int(entry.get('rows', 0) or 0):,}")
+            columns[3].caption(compact_timestamp(entry.get("imported_at"), "Not recorded"))
+
+
 def main() -> None:
     config, stops, raw_labels = load_study()
     project = config.get("project", {})
@@ -1636,11 +1780,10 @@ def main() -> None:
     elif tabs[3].open:
         with tabs[3]:
             if visualization.get("show_downloads", True):
-                st.download_button("Download stops CSV", stops.to_csv(index=False).encode("utf-8"), "shade_study_stops.csv", "text/csv")
-                st.download_button("Download stops GeoJSON", dataframe_to_geojson(stops).encode("utf-8"), "shade_study_stops.geojson", "application/geo+json")
-                st.download_button("Download study configuration", json.dumps(config, indent=2).encode("utf-8"), "shade_study_config.json", "application/json")
-                if not raw_labels.empty:
-                    st.download_button("Download raw labels CSV", raw_labels.to_csv(index=False).encode("utf-8"), "shade_study_raw_labels.csv", "text/csv")
+                render_export_files(stops, raw_labels, config, key_prefix="published")
+            else:
+                st.info("Public file downloads are disabled for this study.")
+            render_dataset_provenance(list(config.get("import_log") or []))
 
 
 if __name__ == "__main__":

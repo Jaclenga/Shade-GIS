@@ -8,6 +8,8 @@ pre-release phase while the reusable platform stabilizes.
 ## [Unreleased]
 
 ### Added
+- Compact Export Files catalog with descriptions, record counts, generated sizes, data dates,
+  per-row downloads, and a separate Dataset Provenance section.
 - Progress-oriented Dataset Status dashboard with coverage/review progress bars, a filtered work
   queue, and a collapsed paginated Dataset Preview replacing the former Dataset Health spreadsheets.
 - Agreement analytics section with a scalable disagreement-only queue, per-stop evidence review,

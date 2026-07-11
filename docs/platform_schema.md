@@ -229,6 +229,12 @@ The `Preview` page exports:
 - Raw labels CSV, when raw labels have been submitted.
 - Study configuration JSON containing project metadata, taxonomy, methodology copy, visualization settings, and import log.
 
+The Exports tab presents these files in one compact catalog. Each row explains the file's purpose,
+record count, generated size, relevant import or label date, and download action. Raw Labels CSV
+remains visible but disabled when no annotations exist, which keeps the export layout stable as the
+project progresses. Dataset source, format, row count, and import timestamp are shown separately in
+the `Dataset Provenance` section below the file catalog rather than as an unlabeled dataframe.
+
 The `Deploy` page also exports a GitHub-ready ZIP bundle for the rendered public app. The public
 Streamlit source is maintained in `published_app.py`, which the builder preview imports and the
 deploy bundle copies as its standalone `app.py`. The bundle includes:

@@ -101,32 +101,16 @@ def render_preview_page() -> None:
     elif tabs[3].open:
         with tabs[3]:
             if visualization.get("show_downloads", True):
-                st.download_button(
-                    "Download stops CSV",
-                    data=stops.to_csv(index=False).encode("utf-8"),
-                    file_name="shade_study_stops.csv",
-                    mime="text/csv",
+                published_app.render_export_files(
+                    stops,
+                    raw_labels,
+                    config,
+                    st.session_state["import_log"],
+                    key_prefix="preview",
                 )
-                st.download_button(
-                    "Download stops GeoJSON",
-                    data=published_app.dataframe_to_geojson(stops).encode("utf-8"),
-                    file_name="shade_study_stops.geojson",
-                    mime="application/geo+json",
-                )
-                st.download_button(
-                    "Download study configuration",
-                    data=json.dumps(config, indent=2, default=str).encode("utf-8"),
-                    file_name="shade_study_config.json",
-                    mime="application/json",
-                )
-                if not raw_labels.empty:
-                    st.download_button(
-                        "Download raw labels CSV",
-                        data=raw_labels.to_csv(index=False).encode("utf-8"),
-                        file_name="shade_study_raw_labels.csv",
-                        mime="text/csv",
-                    )
-            st.dataframe(pd.DataFrame(st.session_state["import_log"]), width="stretch", hide_index=True)
+            else:
+                st.info("Public file downloads are disabled for this study.")
+            published_app.render_dataset_provenance(st.session_state["import_log"])
 
 
 
