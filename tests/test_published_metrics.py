@@ -116,6 +116,18 @@ def test_published_agreement_overview_uses_compact_metrics() -> None:
     assert "Krippendorff α" in markup
 
 
+def test_taxonomy_display_hides_sort_order_but_preserves_category_order() -> None:
+    taxonomy = [
+        {"sort_order": 2, "name": "Limited Shade", "description": "Partial coverage"},
+        {"sort_order": 1, "name": "No Shade", "description": "No coverage"},
+    ]
+
+    display = published_app.taxonomy_display_table(taxonomy)
+
+    assert display.columns.tolist() == ["name", "description"]
+    assert display["name"].tolist() == ["No Shade", "Limited Shade"]
+
+
 def test_stop_detail_picker_avoids_session_state_default_warning(monkeypatch) -> None:
     selectbox_calls = []
 

@@ -1273,6 +1273,15 @@ def render_issue_analytics_dashboard(
         st.dataframe(priority.loc[:, columns], width="stretch", hide_index=True)
 
 
+def taxonomy_display_table(taxonomy: list[dict[str, Any]]) -> pd.DataFrame:
+    display = pd.DataFrame(taxonomy)
+    if display.empty:
+        return display
+    if "sort_order" in display.columns:
+        display = display.sort_values("sort_order", kind="stable")
+    return display.drop(columns=["sort_order"], errors="ignore").reset_index(drop=True)
+
+
 def render_methodology(config: dict[str, Any]) -> None:
     project = config.get("project", {})
     methodology = config.get("methodology", {})
@@ -1299,7 +1308,7 @@ def render_methodology(config: dict[str, Any]) -> None:
     taxonomy = config.get("taxonomy", [])
     if taxonomy:
         st.markdown("## Shade Taxonomy")
-        st.dataframe(pd.DataFrame(taxonomy), width="stretch", hide_index=True)
+        st.dataframe(taxonomy_display_table(taxonomy), width="stretch", hide_index=True)
 
 
 def dataframe_to_geojson(df: pd.DataFrame) -> str:

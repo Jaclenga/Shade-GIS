@@ -5,6 +5,16 @@ import pandas as pd
 import streamlit as st
 
 
+def builder_taxonomy_display_table(taxonomy: list[dict[str, Any]]) -> pd.DataFrame:
+    display = pd.DataFrame(taxonomy)
+    if display.empty:
+        return display
+    if "sort_order" in display.columns:
+        display = display.sort_values("sort_order", kind="stable")
+    visible_cols = [column for column in ["name", "description", "color"] if column in display.columns]
+    return display.loc[:, visible_cols].reset_index(drop=True)
+
+
 def render_grouped_citations(citation_text: str) -> None:
     lines = str(citation_text or "").splitlines()
     if not any(line.strip() for line in lines):
@@ -69,9 +79,7 @@ def render_builder_about_page(
 
     if taxonomy:
         st.markdown("## Shade Taxonomy")
-        taxonomy_df = pd.DataFrame(taxonomy)
-        visible_cols = [column for column in ["sort_order", "name", "description", "color"] if column in taxonomy_df.columns]
-        st.dataframe(taxonomy_df.loc[:, visible_cols], width="stretch", hide_index=True)
+        st.dataframe(builder_taxonomy_display_table(taxonomy), width="stretch", hide_index=True)
 
     st.markdown("## Data Sources")
     st.markdown(methodology.get("data_sources", ""))

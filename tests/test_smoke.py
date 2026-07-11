@@ -74,6 +74,20 @@ def test_summary_metrics_only_render_in_analytics():
     assert "published_app.render_metric_cards(visible_stops)" not in preview_source
 
 
+def test_public_taxonomy_table_does_not_expose_sort_order():
+    source = Path("published_app.py").read_text(encoding="utf-8")
+
+    assert 'st.dataframe(taxonomy_display_table(taxonomy)' in source
+    assert 'drop(columns=["sort_order"]' in source
+
+
+def test_builder_docs_taxonomy_table_does_not_expose_sort_order():
+    source = Path("builder_about_page.py").read_text(encoding="utf-8")
+
+    assert "st.dataframe(builder_taxonomy_display_table(taxonomy)" in source
+    assert '["sort_order", "name", "description", "color"]' not in source
+
+
 def test_preview_uses_the_shared_stop_and_voting_panel():
     preview_source = Path("shade_gis/pages/preview_page.py").read_text(encoding="utf-8")
 

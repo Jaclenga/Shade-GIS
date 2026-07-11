@@ -10,6 +10,10 @@ pre-release phase while the reusable platform stabilizes.
 ### Added
 - Compact Export Files catalog with descriptions, record counts, generated sizes, data dates,
   per-row downloads, and a separate Dataset Provenance section.
+
+### Changed
+- Builder Docs and public methodology taxonomy tables keep configured category ordering without
+  displaying the internal `sort_order` field.
 - Progress-oriented Dataset Status dashboard with coverage/review progress bars, a filtered work
   queue, and a collapsed paginated Dataset Preview replacing the former Dataset Health spreadsheets.
 - Agreement analytics section with a scalable disagreement-only queue, per-stop evidence review,
