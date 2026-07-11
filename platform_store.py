@@ -251,6 +251,12 @@ REVIEW_HISTORY_FIELDS = [
     "created_at",
 ]
 
+
+def empty_dataframe(columns: list[str]) -> pd.DataFrame:
+    """Return an empty frame without invoking Arrow string-index inference."""
+    column_index = pd.Index(columns, dtype=object)
+    return pd.DataFrame(columns=column_index)
+
 NUMERIC_STOP_FIELDS = {
     "stop_lat",
     "stop_lon",
@@ -329,7 +335,7 @@ def list_shade_labels(
             record[f"metadata_{key}"] = value
         records.append(record)
     if not records:
-        return pd.DataFrame(columns=[field for field in LABEL_FIELDS if field != "metadata_json"])
+        return empty_dataframe([field for field in LABEL_FIELDS if field != "metadata_json"])
     return pd.DataFrame(records)
 
 
@@ -365,7 +371,7 @@ def list_images(
             record[f"metadata_{key}"] = value
         records.append(record)
     if not records:
-        return pd.DataFrame(columns=[field for field in IMAGE_FIELDS if field != "metadata_json"])
+        return empty_dataframe([field for field in IMAGE_FIELDS if field != "metadata_json"])
     return pd.DataFrame(records)
 
 
@@ -526,7 +532,7 @@ def list_review_history(
             record[f"metadata_{key}"] = value
         records.append(record)
     if not records:
-        return pd.DataFrame(columns=[field for field in REVIEW_HISTORY_FIELDS if field != "metadata_json"])
+        return empty_dataframe([field for field in REVIEW_HISTORY_FIELDS if field != "metadata_json"])
     return pd.DataFrame(records)
 
 
@@ -830,7 +836,7 @@ def stops_dataframe(rows: list[sqlite3.Row]) -> pd.DataFrame:
         record.update(extra)
         records.append(record)
     if not records:
-        return pd.DataFrame(columns=STOP_FIELDS)
+        return empty_dataframe(STOP_FIELDS)
     return pd.DataFrame(records)
 
 

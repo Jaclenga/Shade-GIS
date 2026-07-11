@@ -188,6 +188,32 @@ def test_review_queue_excludes_stops_without_submitted_labels(minimal_stops):
     assert queue.empty
 
 
+def test_empty_label_history_avoids_arrow_backed_column_index(
+    db_path, project, taxonomy, methodology, visualization, minimal_stops
+):
+    project_id = create_project(project, taxonomy, methodology, visualization, minimal_stops, [], db_path)
+
+    labels = list_shade_labels(project_id, path=db_path)
+
+    assert labels.empty
+    assert labels.columns.dtype == object
+    assert labels.columns.tolist() == [
+        "id",
+        "project_id",
+        "stop_id",
+        "image_id",
+        "labeler_id",
+        "labeler_role",
+        "shade_category",
+        "shade_coverage",
+        "shade_sources",
+        "confidence",
+        "notes",
+        "source",
+        "created_at",
+    ]
+
+
 def test_review_queue_display_uses_reviewer_friendly_columns(minimal_stops):
     queue = minimal_stops.copy()
     queue["majority_label"] = ["Intentional Built Shade", ""]
