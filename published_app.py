@@ -1215,7 +1215,12 @@ def render_numeric_by_shade_dashboard(df: pd.DataFrame, numeric_column: str, val
     st.dataframe(summary, width="stretch", hide_index=True)
 
 
-def render_issue_analytics_dashboard(df: pd.DataFrame, visualization: dict[str, Any], raw_labels: pd.DataFrame) -> None:
+def render_issue_analytics_dashboard(
+    df: pd.DataFrame,
+    visualization: dict[str, Any],
+    raw_labels: pd.DataFrame,
+    include_agreement: bool = True,
+) -> None:
     selected = selected_dashboard_sections(df, visualization)
     if df.empty:
         st.info("No stops match the active filters.")
@@ -1253,7 +1258,7 @@ def render_issue_analytics_dashboard(df: pd.DataFrame, visualization: dict[str, 
         st.markdown("#### Action Queues")
         st.dataframe(pd.DataFrame(queue_rows), width="stretch", hide_index=True)
 
-    if "Agreement metrics" in selected:
+    if include_agreement and "Agreement metrics" in selected:
         render_agreement_metrics(raw_labels)
     if "Shade by route" in selected:
         render_route_shade_dashboard(df)
@@ -1438,27 +1443,126 @@ def format_metric_value(value: float | None) -> str:
     return f"{float(value):.3f}"
 
 
+def agreement_overview_values(labels: pd.DataFrame) -> dict[str, int | float | None]:
+    majority = majority_label_table(labels)
+    return {
+        "stops_labeled": int(majority["stop_id"].nunique()) if not majority.empty else 0,
+        "stops_needing_review": int(majority["disagreement_flag"].sum()) if not majority.empty else 0,
+        "mean_agreement": float(majority["agreement_pct"].mean()) if not majority.empty else None,
+        "krippendorff_alpha": krippendorff_alpha_nominal(labels),
+        "fleiss_kappa": fleiss_kappa(labels),
+    }
+
+
+def published_disagreement_queue(labels: pd.DataFrame) -> pd.DataFrame:
+    majority = majority_label_table(labels)
+    if majority.empty:
+        return majority
+    return majority[majority["disagreement_flag"].astype(bool)].sort_values(
+        ["agreement_pct", "label_count", "stop_id"], ascending=[True, False, True]
+    )
+
+
+def agreement_overview_markup(metrics: dict[str, int | float | None]) -> str:
+    mean = metrics["mean_agreement"]
+    alpha = metrics["krippendorff_alpha"]
+    kappa = metrics["fleiss_kappa"]
+    mean_text = f"{float(mean):.1f}%" if mean is not None else "Not enough data"
+    alpha_text = f"{float(alpha):.2f}" if alpha is not None else "Not enough data"
+    kappa_text = f"{float(kappa):.2f}" if kappa is not None else "Not enough data"
+    return f"""
+    <style>
+    .agreement-cards {{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.75rem; margin:.7rem 0 1rem; }}
+    .agreement-stat {{ border:1px solid #e2e8f0; border-radius:12px; background:#fff; padding:.8rem 1rem .9rem; min-height:106px; box-shadow:0 1px 2px rgba(15,23,42,.04); }}
+    .agreement-stat-label {{ color:#475569; font-size:.92rem; font-weight:650; }}
+    .agreement-stat-value {{ color:#0f172a; font-size:1.75rem; font-weight:750; margin-top:.55rem; }}
+    .agreement-reliability {{ border-top:1px solid #e2e8f0; border-bottom:1px solid #e2e8f0; padding:.75rem 0; margin-bottom:.8rem; }}
+    .agreement-reliability-title {{ color:#334155; font-weight:700; margin-bottom:.45rem; }}
+    .agreement-reliability-row {{ display:grid; grid-template-columns:minmax(180px,1fr) auto; gap:1rem; padding:.2rem 0; color:#334155; }}
+    .agreement-reliability-value {{ color:#0f172a; font-weight:650; }}
+    @media (max-width:720px) {{ .agreement-cards {{ grid-template-columns:1fr; }} }}
+    </style>
+    <div class="agreement-cards">
+      <div class="agreement-stat"><div class="agreement-stat-label">📍 Labeled</div><div class="agreement-stat-value">{int(metrics['stops_labeled']):,}</div></div>
+      <div class="agreement-stat"><div class="agreement-stat-label">⚠️ Review</div><div class="agreement-stat-value">{int(metrics['stops_needing_review']):,}</div></div>
+      <div class="agreement-stat"><div class="agreement-stat-label">🤝 Agreement</div><div class="agreement-stat-value">{mean_text}</div></div>
+    </div>
+    <div class="agreement-reliability">
+      <div class="agreement-reliability-title">Reliability</div>
+      <div class="agreement-reliability-row"><span>Krippendorff α</span><span class="agreement-reliability-value">{alpha_text}</span></div>
+      <div class="agreement-reliability-row"><span>Fleiss κ</span><span class="agreement-reliability-value">{kappa_text}</span></div>
+    </div>
+    """
+
+
 def render_agreement_metrics(labels: pd.DataFrame) -> None:
-    st.markdown("#### Agreement Metrics")
+    st.markdown("#### Agreement")
+    st.caption("Overview of annotation quality and review status.")
     if labels.empty:
         st.info("No raw labels were included with this published study.")
         return
-    majority = majority_label_table(labels)
-    cohen, cohen_pairs = average_pairwise_cohen_kappa(labels)
-    summary = pd.DataFrame([
-        ("Stops with labels", int(majority["stop_id"].nunique()) if not majority.empty else 0),
-        ("Stops with 2+ labels", int((majority["label_count"] >= 2).sum()) if not majority.empty else 0),
-        ("Stops with disagreement", int(majority["disagreement_flag"].sum()) if not majority.empty else 0),
-        ("Mean majority agreement", f"{float(majority['agreement_pct'].mean()):.1f}%" if not majority.empty else "Not enough data"),
-        ("Average pairwise Cohen kappa", format_metric_value(cohen)),
-        ("Cohen rater pairs compared", cohen_pairs),
-        ("Fleiss kappa", format_metric_value(fleiss_kappa(labels))),
-        ("Krippendorff alpha", format_metric_value(krippendorff_alpha_nominal(labels))),
-    ], columns=["Metric", "Value"])
-    summary["Value"] = summary["Value"].astype(str)
-    st.dataframe(summary, width="stretch", hide_index=True)
-    if not majority.empty:
-        st.dataframe(majority.sort_values(["disagreement_flag", "agreement_pct", "stop_id"], ascending=[False, True, True]), width="stretch", hide_index=True)
+    metrics = agreement_overview_values(labels)
+    st.markdown(agreement_overview_markup(metrics), unsafe_allow_html=True)
+
+    queue = published_disagreement_queue(labels)
+    if queue.empty:
+        st.success("✅ All labeled stops currently have unanimous agreement.")
+        return
+    st.markdown("##### Disagreements requiring project review")
+    filters = st.columns([1, 1.25, 2])
+    minimum_labels = filters[0].number_input(
+        "Minimum labels", min_value=2, value=2, step=1, key="published_agreement_minimum_labels"
+    )
+    threshold = filters[1].slider(
+        "Agreement threshold", 0.0, 99.9, 99.9, 0.1, key="published_agreement_threshold"
+    )
+    categories = sorted(
+        {
+            part.strip()
+            for value in queue["majority_label"].fillna("").astype(str)
+            for part in value.split(";")
+            if part.strip()
+        }
+    )
+    selected_categories = filters[2].multiselect(
+        "Label category", categories, key="published_agreement_categories"
+    )
+    filtered = queue[
+        (queue["label_count"] >= int(minimum_labels))
+        & (queue["agreement_pct"] <= float(threshold))
+    ].copy()
+    if selected_categories:
+        selected_set = set(selected_categories)
+        filtered = filtered[
+            filtered["majority_label"].astype(str).map(
+                lambda value: bool(selected_set.intersection(part.strip() for part in value.split(";")))
+            )
+        ]
+    if filtered.empty:
+        st.info("No disagreements match these filters.")
+        return
+    paging = st.columns([1, 1, 3])
+    page_size = paging[0].selectbox(
+        "Rows per page", [10, 25, 50], index=1, key="published_agreement_page_size"
+    )
+    page_count = max(1, math.ceil(len(filtered) / int(page_size)))
+    page_number = paging[1].number_input(
+        "Page", min_value=1, max_value=page_count, value=1, step=1, key="published_agreement_page"
+    )
+    start = (int(page_number) - 1) * int(page_size)
+    visible = filtered.iloc[start : start + int(page_size)]
+    paging[2].caption(f"{len(filtered):,} disagreements · Page {int(page_number):,} of {page_count:,}")
+    display = pd.DataFrame(
+        {
+            "Stop": visible["stop_id"].astype(str),
+            "Majority Label": visible["majority_label"].astype(str),
+            "Votes": visible.apply(
+                lambda row: f"{int(row['majority_count'])} / {int(row['label_count'])}", axis=1
+            ),
+            "Agreement": visible["agreement_pct"].map(lambda value: f"{float(value):.1f}%"),
+        }
+    )
+    st.dataframe(display, width="stretch", hide_index=True)
 
 
 def main() -> None:

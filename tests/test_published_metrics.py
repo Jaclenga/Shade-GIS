@@ -84,22 +84,7 @@ def test_summary_metric_cards_do_not_surface_empty_accepted_status() -> None:
     assert metric_by_label(metrics, "No-shade stops")["delta"] == "35.3% of classified"
 
 
-def test_published_agreement_metrics_value_column_is_arrow_safe(monkeypatch) -> None:
-    captured = []
-
-    class FakeStreamlit:
-        @staticmethod
-        def markdown(*args, **kwargs):
-            return None
-
-        @staticmethod
-        def info(*args, **kwargs):
-            return None
-
-        @staticmethod
-        def dataframe(data, *args, **kwargs):
-            captured.append(data)
-
+def test_published_agreement_overview_uses_compact_metrics() -> None:
     labels = pd.DataFrame(
         [
             {
@@ -118,13 +103,17 @@ def test_published_agreement_metrics_value_column_is_arrow_safe(monkeypatch) -> 
             },
         ]
     )
-    monkeypatch.setattr(published_app, "st", FakeStreamlit)
+    metrics = published_app.agreement_overview_values(labels)
+    queue = published_app.published_disagreement_queue(labels)
 
-    published_app.render_agreement_metrics(labels)
-
-    summary = captured[0]
-    assert summary["Value"].map(type).eq(str).all()
-    assert summary.loc[summary["Metric"] == "Mean majority agreement", "Value"].iloc[0] == "100.0%"
+    assert metrics["stops_labeled"] == 1
+    assert metrics["stops_needing_review"] == 0
+    assert metrics["mean_agreement"] == 100.0
+    assert queue.empty
+    markup = published_app.agreement_overview_markup(metrics)
+    assert "📍 Labeled" in markup
+    assert "Reliability" in markup
+    assert "Krippendorff α" in markup
 
 
 def test_stop_detail_picker_avoids_session_state_default_warning(monkeypatch) -> None:

@@ -224,6 +224,20 @@ LABEL_FIELDS = [
     "created_at",
 ]
 
+IMAGE_FIELDS = [
+    "id",
+    "project_id",
+    "stop_id",
+    "uri",
+    "storage_path",
+    "image_type",
+    "source",
+    "captured_at",
+    "attribution",
+    "metadata_json",
+    "created_at",
+]
+
 REVIEW_HISTORY_FIELDS = [
     "id",
     "project_id",
@@ -317,6 +331,94 @@ def list_shade_labels(
     if not records:
         return pd.DataFrame(columns=[field for field in LABEL_FIELDS if field != "metadata_json"])
     return pd.DataFrame(records)
+
+
+def list_images(
+    project_id: str,
+    stop_id: str | None = None,
+    path: Path | None = None,
+) -> pd.DataFrame:
+    """Return project imagery, optionally scoped to one stop."""
+    init_database(path)
+    filters = ["project_id = ?"]
+    params: list[Any] = [project_id]
+    if stop_id:
+        filters.append("stop_id = ?")
+        params.append(stop_id)
+    where_clause = " AND ".join(filters)
+    with connect(path) as conn:
+        rows = conn.execute(
+            f"""
+            SELECT id, project_id, stop_id, uri, storage_path, image_type,
+                   source, captured_at, attribution, metadata_json, created_at
+            FROM images
+            WHERE {where_clause}
+            ORDER BY captured_at DESC, created_at DESC, id DESC
+            """,
+            params,
+        ).fetchall()
+    records = []
+    for row in rows:
+        record = {field: row[field] for field in IMAGE_FIELDS}
+        metadata = json.loads(record.pop("metadata_json") or "{}")
+        for key, value in metadata.items():
+            record[f"metadata_{key}"] = value
+        records.append(record)
+    if not records:
+        return pd.DataFrame(columns=[field for field in IMAGE_FIELDS if field != "metadata_json"])
+    return pd.DataFrame(records)
+
+
+def add_image(
+    project_id: str,
+    image: dict[str, Any],
+    path: Path | None = None,
+) -> str:
+    """Register an uploaded or externally hosted image for review evidence."""
+    db_path = Path(path) if path is not None else database_path()
+    init_database(db_path)
+    image_id = str(image.get("id", "") or uuid.uuid4())
+    now = utc_timestamp()
+    metadata = {
+        key: clean_scalar(value)
+        for key, value in image.items()
+        if key
+        not in {
+            "id",
+            "stop_id",
+            "uri",
+            "storage_path",
+            "image_type",
+            "source",
+            "captured_at",
+            "attribution",
+        }
+    }
+    with connect(db_path) as conn:
+        conn.execute(
+            """
+            INSERT INTO images (
+                id, project_id, stop_id, uri, storage_path, image_type,
+                source, captured_at, attribution, metadata_json, created_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                image_id,
+                project_id,
+                clean_optional_text(image.get("stop_id", "")),
+                clean_scalar(image.get("uri", "")),
+                clean_optional_text(image.get("storage_path", "")),
+                clean_optional_text(image.get("image_type", "")),
+                clean_optional_text(image.get("source", "")),
+                clean_optional_text(image.get("captured_at", "")),
+                clean_optional_text(image.get("attribution", "")),
+                json.dumps(metadata, ensure_ascii=True),
+                now,
+            ),
+        )
+        conn.commit()
+    return image_id
 
 
 def add_shade_label(

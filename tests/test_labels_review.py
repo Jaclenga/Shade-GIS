@@ -2,18 +2,146 @@ from __future__ import annotations
 
 import pandas as pd
 
-from platform_store import add_review_event, add_shade_label, create_project, list_review_history, list_shade_labels
+from platform_store import (
+    add_image,
+    add_review_event,
+    add_shade_label,
+    create_project,
+    list_images,
+    list_review_history,
+    list_shade_labels,
+)
 from builder_app import (
     SHADE_COVERAGE_OPTIONS,
     SHADE_COVERAGE_TAXONOMY,
     SHADE_SOURCE_OPTIONS,
     SHADE_SOURCE_TAXONOMY,
     agreement_metric_summary,
+    agreement_overview_metrics,
+    disagreement_queue_table,
     majority_label_table,
     review_queue_label,
     review_queue_table,
 )
-from shade_gis.pages import labels_page
+from shade_gis.pages import agreement_page, labels_page
+
+
+def disagreement_fixture() -> tuple[pd.DataFrame, pd.DataFrame]:
+    stops = pd.DataFrame(
+        [
+            {"stop_id": "4254", "stop_name": "Oak Street", "review_status": "Needs Review"},
+            {"stop_id": "7588", "stop_name": "Pine Street", "review_status": "Needs Review"},
+            {"stop_id": "7589", "stop_name": "Elm Street", "review_status": "Needs Review"},
+        ]
+    )
+    labels = pd.DataFrame(
+        [
+            {"stop_id": "4254", "shade_category": "Significant Shade", "labeler_id": "a", "created_at": "2026-07-01T10:00:00Z"},
+            {"stop_id": "4254", "shade_category": "Significant Shade", "labeler_id": "b", "created_at": "2026-07-01T10:01:00Z"},
+            {"stop_id": "4254", "shade_category": "Limited Shade", "labeler_id": "c", "created_at": "2026-07-01T10:02:00Z"},
+            {"stop_id": "7588", "shade_category": "No Shade", "labeler_id": "a", "created_at": "2026-07-01T10:00:00Z"},
+            {"stop_id": "7588", "shade_category": "Limited Shade", "labeler_id": "b", "created_at": "2026-07-01T10:01:00Z"},
+            {"stop_id": "7589", "shade_category": "No Shade", "labeler_id": "a", "created_at": "2026-07-01T10:00:00Z"},
+            {"stop_id": "7589", "shade_category": "No Shade", "labeler_id": "b", "created_at": "2026-07-01T10:01:00Z"},
+        ]
+    )
+    return stops, labels
+
+
+def test_disagreement_queue_excludes_unanimous_and_sorts_lowest_agreement_first():
+    stops, labels = disagreement_fixture()
+
+    queue = disagreement_queue_table(stops, labels)
+
+    assert queue["stop_id"].tolist() == ["7588", "4254"]
+    assert queue["agreement_pct"].tolist() == [50.0, 66.7]
+
+
+def test_current_resolution_hides_stop_but_newer_label_reopens_it():
+    stops, labels = disagreement_fixture()
+    current_history = pd.DataFrame(
+        [{"stop_id": "4254", "to_status": "Accepted", "created_at": "2026-07-01T11:00:00Z"}]
+    )
+    stale_history = pd.DataFrame(
+        [{"stop_id": "4254", "to_status": "Accepted", "created_at": "2026-07-01T09:00:00Z"}]
+    )
+
+    assert disagreement_queue_table(stops, labels, current_history)["stop_id"].tolist() == ["7588"]
+    assert disagreement_queue_table(stops, labels, stale_history)["stop_id"].tolist() == ["7588", "4254"]
+
+
+def test_agreement_overview_counts_only_unresolved_disagreements():
+    stops, labels = disagreement_fixture()
+    history = pd.DataFrame(
+        [{"stop_id": "4254", "to_status": "Accepted", "created_at": "2026-07-01T11:00:00Z"}]
+    )
+
+    metrics = agreement_overview_metrics(stops, labels, history)
+
+    assert metrics["stops_labeled"] == 3
+    assert metrics["stops_needing_review"] == 1
+    assert metrics["mean_agreement"] == 72.23333333333333
+
+
+def test_agreement_overview_markup_groups_cards_and_reliability():
+    markup = agreement_page.agreement_overview_markup(
+        {
+            "stops_labeled": 3,
+            "stops_needing_review": 0,
+            "mean_agreement": 100.0,
+            "krippendorff_alpha": 1.0,
+            "fleiss_kappa": 1.0,
+        }
+    )
+
+    assert "📍 Labeled" in markup
+    assert "⚠️ Review" in markup
+    assert "🤝 Agreement" in markup
+    assert "100.0%" in markup
+    assert "Reliability" in markup
+    assert "Krippendorff α" in markup
+    assert "Fleiss κ" in markup
+
+
+def test_disagreement_queue_filters_and_paginates():
+    stops, labels = disagreement_fixture()
+    queue = disagreement_queue_table(stops, labels)
+
+    filtered = agreement_page.filter_disagreement_queue_records(
+        queue,
+        minimum_labels=3,
+        maximum_agreement=70,
+        label_categories=["Significant Shade"],
+    )
+    page, page_number, page_count = agreement_page.paginate_records(queue, page=99, page_size=1)
+    display = agreement_page.disagreement_queue_display_table(filtered)
+
+    assert filtered["stop_id"].tolist() == ["4254"]
+    assert display.loc[0, "Votes"] == "2 / 3"
+    assert display.loc[0, "Agreement"] == "66.7%"
+    assert page["stop_id"].tolist() == ["4254"]
+    assert (page_number, page_count) == (2, 2)
+
+
+def test_stop_images_roundtrip_for_review(db_path, project, taxonomy, methodology, visualization, minimal_stops):
+    project_id = create_project(project, taxonomy, methodology, visualization, minimal_stops, [], db_path)
+    image_id = add_image(
+        project_id,
+        {
+            "stop_id": "1001",
+            "uri": "https://example.org/stop-1001.jpg",
+            "image_type": "uploaded_photo",
+            "source": "field audit",
+            "attribution": "Test reviewer",
+        },
+        db_path,
+    )
+
+    images = list_images(project_id, "1001", db_path)
+
+    assert images["id"].tolist() == [image_id]
+    assert images.loc[0, "uri"] == "https://example.org/stop-1001.jpg"
+    assert images.loc[0, "attribution"] == "Test reviewer"
 
 
 def test_raw_labels_conflict_and_majority_are_queryable(db_path, project, taxonomy, methodology, visualization, minimal_stops):

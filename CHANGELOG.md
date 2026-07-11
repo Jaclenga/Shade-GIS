@@ -8,6 +8,8 @@ pre-release phase while the reusable platform stabilizes.
 ## [Unreleased]
 
 ### Added
+- Agreement analytics section with a scalable disagreement-only queue, per-stop evidence review,
+  canonical decision persistence, automatic reopening after newer labels, and registered-image display.
 - Configurable public bus-stop coverage voting in generated apps, including editable admin controls,
   per-browser-session vote handling, consensus thresholds, SQLite development storage, and optional
   shared PostgreSQL persistence for hosted deployments, managed from a dedicated builder page.

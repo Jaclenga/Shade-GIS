@@ -243,6 +243,82 @@ def agreement_metric_summary(labels: pd.DataFrame, stops: pd.DataFrame) -> pd.Da
     return summary
 
 
+RESOLVED_REVIEW_STATUSES = {"Accepted", "Expert Reviewed", "Archived"}
+
+
+def disagreement_queue_table(
+    stops: pd.DataFrame,
+    labels: pd.DataFrame,
+    review_history: pd.DataFrame | None = None,
+) -> pd.DataFrame:
+    """Build the unresolved disagreement queue, reopening stops after newer labels."""
+    majority = majority_label_table(labels)
+    if majority.empty:
+        return pd.DataFrame()
+    queue = majority[majority["disagreement_flag"].astype(bool)].copy()
+    if queue.empty:
+        return queue
+
+    stop_details = stops.copy() if stops is not None else pd.DataFrame()
+    if not stop_details.empty and "stop_id" in stop_details.columns:
+        stop_details["stop_id"] = stop_details["stop_id"].astype(str)
+        queue = queue.merge(stop_details, on="stop_id", how="left")
+    for column, fallback in [
+        ("stop_name", ""),
+        ("routes", ""),
+        ("review_status", "Unlabeled"),
+    ]:
+        if column not in queue.columns:
+            queue[column] = fallback
+        queue[column] = queue[column].fillna(fallback)
+
+    clean_labels = clean_label_values(labels)
+    if "created_at" in clean_labels.columns:
+        clean_labels = clean_labels.copy()
+        clean_labels["latest_label_at"] = pd.to_datetime(clean_labels["created_at"], errors="coerce", utc=True)
+        latest_labels = clean_labels.groupby("stop_id", as_index=False)["latest_label_at"].max()
+        queue = queue.merge(latest_labels, on="stop_id", how="left")
+    else:
+        queue["latest_label_at"] = pd.Series(pd.NaT, index=queue.index, dtype="datetime64[ns, UTC]")
+
+    history = review_history.copy() if review_history is not None else pd.DataFrame()
+    if not history.empty and {"stop_id", "to_status"}.issubset(history.columns):
+        resolved = history[history["to_status"].isin(RESOLVED_REVIEW_STATUSES)].copy()
+        if not resolved.empty:
+            resolved["stop_id"] = resolved["stop_id"].astype(str)
+            resolved["resolved_at"] = pd.to_datetime(resolved.get("created_at"), errors="coerce", utc=True)
+            latest_resolutions = resolved.groupby("stop_id", as_index=False)["resolved_at"].max()
+            queue = queue.merge(latest_resolutions, on="stop_id", how="left")
+        else:
+            queue["resolved_at"] = pd.Series(pd.NaT, index=queue.index, dtype="datetime64[ns, UTC]")
+    else:
+        queue["resolved_at"] = pd.Series(pd.NaT, index=queue.index, dtype="datetime64[ns, UTC]")
+
+    terminal_without_history = queue["review_status"].isin(RESOLVED_REVIEW_STATUSES) & queue["resolved_at"].isna()
+    resolution_is_current = queue["resolved_at"].notna() & (
+        queue["latest_label_at"].isna() | (queue["resolved_at"] >= queue["latest_label_at"])
+    )
+    queue = queue[~(terminal_without_history | resolution_is_current)].copy()
+    return queue.sort_values(["agreement_pct", "label_count", "stop_id"], ascending=[True, False, True])
+
+
+def agreement_overview_metrics(
+    stops: pd.DataFrame,
+    labels: pd.DataFrame,
+    review_history: pd.DataFrame | None = None,
+) -> dict[str, int | float | None]:
+    majority = majority_label_table(labels)
+    queue = disagreement_queue_table(stops, labels, review_history)
+    return {
+        "stops_labeled": int(majority["stop_id"].nunique()) if not majority.empty else 0,
+        "stops_needing_review": len(queue),
+        "raw_disagreements": int(majority["disagreement_flag"].sum()) if not majority.empty else 0,
+        "mean_agreement": float(majority["agreement_pct"].mean()) if not majority.empty else None,
+        "krippendorff_alpha": krippendorff_alpha_nominal(labels),
+        "fleiss_kappa": fleiss_kappa(labels),
+    }
+
+
 def render_agreement_metrics(labels: pd.DataFrame, stops: pd.DataFrame) -> None:
     st.markdown("#### Agreement Metrics")
     if labels.empty:

@@ -65,6 +65,17 @@ streamlit run app.py
 
 The builder implementation lives in `builder_app.py`, with supporting modules under `shade_gis/`.
 
+The Preview's `Analytics` tab includes an Agreement section when `Agreement metrics` is selected in
+the Visuals dashboard controls. Its compact overview shows labeled stops, unresolved disagreements,
+mean agreement, Krippendorff's alpha, and Fleiss' kappa. The primary action opens a
+disagreement-only queue sorted by lowest agreement, with minimum-label, agreement-threshold, and
+label-category filters plus pagination. A reviewer can open one stop, compare every submitted label
+and reviewer ID, inspect embedded Street View, the project map, and registered photos, then save a
+canonical coverage/source decision. That decision marks the stop `Accepted` and appends an auditable
+`Resolve disagreement` event to `review_history`; a newer raw label automatically reopens the stop.
+Generated public apps show the compact summary and filtered disagreement queue without admin write
+controls.
+
 ### Platform Store
 
 The Streamlit builder uses SQLite by default. On Windows, the database is created under:

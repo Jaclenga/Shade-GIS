@@ -12,6 +12,7 @@ def test_core_modules_compile_without_bytecode_writes():
         "public_voting.py",
         "shade_gis/shade_dimensions.py",
         "shade_gis/pages/preview_page.py",
+        "shade_gis/pages/agreement_page.py",
         "shade_gis/pages/voting_page.py",
     ]:
         source = Path(filename).read_text(encoding="utf-8")
@@ -56,3 +57,14 @@ def test_preview_uses_the_shared_stop_and_voting_panel():
     preview_source = Path("shade_gis/pages/preview_page.py").read_text(encoding="utf-8")
 
     assert "published_app.render_stop_and_voting_panel(" in preview_source
+
+
+def test_agreement_workflow_is_embedded_in_preview_analytics_not_top_level_navigation():
+    builder_source = Path("builder_app.py").read_text(encoding="utf-8")
+    preview_source = Path("shade_gis/pages/preview_page.py").read_text(encoding="utf-8")
+
+    assert 'pages = ["Data", "Labels", "Visuals", "Voting", "Docs", "Preview", "Deploy"]' in builder_source
+    assert 'elif page == "Agreement"' not in builder_source
+    assert 'agreement_enabled = "Agreement metrics" in selected_sections' in preview_source
+    assert "render_agreement_analytics_section(" in preview_source
+    assert "include_agreement=False" in preview_source

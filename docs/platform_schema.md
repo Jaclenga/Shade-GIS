@@ -134,7 +134,8 @@ timestamp. A reviewer can optionally apply a submitted label to the current stop
 map and exports, but the raw label row is still retained either way.
 
 The page also exposes raw-label history, basic counts for labeled/unlabeled/conflicting stops, and
-a raw-label CSV download. Agreement metrics are computed from `shade_category` labels:
+a raw-label CSV download. The Agreement section in the Preview `Analytics` tab computes reliability
+from `shade_category` labels:
 
 - Per-stop majority label, label count, majority count, agreement percentage, disagreement flag, and tied-majority flag.
 - Average pairwise Cohen's kappa using the latest label per stop per reviewer.
@@ -144,6 +145,17 @@ a raw-label CSV download. Agreement metrics are computed from `shade_category` l
 Reviewer-based metrics use `labeler_id` when present; otherwise they fall back to the submitted
 role/source combination. These metrics summarize reliability and do not overwrite raw labels or
 current stop fields.
+
+The Agreement overview replaces the former metrics table and shows those reliability measures
+alongside the unresolved-disagreement count. Its primary action opens a queue containing only
+unresolved disagreements, sorted by lowest agreement. The queue supports minimum-label,
+agreement-threshold, and majority-category filters and paginates before rendering row actions. A
+single-stop review shows all submitted labels and reviewer IDs, embedded Street View, the project
+map, and all `images` rows associated with the stop. Saving a canonical coverage/source decision
+updates the stop to `Accepted` and appends a `Resolve disagreement` event to `review_history`.
+Resolution timestamps are compared with raw-label timestamps so a label submitted after the latest
+decision reopens the stop automatically. Generated public apps render the compact overview and
+filtered disagreement queue without canonical-decision controls.
 
 ## Review Workflow
 
