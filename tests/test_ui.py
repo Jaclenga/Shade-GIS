@@ -230,6 +230,7 @@ def test_builder_navigation_pages_render(playwright_api, streamlit_server: Strea
             page.goto(streamlit_server.url, wait_until="domcontentloaded")
             page.locator(".builder-brand", has_text="Shade-GIS").wait_for(timeout=30_000)
             page.get_by_role("heading", name="Project Data", exact=True).wait_for(timeout=30_000)
+            page.get_by_role("heading", name="Data Quality", exact=True).wait_for(timeout=30_000)
             playwright_api.expect(page.get_by_role("button", name="Data", exact=True)).to_be_enabled(timeout=30_000)
             wait_for_streamlit_idle(playwright_api, page)
 

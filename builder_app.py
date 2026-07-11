@@ -961,17 +961,6 @@ def build_github_deploy_bundle(repo_name: str, deploy_mode: str = "existing") ->
     return buffer.getvalue()
 
 
-def validation_summary(df: pd.DataFrame) -> pd.DataFrame:
-    checks = [
-        ("Stops ready for mapping", len(df)),
-        ("Duplicate stop IDs removed", int(df["stop_id"].duplicated().sum()) if "stop_id" in df else 0),
-        ("Missing coordinates", int(df[["stop_lat", "stop_lon"]].isna().any(axis=1).sum()) if not df.empty else 0),
-        ("Stops needing review", int((df.get("shading") == "Needs Review").sum()) if not df.empty else 0),
-        ("Stops with route metadata", int((df.get("routes", "") != "").sum()) if not df.empty else 0),
-    ]
-    return pd.DataFrame(checks, columns=["Check", "Value"])
-
-
 def set_page(page: str) -> None:
     if st.session_state.get("page") == page:
         return

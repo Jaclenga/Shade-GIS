@@ -188,6 +188,72 @@ def test_review_queue_excludes_stops_without_submitted_labels(minimal_stops):
     assert queue.empty
 
 
+def test_review_queue_normalizes_arrow_and_unusual_status_values_to_python_objects():
+    stop_ids = ["normal", 202, "missing", "empty", "numeric", "list", "dict", "tuple"]
+    stops = pd.DataFrame(
+        {
+            "stop_id": stop_ids,
+            "stop_name": [f"Stop {index}" for index in range(len(stop_ids))],
+            "review_status": [
+                "Accepted",
+                None,
+                pd.NA,
+                "",
+                7,
+                ["Disputed"],
+                {"status": "Archived"},
+                ("Crowd Reviewed",),
+            ],
+        }
+    )
+    labels = pd.DataFrame(
+        [{"stop_id": stop_id, "shade_category": "No Shade"} for stop_id in stop_ids]
+    )
+
+    queue = review_queue_table(stops, labels).set_index("stop_id")
+
+    assert queue["review_status"].dtype == object
+    assert all(type(value) is str for value in queue["review_status"])
+    assert queue["review_status"].to_dict() == {
+        "normal": "Accepted",
+        "202": "Unlabeled",
+        "missing": "Unlabeled",
+        "empty": "Unlabeled",
+        "numeric": "Needs Review",
+        "list": "Needs Review",
+        "dict": "Needs Review",
+        "tuple": "Needs Review",
+    }
+
+    arrow_stops = pd.DataFrame(
+        {
+            "stop_id": ["arrow-accepted", "arrow-missing", "arrow-empty"],
+            "stop_name": ["Accepted", "Missing", "Empty"],
+        }
+    )
+    arrow_stops["review_status"] = pd.Series(
+        ["Accepted", None, ""],
+        dtype="string[pyarrow]",
+    )
+    arrow_labels = pd.DataFrame(
+        [
+            {"stop_id": stop_id, "shade_category": "No Shade"}
+            for stop_id in arrow_stops["stop_id"]
+        ]
+    )
+
+    arrow_queue = review_queue_table(arrow_stops, arrow_labels)
+
+    assert type(arrow_stops["review_status"].array).__name__ == "ArrowStringArray"
+    assert arrow_queue["review_status"].dtype == object
+    assert type(arrow_queue["review_status"].array).__name__ == "NumpyExtensionArray"
+    assert arrow_queue.set_index("stop_id")["review_status"].to_dict() == {
+        "arrow-accepted": "Accepted",
+        "arrow-missing": "Unlabeled",
+        "arrow-empty": "Unlabeled",
+    }
+
+
 def test_empty_label_history_avoids_arrow_backed_column_index(
     db_path, project, taxonomy, methodology, visualization, minimal_stops
 ):

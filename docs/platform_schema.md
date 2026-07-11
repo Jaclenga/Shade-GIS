@@ -103,7 +103,17 @@ Columns outside the required and optional platform fields are preserved as datas
 charts, and exports when the active dataset contains usable values, but they are not promoted into
 the core platform schema.
 
-The Data page derives a compact `Dataset Status` dashboard from stop fields and raw-label history.
+The Data page runs the active `stops` dataset and durable `images` registry through one centralized
+`Data Quality` report. Duplicate stop IDs, missing coordinates, missing required fields, invalid
+point geometries, and orphaned images are publication-blocking findings. Invalid point geometry
+means a nonnumeric coordinate or a latitude/longitude outside WGS84 bounds; a missing coordinate is
+reported separately. An image is orphaned when `images.stop_id` is blank or does not match an active
+`stops.stop_id`. Every check exposes its count and can filter the affected-record viewer to the
+source stop or image rows. A project is publication-ready only when it contains at least one stop
+and the report contains no findings. The complete operator workflow is documented in
+[`docs/data_quality.md`](data_quality.md).
+
+The Data page also derives a compact `Dataset Status` dashboard from stop fields and raw-label history.
 A stop counts as labeled when it has at least one raw label or a canonical coverage label. Reviewed
 stops are labeled records whose `review_status` is crowd reviewed, expert reviewed, accepted, or
 archived. Needs-review records include `Needs Review`, `Disputed`, unresolved raw-label conflicts,
@@ -111,8 +121,7 @@ and labeled records without a completed review state. The dashboard shows label 
 all stops and review completion against labeled stops. Its paginated work queue can filter Reviewed,
 Needs Review, and Unlabeled records or search by stop ID. Stop data remains accessible in the
 collapsed `Dataset Preview` expander, but only the selected 25-, 50-, or 100-row page is rendered;
-the full dataset is never mounted as one browser table. Import-validation checks remain visible in
-the same expander.
+the full dataset is never mounted as one browser table.
 
 ## Shade Taxonomies
 

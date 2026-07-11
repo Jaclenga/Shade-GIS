@@ -65,12 +65,20 @@ streamlit run app.py
 
 The builder implementation lives in `builder_app.py`, with supporting modules under `shade_gis/`.
 
-At the bottom of the Data page, `Dataset Status` summarizes total, labeled, reviewed, and
-needs-review stops. Label coverage and review-completion progress bars make project completeness
-visible without scanning the underlying table. A filtered, paginated work queue defaults to stops
-that need review or remain unlabeled and shows only stop ID, workflow status, raw-label count, final
-label, and agreement. The collapsed `Dataset Preview` renders only the selected 25-, 50-, or
-100-row page while retaining paginated access to every record and the import-validation checks.
+The Data page includes a centralized `Data Quality` dashboard before the taxonomy and workflow
+sections. It reports duplicate stop IDs, missing coordinates, missing required fields, invalid point
+geometries, and images that do not reference a stop in the active dataset. Each check shows an
+affected-record count and a direct action that filters the paginated record viewer to the relevant
+stop or image rows. The publication-readiness banner passes only when the dataset contains at least
+one stop and every blocking check has zero findings. See [Data quality workflow](docs/data_quality.md)
+for check definitions and remediation guidance.
+
+`Dataset Status` separately summarizes total, labeled, reviewed, and needs-review stops. Label
+coverage and review-completion progress bars make project completeness visible without scanning the
+underlying table. A filtered, paginated work queue defaults to stops that need review or remain
+unlabeled and shows only stop ID, workflow status, raw-label count, final label, and agreement. The
+collapsed `Dataset Preview` renders only the selected 25-, 50-, or 100-row page while retaining
+paginated access to every record.
 
 The Preview's `Analytics` tab includes an Agreement section when `Agreement metrics` is selected in
 the Visuals dashboard controls. Its compact overview shows labeled stops, unresolved disagreements,

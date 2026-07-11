@@ -8,6 +8,8 @@ pre-release phase while the reusable platform stabilizes.
 ## [Unreleased]
 
 ### Added
+- Centralized Data Quality dashboard with record-level filters for duplicate stop IDs, missing
+  coordinates, missing required fields, invalid geometries, orphaned images, and publication readiness.
 - Compact Export Files catalog with descriptions, record counts, generated sizes, data dates,
   per-row downloads, and a separate Dataset Provenance section.
 

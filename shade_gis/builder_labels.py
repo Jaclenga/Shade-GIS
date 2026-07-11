@@ -20,10 +20,30 @@ REVIEW_STATUS_NAMES = {
 
 
 def normalize_review_status(value: Any) -> str:
-    if pd.isna(value) or not str(value).strip():
+    if value is None or value is pd.NA:
         return "Unlabeled"
-    text = str(value).strip()
+    try:
+        missing = pd.isna(value)
+        if bool(missing):
+            return "Unlabeled"
+    except (TypeError, ValueError):
+        # Nested values are not scalar missing values. They normalize to the
+        # same fallback as any other unsupported review status below.
+        pass
+    try:
+        text = str(value).strip()
+    except Exception:
+        return "Needs Review"
+    if not text:
+        return "Unlabeled"
     return text if text in REVIEW_STATUS_NAMES else "Needs Review"
+
+
+def normalize_review_status_series(values: pd.Series) -> pd.Series:
+    """Normalize statuses without rebuilding an Arrow-backed string array."""
+    object_values = values.astype(object)
+    normalized = [normalize_review_status(value) for value in object_values.tolist()]
+    return pd.Series(normalized, index=values.index, dtype=object, name=values.name)
 
 
 def stop_picker_label(row: pd.Series) -> str:
@@ -367,7 +387,7 @@ def review_queue_table(stops: pd.DataFrame, labels: pd.DataFrame) -> pd.DataFram
     queue["stop_id"] = queue["stop_id"].astype(str)
     if "review_status" not in queue.columns:
         queue["review_status"] = "Unlabeled"
-    queue["review_status"] = queue["review_status"].apply(normalize_review_status)
+    queue["review_status"] = normalize_review_status_series(queue["review_status"])
     for column in ["shading", "stop_name", "routes", "municipality"]:
         if column not in queue.columns:
             queue[column] = ""
