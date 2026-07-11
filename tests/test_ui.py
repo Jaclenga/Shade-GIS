@@ -234,19 +234,25 @@ def test_builder_navigation_pages_render(playwright_api, streamlit_server: Strea
                         assert navigation_error is not None
                         raise navigation_error
 
-                    # Avoid a full `page.reload()` (it can create a new Streamlit
-                    # session). Wait for the server and current session to stabilize,
-                    # then resolve a fresh locator before the second attempt.
+                    # A healthy server does not guarantee that the browser's current
+                    # Streamlit WebSocket session recovered. When that session is
+                    # wedged, every button remains disabled indefinitely and retrying
+                    # against the same DOM cannot succeed. Reconnect the page before
+                    # resolving a fresh locator for the second attempt. The UI fixture
+                    # uses a temporary durable project store, so a replacement frontend
+                    # session still loads the same test project.
                     try:
                         port = int(streamlit_server.url.rsplit(":", 1)[1])
                         wait_for_streamlit_health(port, timeout_seconds=30)
                     except Exception:
                         page.wait_for_timeout(1000)
 
+                    page.reload(wait_until="domcontentloaded")
                     page.locator(
                         ".builder-brand",
                         has_text="Shade-GIS",
                     ).wait_for(timeout=30_000)
+                    wait_for_streamlit_idle(playwright_api, page)
 
                     nav_button = (
                         page.get_by_test_id("stMainBlockContainer").get_by_role("button", name=nav_label, exact=True)

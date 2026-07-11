@@ -68,3 +68,14 @@ def test_agreement_workflow_is_embedded_in_preview_analytics_not_top_level_navig
     assert 'agreement_enabled = "Agreement metrics" in selected_sections' in preview_source
     assert "render_agreement_analytics_section(" in preview_source
     assert "include_agreement=False" in preview_source
+
+
+def test_data_page_uses_progress_dashboard_and_collapsed_dataset_preview():
+    source = Path("shade_gis/pages/data_page.py").read_text(encoding="utf-8")
+
+    assert 'st.subheader("Dataset Status")' in source
+    assert 'st.markdown("#### Work Queue")' in source
+    assert 'st.expander("Dataset Preview", expanded=False)' in source
+    assert "st.dataframe(visible_stops" in source
+    assert "st.dataframe(stops," not in source
+    assert 'st.subheader("Dataset Health")' not in source

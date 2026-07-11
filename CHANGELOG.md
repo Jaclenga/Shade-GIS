@@ -8,6 +8,8 @@ pre-release phase while the reusable platform stabilizes.
 ## [Unreleased]
 
 ### Added
+- Progress-oriented Dataset Status dashboard with coverage/review progress bars, a filtered work
+  queue, and a collapsed paginated Dataset Preview replacing the former Dataset Health spreadsheets.
 - Agreement analytics section with a scalable disagreement-only queue, per-stop evidence review,
   canonical decision persistence, automatic reopening after newer labels, and registered-image display.
 - Configurable public bus-stop coverage voting in generated apps, including editable admin controls,

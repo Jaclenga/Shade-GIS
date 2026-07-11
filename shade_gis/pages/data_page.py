@@ -1,4 +1,257 @@
 from builder_app import *
+from shade_gis.shade_dimensions import normalize_shade_coverage
+
+
+DATASET_REVIEWED_STATUSES = {"Crowd Reviewed", "Expert Reviewed", "Accepted", "Archived"}
+DATASET_ATTENTION_STATUSES = {"Needs Review", "Disputed"}
+DATASET_STATUS_OPTIONS = ["Needs Review", "Reviewed", "Unlabeled"]
+DATASET_QUEUE_PAGE_SIZES = [10, 25, 50]
+DATASET_PREVIEW_PAGE_SIZES = [25, 50, 100]
+
+
+def dataset_status_table(
+    stops: pd.DataFrame,
+    labels: pd.DataFrame,
+    review_history: pd.DataFrame | None = None,
+) -> pd.DataFrame:
+    """Combine canonical stop state and raw-label history into progress rows."""
+    if stops.empty or "stop_id" not in stops.columns:
+        return pd.DataFrame(
+            columns=["stop_id", "dataset_status", "label_count", "final_label", "agreement_pct"]
+        )
+    status = stops.copy()
+    status["stop_id"] = status["stop_id"].fillna("").astype(str).str.strip()
+    majority = majority_label_table(labels)
+    if not majority.empty:
+        majority = majority.copy()
+        majority["stop_id"] = majority["stop_id"].astype(str)
+        computed_columns = [column for column in majority.columns if column != "stop_id" and column in status.columns]
+        status = status.drop(columns=computed_columns)
+        status = status.merge(majority, on="stop_id", how="left")
+    for column, fallback in [
+        ("label_count", 0),
+        ("agreement_pct", None),
+        ("disagreement_flag", False),
+        ("review_status", "Unlabeled"),
+        ("shading", ""),
+        ("shade_coverage", ""),
+    ]:
+        if column not in status.columns:
+            status[column] = fallback
+        status[column] = status[column].fillna(fallback) if fallback is not None else status[column]
+    status["label_count"] = pd.to_numeric(status["label_count"], errors="coerce").fillna(0).astype(int)
+    status["review_status"] = status["review_status"].fillna("Unlabeled").astype(str)
+
+    def final_label(row: pd.Series) -> str:
+        coverage = normalize_shade_coverage(row.get("shade_coverage", ""), "")
+        if not coverage:
+            coverage = normalize_shade_coverage(row.get("shading", ""), "")
+        return coverage if coverage and coverage != "Needs Review" else "Not set"
+
+    status["final_label"] = status.apply(final_label, axis=1)
+    unresolved = disagreement_queue_table(stops, labels, review_history)
+    unresolved_ids = set(unresolved["stop_id"].astype(str)) if not unresolved.empty else set()
+    status["unresolved_disagreement"] = status["stop_id"].isin(unresolved_ids)
+
+    def work_status(row: pd.Series) -> str:
+        review_status = str(row.get("review_status", "") or "")
+        if bool(row.get("unresolved_disagreement", False)):
+            return "Needs Review"
+        if review_status in DATASET_REVIEWED_STATUSES:
+            return "Reviewed"
+        if review_status in DATASET_ATTENTION_STATUSES or bool(row.get("disagreement_flag", False)):
+            return "Needs Review"
+        if int(row.get("label_count", 0) or 0) == 0 and row.get("final_label") == "Not set":
+            return "Unlabeled"
+        return "Needs Review"
+
+    status["dataset_status"] = status.apply(work_status, axis=1)
+    status["is_labeled"] = (status["label_count"] > 0) | status["final_label"].ne("Not set")
+    return status
+
+
+def dataset_status_metrics(status: pd.DataFrame) -> dict[str, int | float]:
+    total = len(status)
+    labeled_mask = status.get("is_labeled", pd.Series(False, index=status.index)).fillna(False).astype(bool)
+    labeled = int(labeled_mask.sum())
+    reviewed = int((status.get("dataset_status", pd.Series(dtype=str)).eq("Reviewed") & labeled_mask).sum())
+    needs_review = int(status.get("dataset_status", pd.Series(dtype=str)).eq("Needs Review").sum())
+    unlabeled = int(status.get("dataset_status", pd.Series(dtype=str)).eq("Unlabeled").sum())
+    return {
+        "total_stops": total,
+        "labeled_stops": labeled,
+        "reviewed_stops": reviewed,
+        "stops_needing_review": needs_review,
+        "unlabeled_stops": unlabeled,
+        "label_coverage": labeled / total if total else 0.0,
+        "review_completion": reviewed / labeled if labeled else 0.0,
+    }
+
+
+def filter_dataset_work_queue(
+    status: pd.DataFrame,
+    selected_statuses: list[str],
+    stop_search: str = "",
+) -> pd.DataFrame:
+    filtered = status.copy()
+    if selected_statuses:
+        filtered = filtered[filtered["dataset_status"].isin(selected_statuses)]
+    if stop_search.strip():
+        query = stop_search.strip().lower()
+        filtered = filtered[filtered["stop_id"].astype(str).str.lower().str.contains(query, regex=False)]
+    rank = {"Needs Review": 0, "Unlabeled": 1, "Reviewed": 2}
+    filtered["status_rank"] = filtered["dataset_status"].map(rank).fillna(3)
+    filtered["agreement_sort"] = pd.to_numeric(filtered["agreement_pct"], errors="coerce").fillna(101)
+    return filtered.sort_values(["status_rank", "agreement_sort", "stop_id"])
+
+
+def dataset_work_queue_display(status: pd.DataFrame) -> pd.DataFrame:
+    records = []
+    for _, row in status.iterrows():
+        agreement = pd.to_numeric(pd.Series([row.get("agreement_pct")]), errors="coerce").iloc[0]
+        records.append(
+            {
+                "Stop ID": str(row.get("stop_id", "")),
+                "Status": str(row.get("dataset_status", "")),
+                "Labels": int(row.get("label_count", 0) or 0),
+                "Final Label": str(row.get("final_label", "Not set") or "Not set"),
+                "Agreement": f"{float(agreement):.1f}%" if pd.notna(agreement) else "—",
+            }
+        )
+    return pd.DataFrame.from_records(
+        records,
+        columns=["Stop ID", "Status", "Labels", "Final Label", "Agreement"],
+    )
+
+
+def dataset_preview_page(
+    stops: pd.DataFrame,
+    page: int,
+    page_size: int,
+) -> tuple[pd.DataFrame, int, int]:
+    """Return only the requested preview slice so the UI never mounts all rows."""
+    page_size = max(int(page_size), 1)
+    page_count = max(1, math.ceil(len(stops) / page_size))
+    safe_page = min(max(int(page), 1), page_count)
+    start = (safe_page - 1) * page_size
+    return stops.iloc[start : start + page_size].copy(), safe_page, page_count
+
+
+def render_dataset_status(
+    stops: pd.DataFrame,
+    labels: pd.DataFrame,
+    review_history: pd.DataFrame | None = None,
+) -> None:
+    st.subheader("Dataset Status")
+    st.caption("Project progress, remaining work, and stops that need attention.")
+    status = dataset_status_table(stops, labels, review_history)
+    metrics = dataset_status_metrics(status)
+
+    cards = st.columns(4)
+    cards[0].metric("Total stops", f"{metrics['total_stops']:,}")
+    cards[1].metric("Labeled stops", f"{metrics['labeled_stops']:,}")
+    cards[2].metric("Reviewed stops", f"{metrics['reviewed_stops']:,}")
+    cards[3].metric("Needs review", f"{metrics['stops_needing_review']:,}")
+
+    progress = st.columns(2)
+    with progress[0]:
+        st.markdown("**Label coverage**")
+        st.progress(float(metrics["label_coverage"]))
+        st.caption(
+            f"{metrics['labeled_stops']:,} of {metrics['total_stops']:,} stops have a raw or final label "
+            f"({float(metrics['label_coverage']) * 100:.1f}%)."
+        )
+    with progress[1]:
+        st.markdown("**Review completion**")
+        st.progress(float(metrics["review_completion"]))
+        st.caption(
+            f"{metrics['reviewed_stops']:,} of {metrics['labeled_stops']:,} labeled stops are reviewed "
+            f"({float(metrics['review_completion']) * 100:.1f}%)."
+        )
+
+    st.markdown("#### Work Queue")
+    filters = st.columns([2, 1.2])
+    selected_statuses = filters[0].multiselect(
+        "Status",
+        DATASET_STATUS_OPTIONS,
+        default=["Needs Review", "Unlabeled"],
+        key="dataset_queue_statuses",
+    )
+    stop_search = filters[1].text_input(
+        "Search stop ID",
+        key="dataset_queue_stop_search",
+        placeholder="e.g. 4254",
+    )
+    filtered = filter_dataset_work_queue(status, selected_statuses, stop_search)
+    if filtered.empty:
+        st.info("No stops match the work queue filters.")
+    else:
+        paging = st.columns([1, 1, 3], vertical_alignment="bottom")
+        page_size = paging[0].selectbox(
+            "Rows per page",
+            DATASET_QUEUE_PAGE_SIZES,
+            index=1,
+            key="dataset_queue_page_size",
+        )
+        page_count = max(1, math.ceil(len(filtered) / int(page_size)))
+        current_page = st.session_state.get("dataset_queue_page", 1)
+        if not isinstance(current_page, int) or current_page < 1 or current_page > page_count:
+            st.session_state["dataset_queue_page"] = min(max(int(current_page or 1), 1), page_count)
+        requested_page = paging[1].number_input(
+            "Page",
+            min_value=1,
+            max_value=page_count,
+            step=1,
+            key="dataset_queue_page",
+        )
+        start = (int(requested_page) - 1) * int(page_size)
+        visible = filtered.iloc[start : start + int(page_size)]
+        paging[2].caption(
+            f"{len(filtered):,} stops · Page {int(requested_page):,} of {page_count:,} · "
+            f"{metrics['unlabeled_stops']:,} unlabeled overall"
+        )
+        st.dataframe(dataset_work_queue_display(visible), width="stretch", hide_index=True)
+
+    with st.expander("Dataset Preview", expanded=False):
+        st.caption("Browse the project dataset one page at a time. Only the visible page is rendered.")
+        st.dataframe(validation_summary(stops), width="stretch", hide_index=True)
+        preview_controls = st.columns([1, 1, 3], vertical_alignment="bottom")
+        preview_page_size = preview_controls[0].selectbox(
+            "Preview rows per page",
+            DATASET_PREVIEW_PAGE_SIZES,
+            index=1,
+            key="dataset_preview_page_size",
+        )
+        preview_page_count = max(1, math.ceil(len(stops) / int(preview_page_size)))
+        current_preview_page = st.session_state.get("dataset_preview_page", 1)
+        if (
+            not isinstance(current_preview_page, int)
+            or current_preview_page < 1
+            or current_preview_page > preview_page_count
+        ):
+            st.session_state["dataset_preview_page"] = min(
+                max(int(current_preview_page or 1), 1),
+                preview_page_count,
+            )
+        requested_preview_page = preview_controls[1].number_input(
+            "Preview page",
+            min_value=1,
+            max_value=preview_page_count,
+            step=1,
+            key="dataset_preview_page",
+        )
+        visible_stops, preview_page, preview_page_count = dataset_preview_page(
+            stops,
+            int(requested_preview_page),
+            int(preview_page_size),
+        )
+        first_row = (preview_page - 1) * int(preview_page_size) + 1 if len(stops) else 0
+        last_row = min(preview_page * int(preview_page_size), len(stops))
+        preview_controls[2].caption(
+            f"Showing rows {first_row:,}–{last_row:,} of {len(stops):,} · "
+            f"Page {preview_page:,} of {preview_page_count:,}"
+        )
+        st.dataframe(visible_stops, width="stretch", hide_index=True)
 
 def render_project_storage_controls() -> None:
     projects = list_projects()
@@ -237,9 +490,10 @@ def render_data_page() -> None:
         },
     )
 
-    st.subheader("Dataset Health")
-    st.dataframe(validation_summary(st.session_state["stops"]), width="stretch", hide_index=True)
-    st.dataframe(st.session_state["stops"].head(50), width="stretch", hide_index=True)
+    project_id = st.session_state.get("active_project_id")
+    labels = list_shade_labels(project_id) if project_id else pd.DataFrame()
+    review_history = list_review_history(project_id) if project_id else pd.DataFrame()
+    render_dataset_status(st.session_state["stops"], labels, review_history)
 
 
 

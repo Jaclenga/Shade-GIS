@@ -103,6 +103,17 @@ Columns outside the required and optional platform fields are preserved as datas
 charts, and exports when the active dataset contains usable values, but they are not promoted into
 the core platform schema.
 
+The Data page derives a compact `Dataset Status` dashboard from stop fields and raw-label history.
+A stop counts as labeled when it has at least one raw label or a canonical coverage label. Reviewed
+stops are labeled records whose `review_status` is crowd reviewed, expert reviewed, accepted, or
+archived. Needs-review records include `Needs Review`, `Disputed`, unresolved raw-label conflicts,
+and labeled records without a completed review state. The dashboard shows label coverage against
+all stops and review completion against labeled stops. Its paginated work queue can filter Reviewed,
+Needs Review, and Unlabeled records or search by stop ID. Stop data remains accessible in the
+collapsed `Dataset Preview` expander, but only the selected 25-, 50-, or 100-row page is rendered;
+the full dataset is never mounted as one browser table. Import-validation checks remain visible in
+the same expander.
+
 ## Shade Taxonomies
 
 The core source taxonomy is:
