@@ -111,6 +111,7 @@ def streamlit_server(playwright_api):
     env = os.environ.copy()
     env.update(
         {
+            "PYTHONFAULTHANDLER": "1",
             "SHADE_GIS_DB_PATH": str(temp_root / "shade-gis-ui.sqlite3"),
             "SHADE_GIS_VOTE_DB_PATH": str(temp_root / "shade-gis-votes-ui.sqlite3"),
             "SHADE_GIS_TEST_DISABLE_AUTO_SAVE": "1",
@@ -133,6 +134,8 @@ def streamlit_server(playwright_api):
         "true",
         "--server.fileWatcherType",
         "none",
+        "--runner.fastReruns",
+        "false",
         "--browser.gatherUsageStats",
         "false",
     ]
@@ -338,6 +341,9 @@ def test_builder_navigation_pages_render(playwright_api, streamlit_server: Strea
             except Exception:
                 # Best-effort debug dump; ignore failures here to not hide original error.
                 pass
-            raise AssertionError(f"{error}\n\nStreamlit server log tail:\n{streamlit_server.log_tail()}") from error
+            raise AssertionError(
+                f"UI failure while testing {current_surface['name']}: {error}"
+                f"\n\nStreamlit server log tail:\n{streamlit_server.log_tail()}"
+            ) from error
         finally:
             browser.close()
