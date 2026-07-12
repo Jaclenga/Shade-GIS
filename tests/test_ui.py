@@ -271,6 +271,14 @@ def test_builder_header_home_and_grouped_menus(playwright_api, streamlit_server:
             confirm_seed_project_open(page)
             page.get_by_role("heading", name="Project Data", exact=True).wait_for(timeout=30_000)
             wait_for_streamlit_idle(playwright_api, page, streamlit_server)
+            manual_entry_tab = page.get_by_role("tab", name="Manual Entry", exact=True)
+            manual_entry_tab.click()
+            playwright_api.expect(
+                page.get_by_role("button", name="Add entry", exact=True)
+            ).to_be_visible(timeout=30_000)
+            playwright_api.expect(
+                page.get_by_role("button", name="Use manual entries", exact=True)
+            ).to_be_disabled(timeout=30_000)
             page.get_by_role("button", name="Data", exact=True).click(timeout=30_000)
             data_menu = page.get_by_test_id("stPopoverBody")
             playwright_api.expect(data_menu.get_by_role("button", name="Overview", exact=True)).to_be_visible()

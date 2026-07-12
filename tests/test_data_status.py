@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import subprocess
+import sys
+
 import pandas as pd
 
 from shade_gis.pages.data_page import (
@@ -8,7 +11,7 @@ from shade_gis.pages.data_page import (
     dataset_status_table,
     dataset_work_queue_display,
     filter_dataset_work_queue,
-    manual_entry_template,
+    manual_entry_dataframe,
 )
 
 
@@ -52,12 +55,38 @@ def status_fixture() -> tuple[pd.DataFrame, pd.DataFrame]:
     return stops, labels
 
 
-def test_manual_entry_template_uses_object_dtype_for_editable_mixed_input():
-    template = manual_entry_template()
+def test_manual_entry_dataframe_uses_python_backed_string_columns():
+    template = manual_entry_dataframe([{"stop_id": "1001", "stop_name": "Main & First"}])
 
     assert len(template) == 1
-    assert template.dtypes.eq(object).all()
-    assert template.iloc[0].eq("").all()
+    assert template.columns.is_unique
+    assert all(isinstance(dtype, pd.StringDtype) for dtype in template.dtypes)
+    assert all(dtype.storage == "python" for dtype in template.dtypes)
+    assert template.iloc[0]["stop_id"] == "1001"
+    assert template.iloc[0]["stop_name"] == "Main & First"
+    assert template.iloc[0].drop(["stop_id", "stop_name"]).eq("").all()
+
+
+def test_manual_entry_dataframe_repeatedly_crosses_arrow_boundary_in_subprocess():
+    script = """
+import pyarrow as pa
+from shade_gis.pages.data_page import manual_entry_dataframe
+
+template = manual_entry_dataframe([{"stop_id": "1001", "stop_name": "Main & First"}])
+for _ in range(250):
+    table = pa.Table.from_pandas(template, preserve_index=False)
+assert table.num_rows == 1
+assert all(str(field.type) == "string" for field in table.schema)
+"""
+    completed = subprocess.run(
+        [sys.executable, "-c", script],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stdout + completed.stderr
 
 
 def test_dataset_status_combines_final_labels_raw_labels_and_review_state():

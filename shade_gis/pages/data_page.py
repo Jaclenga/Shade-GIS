@@ -10,11 +10,16 @@ DATASET_QUEUE_PAGE_SIZES = [10, 25, 50]
 DATASET_PREVIEW_PAGE_SIZES = [25, 50, 100]
 
 
-def manual_entry_template() -> pd.DataFrame:
-    """Return a mixed-input editor row without Arrow-backed string inference."""
+def manual_entry_dataframe(records: list[dict[str, str]]) -> pd.DataFrame:
+    """Build a consistently typed frame after manual form submission."""
+    normalized_records = [
+        {column: str(record.get(column, "") or "").strip() for column in MANUAL_ENTRY_COLUMNS}
+        for record in records
+    ]
     return pd.DataFrame(
-        [{column: "" for column in MANUAL_ENTRY_COLUMNS}],
-        dtype=object,
+        normalized_records,
+        columns=MANUAL_ENTRY_COLUMNS,
+        dtype=pd.StringDtype(storage="python"),
     )
 
 
@@ -528,17 +533,52 @@ def render_data_page() -> None:
             )
 
     with manual_tab:
-        st.caption("Add one stop per row. Rows without a stop ID or valid coordinates are ignored on import.")
-        manual_template = manual_entry_template()
-        manual_rows = st.data_editor(
-            manual_template,
-            num_rows="dynamic",
-            width="stretch",
-            hide_index=True,
-            key="manual_import_rows",
+        st.caption(
+            "Add stops to the queue with text fields. Rows without a stop ID or valid coordinates "
+            "are ignored on import."
         )
+        with st.form("manual_entry_form", clear_on_submit=True):
+            field_columns = st.columns(2)
+            manual_values: dict[str, str] = {}
+            for index, column in enumerate(MANUAL_ENTRY_COLUMNS):
+                label = column.replace("_", " ").title().replace("Id", "ID")
+                manual_values[column] = field_columns[index % 2].text_input(
+                    label,
+                    key=f"manual_entry_{column}",
+                )
+            add_manual_entry = st.form_submit_button("Add entry")
+
+        if add_manual_entry:
+            record = {column: str(manual_values.get(column, "")).strip() for column in MANUAL_ENTRY_COLUMNS}
+            if any(record.values()):
+                queued_entries = list(st.session_state.get("manual_import_entries", []))
+                queued_entries.append(record)
+                st.session_state["manual_import_entries"] = queued_entries
+                st.success(f"Added entry {len(queued_entries)} to the manual import queue.")
+            else:
+                st.warning("Enter at least one value before adding an entry.")
+
+        queued_entries = list(st.session_state.get("manual_import_entries", []))
+        if queued_entries:
+            st.markdown("**Queued manual entries**")
+            for index, record in enumerate(queued_entries):
+                entry_column, remove_column = st.columns([5, 1])
+                stop_id = record.get("stop_id") or "No stop ID"
+                stop_name = record.get("stop_name") or "Unnamed stop"
+                entry_column.caption(f"{index + 1}. {stop_id} — {stop_name}")
+                if remove_column.button("Remove", key=f"remove_manual_entry_{index}"):
+                    queued_entries.pop(index)
+                    st.session_state["manual_import_entries"] = queued_entries
+                    st.rerun()
+
         manual_source = st.text_input("Manual import source label", "Manual entry", key="manual_import_source")
-        if st.button("Use manual entries", type="primary", key="use_manual_entries"):
+        if st.button(
+            "Use manual entries",
+            type="primary",
+            key="use_manual_entries",
+            disabled=not queued_entries,
+        ):
+            manual_rows = manual_entry_dataframe(queued_entries)
             mapping = {field: field for field in REQUIRED_STOP_FIELDS + OPTIONAL_FIELDS if field in manual_rows.columns}
             prepared = import_stop_dataset(
                 manual_rows,
@@ -549,6 +589,7 @@ def render_data_page() -> None:
                 import_format="Manual",
                 metadata={"entry_method": "manual"},
             )
+            st.session_state["manual_import_entries"] = []
             st.success(f"Imported {len(prepared):,} manually entered stops.")
 
     source_cols = st.columns(3)

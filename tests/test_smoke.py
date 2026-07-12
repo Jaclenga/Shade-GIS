@@ -149,6 +149,13 @@ def test_data_page_uses_progress_dashboard_and_collapsed_dataset_preview():
     assert 'st.subheader("Dataset Health")' not in source
 
 
+def test_manual_entry_form_does_not_use_arrow_backed_dataframe_widget():
+    source = Path("shade_gis/pages/data_page.py").read_text(encoding="utf-8")
+
+    assert 'st.form("manual_entry_form", clear_on_submit=True)' in source
+    assert "st.data_editor(" not in source
+
+
 def test_preview_exports_use_catalog_and_provenance_sections():
     source = Path("shade_gis/pages/preview_page.py").read_text(encoding="utf-8")
 
