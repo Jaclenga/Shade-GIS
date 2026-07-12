@@ -74,7 +74,21 @@ def wait_for_streamlit_health(port: int, timeout_seconds: int = 45) -> None:
     raise RuntimeError(f"Streamlit health check did not pass at {url}: {last_error}")
 
 
-def wait_for_streamlit_idle(playwright_api, page, timeout_ms: int = 60_000) -> None:
+def assert_streamlit_server_alive(streamlit_server: StreamlitServer) -> None:
+    return_code = streamlit_server.process.poll()
+    if return_code is not None:
+        raise RuntimeError(
+            f"Streamlit server exited with code {return_code}.\n"
+            f"Server log tail:\n{streamlit_server.log_tail()}"
+        )
+
+
+def wait_for_streamlit_idle(
+    playwright_api,
+    page,
+    streamlit_server: StreamlitServer,
+    timeout_ms: int = 60_000,
+) -> None:
     # Streamlit delays its running indicator by ~500 ms. Waiting past that
     # threshold distinguishes a rendered page from a fully completed script run.
     #
@@ -83,7 +97,15 @@ def wait_for_streamlit_idle(playwright_api, page, timeout_ms: int = 60_000) -> N
     # should therefore check that the running icon is gone and that there is
     # no visible "Connecting" text or active "Connection error" dialog.
     page.wait_for_timeout(700)
-    playwright_api.expect(page.get_by_test_id("stStatusWidgetRunningIcon")).to_have_count(0, timeout=timeout_ms)
+    assert_streamlit_server_alive(streamlit_server)
+    running_icon = page.get_by_test_id("stStatusWidgetRunningIcon")
+    deadline = time.monotonic() + (timeout_ms / 1000)
+    while running_icon.count() > 0:
+        assert_streamlit_server_alive(streamlit_server)
+        if time.monotonic() >= deadline:
+            playwright_api.expect(running_icon).to_have_count(0, timeout=1)
+        page.wait_for_timeout(250)
+    assert_streamlit_server_alive(streamlit_server)
 
     # The connection status node may remain mounted in newer Streamlit
     # versions. If it exists, assert it is not visible instead of asserting
@@ -99,6 +121,7 @@ def wait_for_streamlit_idle(playwright_api, page, timeout_ms: int = 60_000) -> N
             playwright_api.expect(page.get_by_text("Connecting")).to_have_count(0, timeout=timeout_ms)
         except Exception:
             pass
+    assert_streamlit_server_alive(streamlit_server)
 
 
 def reconnect_streamlit_page(page, streamlit_server: StreamlitServer, attempts: int = 3) -> None:
@@ -247,6 +270,7 @@ def test_builder_header_home_and_grouped_menus(playwright_api, streamlit_server:
             page.get_by_role("heading", name="Your Projects", exact=True).wait_for(timeout=30_000)
             confirm_seed_project_open(page)
             page.get_by_role("heading", name="Project Data", exact=True).wait_for(timeout=30_000)
+            wait_for_streamlit_idle(playwright_api, page, streamlit_server)
             page.get_by_role("button", name="Data", exact=True).click(timeout=30_000)
             data_menu = page.get_by_test_id("stPopoverBody")
             playwright_api.expect(data_menu.get_by_role("button", name="Overview", exact=True)).to_be_visible()
@@ -328,7 +352,7 @@ def test_builder_navigation_pages_render(playwright_api, streamlit_server: Strea
             page.get_by_role("heading", name="Data Quality", exact=True).wait_for(timeout=30_000)
             playwright_api.expect(page.get_by_role("button", name="Data", exact=True)).to_be_enabled(timeout=30_000)
             playwright_api.expect(page.get_by_role("button", name="Build", exact=True)).to_be_enabled(timeout=30_000)
-            wait_for_streamlit_idle(playwright_api, page)
+            wait_for_streamlit_idle(playwright_api, page, streamlit_server)
 
             for nav_label, heading in expected_pages.items():
                 current_surface["name"] = nav_label
@@ -338,7 +362,7 @@ def test_builder_navigation_pages_render(playwright_api, streamlit_server: Strea
                 nav_button = page.get_by_test_id("stPopoverBody").get_by_role(
                     "button", name=nav_label, exact=True
                 )
-                wait_for_streamlit_idle(playwright_api, page)
+                wait_for_streamlit_idle(playwright_api, page, streamlit_server)
                 target_heading = page.get_by_role("heading", name=heading, exact=True)
 
                 for attempt in range(2):
@@ -371,14 +395,14 @@ def test_builder_navigation_pages_render(playwright_api, streamlit_server: Strea
                     page.get_by_role("button", name="Shade-GIS", exact=True).wait_for(timeout=30_000)
                     confirm_seed_project_open(page)
                     page.get_by_role("heading", name="Project Data", exact=True).wait_for(timeout=30_000)
-                    wait_for_streamlit_idle(playwright_api, page)
+                    wait_for_streamlit_idle(playwright_api, page, streamlit_server)
 
                     menu_button = page.get_by_role("button", name=menu_label, exact=True)
                     menu_button.click(timeout=30_000)
                     nav_button = page.get_by_test_id("stPopoverBody").get_by_role(
                         "button", name=nav_label, exact=True
                     )
-                wait_for_streamlit_idle(playwright_api, page)
+                wait_for_streamlit_idle(playwright_api, page, streamlit_server)
                 if nav_label == "Voting":
                     voting_toggle_container = page.get_by_test_id("stCheckbox").filter(
                         has_text="Let deployed-app visitors vote on stop coverage"
@@ -392,7 +416,7 @@ def test_builder_navigation_pages_render(playwright_api, streamlit_server: Strea
                             exact=True,
                         )
                     ).to_have_count(0, timeout=60_000)
-                    wait_for_streamlit_idle(playwright_api, page)
+                    wait_for_streamlit_idle(playwright_api, page, streamlit_server)
                 elif nav_label == "Preview":
                     map_tab = page.get_by_role("tab", name="Map", exact=True)
                     playwright_api.expect(map_tab).to_have_attribute("aria-selected", "true", timeout=60_000)
@@ -405,7 +429,7 @@ def test_builder_navigation_pages_render(playwright_api, streamlit_server: Strea
                     playwright_api.expect(
                         page.get_by_role("heading", name="Summary Statistics", exact=True)
                     ).to_be_visible(timeout=60_000)
-                    wait_for_streamlit_idle(playwright_api, page)
+                    wait_for_streamlit_idle(playwright_api, page, streamlit_server)
 
             confirm_main_menu_return(page)
             playwright_api.expect(

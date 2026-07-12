@@ -9,6 +9,11 @@ import pandas as pd
 import pydeck as pdk
 import streamlit as st
 
+# Avoid process-fatal Arrow string inference in pandas 3. The published app is
+# bundled as a standalone file, so it must carry the same runtime guard as the
+# builder rather than relying on builder_app configuration.
+pd.options.mode.string_storage = "python"
+
 from public_voting import normalize_voting_config, render_voting_panel
 
 

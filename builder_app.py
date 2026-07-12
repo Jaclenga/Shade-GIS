@@ -18,6 +18,12 @@ import pandas as pd
 import pydeck as pdk
 import streamlit as st
 
+# Pandas 3 otherwise infers Arrow-backed strings when pyarrow is installed.
+# Keep ordinary app frames on the Python-backed string path so malformed or
+# rapidly rerun UI input cannot take the whole Streamlit process down in native
+# Arrow code. Explicit ``string[pyarrow]`` columns remain available when needed.
+pd.options.mode.string_storage = "python"
+
 import published_app
 from builder_about_page import render_builder_about_page
 from public_voting import normalize_voting_config

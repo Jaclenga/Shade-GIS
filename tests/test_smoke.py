@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pandas as pd
+
 
 def test_core_modules_compile_without_bytecode_writes():
     for filename in [
@@ -23,6 +25,18 @@ def test_deploy_source_comes_from_public_app_module():
     import builder_app
 
     assert builder_app.published_app_source() == Path("published_app.py").read_text(encoding="utf-8")
+
+
+def test_builder_and_published_runtime_disable_arrow_string_inference():
+    import builder_app  # noqa: F401 - importing applies the runtime guard
+
+    for filename in ["builder_app.py", "published_app.py"]:
+        source = Path(filename).read_text(encoding="utf-8")
+        assert 'pd.options.mode.string_storage = "python"' in source
+
+    inferred = pd.DataFrame({"value": [""]})
+    assert pd.options.mode.string_storage == "python"
+    assert type(inferred["value"].array).__name__ == "StringArray"
 
 
 def test_app_py_is_builder_entrypoint():
