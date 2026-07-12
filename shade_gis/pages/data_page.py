@@ -10,6 +10,14 @@ DATASET_QUEUE_PAGE_SIZES = [10, 25, 50]
 DATASET_PREVIEW_PAGE_SIZES = [25, 50, 100]
 
 
+def manual_entry_template() -> pd.DataFrame:
+    """Return a mixed-input editor row without Arrow-backed string inference."""
+    return pd.DataFrame(
+        [{column: "" for column in MANUAL_ENTRY_COLUMNS}],
+        dtype=object,
+    )
+
+
 def dataset_status_table(
     stops: pd.DataFrame,
     labels: pd.DataFrame,
@@ -521,7 +529,7 @@ def render_data_page() -> None:
 
     with manual_tab:
         st.caption("Add one stop per row. Rows without a stop ID or valid coordinates are ignored on import.")
-        manual_template = pd.DataFrame([{column: "" for column in MANUAL_ENTRY_COLUMNS}])
+        manual_template = manual_entry_template()
         manual_rows = st.data_editor(
             manual_template,
             num_rows="dynamic",

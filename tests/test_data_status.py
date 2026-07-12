@@ -8,6 +8,7 @@ from shade_gis.pages.data_page import (
     dataset_status_table,
     dataset_work_queue_display,
     filter_dataset_work_queue,
+    manual_entry_template,
 )
 
 
@@ -49,6 +50,14 @@ def status_fixture() -> tuple[pd.DataFrame, pd.DataFrame]:
         ]
     )
     return stops, labels
+
+
+def test_manual_entry_template_uses_object_dtype_for_editable_mixed_input():
+    template = manual_entry_template()
+
+    assert len(template) == 1
+    assert template.dtypes.eq(object).all()
+    assert template.iloc[0].eq("").all()
 
 
 def test_dataset_status_combines_final_labels_raw_labels_and_review_state():
