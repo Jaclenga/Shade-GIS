@@ -98,11 +98,30 @@ def test_agreement_workflow_is_embedded_in_preview_analytics_not_top_level_navig
     builder_source = Path("builder_app.py").read_text(encoding="utf-8")
     preview_source = Path("shade_gis/pages/preview_page.py").read_text(encoding="utf-8")
 
-    assert 'pages = ["Data", "Labels", "Visuals", "Voting", "Docs", "Preview", "Deploy"]' in builder_source
+    assert 'data_pages = [("Overview", "Data"), ("Labels", "Labels"), ("Voting", "Voting")]' in builder_source
+    assert '(cols[2], "Build", build_pages)' in builder_source
     assert 'elif page == "Agreement"' not in builder_source
     assert 'agreement_enabled = "Agreement metrics" in selected_sections' in preview_source
     assert "render_agreement_analytics_section(" in preview_source
     assert "include_agreement=False" in preview_source
+
+
+def test_builder_has_project_home_and_clickable_brand_navigation():
+    source = Path("builder_app.py").read_text(encoding="utf-8")
+
+    assert 'st.title("Shade-GIS Projects")' not in source
+    assert 'st.button("Shade-GIS", key="nav_home", on_click=request_main_menu)' in source
+    assert '@st.dialog("Open project?", on_dismiss=clear_pending_project_open)' in source
+    assert '@st.dialog("Return to main menu?", on_dismiss=clear_pending_main_menu)' in source
+    assert 'with st.container(key="home_page")' in source
+    assert 'f"Open project: {name}"' in source
+    assert "max-width: 1080px" in source
+    assert 'class="home-summary"' not in source
+    assert 'div[class*="st-key-project_card_"]:hover' in source
+    assert 'div[class*="st-key-project_card_"] [data-testid="stButton"] {' in source
+    assert ".st-key-nav_home button:hover" in source
+    assert ".st-key-nav_home button:active" in source
+    assert ".st-key-nav_home button:focus-visible" in source
 
 
 def test_data_page_uses_progress_dashboard_and_collapsed_dataset_preview():

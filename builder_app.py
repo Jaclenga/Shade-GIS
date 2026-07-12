@@ -1,3 +1,4 @@
+import html
 import io
 import ipaddress
 import json
@@ -967,27 +968,413 @@ def set_page(page: str) -> None:
     st.session_state["page"] = page
 
 
-def render_header() -> str:
-    pages = ["Data", "Labels", "Visuals", "Voting", "Docs", "Preview", "Deploy"]
-    if st.session_state.get("page") not in pages:
-        st.session_state["page"] = "Data"
+def open_project(project_id: str) -> None:
+    current_project_id = st.session_state.get("active_project_id")
+    if current_project_id and current_project_id != project_id:
+        save_active_project_to_store()
+        load_project_into_session(project_id)
+    elif st.session_state.get("loaded_project_id") != project_id:
+        load_project_into_session(project_id)
+    set_page("Data")
+
+
+def request_open_project(project_id: str, project_name: str) -> None:
+    st.session_state["pending_project_open"] = {
+        "id": project_id,
+        "name": project_name,
+    }
+
+
+def clear_pending_project_open() -> None:
+    st.session_state.pop("pending_project_open", None)
+
+
+def clear_pending_main_menu() -> None:
+    st.session_state.pop("pending_main_menu", None)
+
+
+def request_main_menu() -> None:
+    clear_pending_project_open()
+    if st.session_state.get("page") == "Home":
+        clear_pending_main_menu()
+        return
+    st.session_state["pending_main_menu"] = True
+
+
+@st.dialog("Open project?", on_dismiss=clear_pending_project_open)
+def render_open_project_confirmation() -> None:
+    pending = st.session_state.get("pending_project_open") or {}
+    project_id = str(pending.get("id") or "")
+    project_name = str(pending.get("name") or "this project")
+    st.markdown("<span class='open-project-dialog-marker'></span>", unsafe_allow_html=True)
+    st.write(f"Open {project_name} and continue to its project workspace?")
+    cancel_column, open_column = st.columns(2)
+    with cancel_column:
+        if st.button("Cancel", width="stretch"):
+            clear_pending_project_open()
+            st.rerun()
+    with open_column:
+        if st.button("Open Project", type="primary", width="stretch"):
+            clear_pending_project_open()
+            open_project(project_id)
+            st.rerun()
+
+
+@st.dialog("Return to main menu?", on_dismiss=clear_pending_main_menu)
+def render_main_menu_confirmation() -> None:
+    project_name = str(st.session_state.get("project", {}).get("name") or "this project")
+    st.markdown("<span class='main-menu-dialog-marker'></span>", unsafe_allow_html=True)
+    st.write(f"Leave {project_name} and return to your project list?")
+    cancel_column, menu_column = st.columns(2)
+    with cancel_column:
+        if st.button("Cancel", key="cancel_main_menu", width="stretch"):
+            clear_pending_main_menu()
+            st.rerun()
+    with menu_column:
+        if st.button("Main Menu", key="confirm_main_menu", type="primary", width="stretch"):
+            clear_pending_main_menu()
+            set_page("Home")
+            st.rerun()
+
+
+def format_project_updated(value: Any) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return "Recently updated"
+    try:
+        updated = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return "Recently updated"
+    now = datetime.now(updated.tzinfo) if updated.tzinfo else datetime.now()
+    if updated.date() == now.date():
+        return "Updated today"
+    return f"Updated {updated.strftime('%b %d, %Y').replace(' 0', ' ')}"
+
+
+def render_home_page() -> None:
+    projects = list_projects()
     st.markdown(
         """
         <style>
-        .builder-topbar {
+        .st-key-home_page {
+            margin: 0 auto;
+            max-width: 1080px;
+            padding: 0.15rem 0 2.5rem;
+        }
+        div[data-testid="stAppViewContainer"]:has(.st-key-home_page) {
+            background: #f8fbf8;
+        }
+        div[data-testid="stAppViewContainer"]:has(.st-key-home_page)
+        div[data-testid="stHorizontalBlock"]:has(.st-key-nav_home) {
+            margin-bottom: 0.35rem;
+        }
+        .st-key-home_page .home-subtitle {
+            color: #52605a;
+            font-size: 1.05rem;
+            line-height: 1.65;
+            margin: 0 0 1.2rem;
+            max-width: 46rem;
+        }
+        .st-key-home_page .home-section-title {
+            color: #17211c;
+            font-size: 1.9rem;
+            letter-spacing: -0.025em;
+            line-height: 1.2;
+            margin: 0;
+        }
+        .st-key-home_page .home-project-count {
+            color: #66736c;
+            font-size: 0.92rem;
+            margin: 0.35rem 0 0;
+        }
+        div[data-testid="stHorizontalBlock"]:has(.home-section-title) [data-testid="stPopover"] button,
+        .st-key-home_create_project button {
+            background: #166534;
+            border-color: #166534;
+            color: white;
+            font-weight: 650;
+        }
+        div[data-testid="stHorizontalBlock"]:has(.home-section-title) [data-testid="stPopover"] button:hover,
+        .st-key-home_create_project button:hover {
+            background: #14532d;
+            border-color: #14532d;
+            color: white;
+        }
+        div[data-testid="stDialog"]:has(.open-project-dialog-marker) button[kind="primary"] {
+            background: #166534;
+            border-color: #166534;
+            color: white;
+        }
+        div[data-testid="stDialog"]:has(.open-project-dialog-marker) button[kind="primary"]:hover {
+            background: #14532d;
+            border-color: #14532d;
+        }
+        div[data-testid="stDialog"]:has(.main-menu-dialog-marker) button[kind="primary"] {
+            background: #166534;
+            border-color: #166534;
+            color: white;
+        }
+        div[data-testid="stDialog"]:has(.main-menu-dialog-marker) button[kind="primary"]:hover {
+            background: #14532d;
+            border-color: #14532d;
+        }
+        div[class*="st-key-project_card_"] {
+            background: white;
+            border: 1px solid #dce4df;
+            border-radius: 0.85rem;
+            box-shadow: 0 1px 2px rgba(15, 48, 30, 0.04);
+            cursor: pointer;
+            box-sizing: border-box;
+            height: 24.5rem;
+            overflow: hidden;
+            padding: 1.25rem;
+            position: relative;
+            transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+        }
+        div[class*="st-key-project_card_"]:hover {
+            border-color: #4ade80;
+            box-shadow: 0 0.75rem 1.8rem rgba(20, 83, 45, 0.13);
+            transform: translateY(-3px);
+        }
+        div[class*="st-key-project_card_"]:active {
+            box-shadow: 0 0.3rem 0.8rem rgba(20, 83, 45, 0.14);
+            transform: translateY(-1px);
+        }
+        div[class*="st-key-project_card_"]:focus-within {
+            border-color: #16a34a;
+            box-shadow: 0 0 0 0.22rem rgba(34, 197, 94, 0.24);
+        }
+        div[class*="st-key-project_card_"] [data-testid="stButton"] {
+            bottom: 0;
+            left: 0;
+            position: absolute;
+            right: 0;
+            z-index: 5;
+        }
+        div[class*="st-key-project_card_"] [data-testid="stButton"] button {
+            bottom: 0;
+            cursor: pointer;
+            height: 24.5rem;
+            left: 0;
+            opacity: 0;
+            position: absolute;
+            width: 100%;
+        }
+        .project-card-content {
+            display: flex;
+            flex-direction: column;
+            min-height: 15.5rem;
+            pointer-events: none;
+        }
+        .project-card-topline {
+            align-items: flex-start;
+            display: flex;
+            gap: 0.75rem;
+            justify-content: space-between;
+        }
+        .project-card-title {
+            color: #17211c;
+            font-size: 1.3rem;
+            font-weight: 720;
+            letter-spacing: -0.012em;
+            line-height: 1.35;
+            margin: 0;
+        }
+        .project-card-location {
+            color: #4f5e56;
+            font-size: 0.94rem;
+            line-height: 1.5;
+            margin: 0.8rem 0 0;
+        }
+        .project-card-badge {
+            align-items: center;
+            background: #e9f8ee;
+            border: 1px solid #b9e8c7;
+            border-radius: 999px;
+            color: #166534;
+            display: inline-flex;
+            font-size: 0.76rem;
+            font-weight: 700;
+            gap: 0.35rem;
+            margin-top: 0.85rem;
+            padding: 0.22rem 0.55rem;
+            width: fit-content;
+        }
+        .project-card-badge::before {
+            background: #22c55e;
+            border-radius: 50%;
+            content: "";
+            height: 0.45rem;
+            width: 0.45rem;
+        }
+        .project-card-badge.private {
+            background: #f1f4f2;
+            border-color: #d7ddd9;
+            color: #52605a;
+        }
+        .project-card-badge.private::before {
+            background: #87938c;
+        }
+        .project-location-label {
+            color: #166534;
+            font-size: 0.72rem;
+            font-weight: 750;
+            letter-spacing: 0.035em;
+            text-transform: uppercase;
+        }
+        .project-card-meta {
+            color: #6b7871;
+            font-size: 0.84rem;
+            line-height: 1.55;
+            margin: 0.65rem 0 0.85rem;
+        }
+        .project-progress-label {
+            align-items: center;
+            color: #4f5e56;
+            display: flex;
+            font-size: 0.8rem;
+            justify-content: space-between;
+            margin-bottom: 0.38rem;
+        }
+        .project-progress-track {
+            background: #e6ece8;
+            border-radius: 999px;
+            height: 0.48rem;
+            overflow: hidden;
+        }
+        .project-progress-fill {
+            background: #22a854;
+            border-radius: inherit;
+            height: 100%;
+        }
+        .project-card-stats {
+            display: grid;
+            gap: 0.6rem;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            margin: 0.9rem 0 1rem;
+        }
+        .project-card-stat strong {
+            color: #26342c;
+            display: block;
+            font-size: 0.9rem;
+        }
+        .project-card-stat span {
+            color: #738078;
+            display: block;
+            font-size: 0.7rem;
+            line-height: 1.25;
+        }
+        .project-card-action {
+            color: #166534;
+            font-size: 0.92rem;
+            font-weight: 700;
+            margin-top: auto;
+        }
+        @media (max-width: 760px) {
+            .st-key-home_page { padding-left: 0.2rem; padding-right: 0.2rem; }
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+    with st.container(key="home_page"):
+        title_column, action_column = st.columns([4, 1], vertical_alignment="center")
+        with title_column:
+            project_word = "project" if len(projects) == 1 else "projects"
+            st.markdown(
+                f'<h1 class="home-section-title">Your Projects</h1>'
+                f'<p class="home-project-count">{len(projects)} {project_word}</p>',
+                unsafe_allow_html=True,
+            )
+        with action_column:
+            with st.popover("＋ New Project", width="stretch"):
+                st.markdown("**Create a shade study**")
+                st.caption("Start with an empty project and add your own transit or GIS data.")
+                new_project_name = st.text_input(
+                    "Project name",
+                    key="home_new_project_name",
+                    placeholder="e.g. Downtown transit shade study",
+                )
+                if st.button("Create project", key="home_create_project", width="stretch"):
+                    project_id = create_blank_project(new_project_name)
+                    load_project_into_session(project_id)
+                    set_page("Data")
+                    st.rerun()
+
+        st.markdown("<div style='height: 0.7rem'></div>", unsafe_allow_html=True)
+        if not projects:
+            st.info("No saved projects yet. Create your first project to get started.")
+            return
+
+        card_columns = st.columns(2, gap="large")
+        for index, project in enumerate(projects):
+            project_id = str(project["id"])
+            project_name = str(project.get("name") or "Untitled Shade Study")
+            name = html.escape(project_name)
+            agency = html.escape(str(project.get("agency") or "No agency"))
+            region = html.escape(str(project.get("region") or "No location set"))
+            version = html.escape(str(project.get("dataset_version") or "draft"))
+            visibility = html.escape(str(project.get("visibility") or "Private"))
+            visibility_class = "public" if visibility.lower() == "public" else "private"
+            updated = html.escape(format_project_updated(project.get("updated_at")))
+            location_count = int(project.get("location_count") or 0)
+            reviewed_count = int(project.get("reviewed_count") or 0)
+            awaiting_count = int(project.get("awaiting_review_count") or 0)
+            review_percent = round(reviewed_count / location_count * 100) if location_count else 0
+            with card_columns[index % len(card_columns)]:
+                with st.container(key=f"project_card_{index}"):
+                    st.markdown(
+                        f"""
+                        <div class="project-card-content">
+                            <div class="project-card-topline">
+                                <h2 class="project-card-title">{name}</h2>
+                            </div>
+                            <span class="project-card-badge {visibility_class}">{visibility}</span>
+                            <p class="project-card-location"><span class="project-location-label">Location</span> · {region} · {agency}</p>
+                            <p class="project-card-meta">Dataset v{version} · {updated}</p>
+                            <div class="project-progress-label"><span>Review progress</span><strong>{review_percent}%</strong></div>
+                            <div class="project-progress-track"><div class="project-progress-fill" style="width: {review_percent}%"></div></div>
+                            <div class="project-card-stats">
+                                <div class="project-card-stat"><strong>{location_count:,}</strong><span>Locations</span></div>
+                                <div class="project-card-stat"><strong>{reviewed_count:,}</strong><span>Reviewed</span></div>
+                                <div class="project-card-stat"><strong>{awaiting_count:,}</strong><span>Need review</span></div>
+                            </div>
+                            <span class="project-card-action">Open Project →</span>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+                    st.button(
+                        f"Open project: {name}",
+                        key=f"home_open_{project_id}",
+                        width="stretch",
+                        on_click=request_open_project,
+                        args=(project_id, project_name),
+                    )
+        if st.session_state.get("pending_project_open"):
+            render_open_project_confirmation()
+
+
+def render_header() -> str:
+    data_pages = [("Overview", "Data"), ("Labels", "Labels"), ("Voting", "Voting")]
+    build_pages = [
+        ("Visuals", "Visuals"),
+        ("Docs", "Docs"),
+        ("Preview", "Preview"),
+        ("Deploy", "Deploy"),
+    ]
+    pages = ["Home", *(page for _, page in data_pages), *(page for _, page in build_pages)]
+    if st.session_state.get("page") not in pages:
+        st.session_state["page"] = "Home"
+    st.markdown(
+        """
+        <style>
+        div[data-testid="stHorizontalBlock"]:has(.st-key-nav_home) {
             border-bottom: 1px solid #e5e7eb;
-            margin: -1rem -1rem 1.2rem;
-            padding: 0.9rem 1.4rem 1.1rem;
+            margin-bottom: 1.2rem;
+            padding: 0.9rem 0 1.1rem;
         }
-        .builder-brand {
-            color: #14532d;
-            font-size: 2.85rem;
-            font-weight: 800;
-            letter-spacing: 0;
-            line-height: 1.08;
-            white-space: nowrap;
-        }
-        .builder-topbar .stButton button {
+        div[data-testid="stHorizontalBlock"]:has(.st-key-nav_home) [data-testid="stPopover"] > button {
             border-radius: 999px;
             font-size: 1.2rem;
             min-height: 3.05rem;
@@ -996,42 +1383,97 @@ def render_header() -> str:
             white-space: nowrap;
             width: 100%;
         }
-        .builder-topbar .stButton button p {
+        div[data-testid="stHorizontalBlock"]:has(.st-key-nav_home) button p {
             white-space: nowrap;
         }
-        .builder-topbar .stButton button[kind="primary"] {
-            background: #ff4b4b;
-            border-color: #ff4b4b;
-            color: white;
+        .st-key-nav_home button {
+            background: transparent;
+            border: 2px solid transparent;
+            border-radius: 0.8rem;
+            color: #14532d;
+            display: inline-flex;
+            font-size: 2.85rem;
+            font-weight: 800;
+            justify-content: flex-start;
+            letter-spacing: 0;
+            line-height: 1.08;
+            padding: 0.35rem 0.65rem;
+            transform: translateY(0);
+            transition: background-color 140ms ease, border-color 140ms ease,
+                box-shadow 140ms ease, color 140ms ease, transform 100ms ease;
+            width: auto;
         }
-        .builder-topbar .stButton button[kind="secondary"] {
-            background: white;
-            border-color: #d1d5db;
-            color: #31333f;
+        .st-key-nav_home button:hover {
+            background: #dcfce7;
+            border-color: #86efac;
+            box-shadow: 0 0.35rem 0.9rem rgba(20, 83, 45, 0.18);
+            color: #0f6b35;
+            transform: translateY(-2px);
+        }
+        .st-key-nav_home button:active {
+            background: #bbf7d0;
+            border-color: #22c55e;
+            box-shadow: 0 0.12rem 0.3rem rgba(20, 83, 45, 0.24);
+            color: #14532d;
+            transform: translateY(1px) scale(0.98);
+        }
+        .st-key-nav_home button:focus-visible {
+            border-color: #16a34a;
+            box-shadow: 0 0 0 0.25rem rgba(34, 197, 94, 0.28);
+            outline: none;
+        }
+        .st-key-nav_home button p {
+            font-size: 2.85rem;
+            font-weight: 800;
+            line-height: 1.08;
         }
         h1 {
             font-size: 1.85rem;
             line-height: 1.15;
         }
+        div[data-testid="stPopoverBody"]:has(.header-menu-marker) [data-testid="stVerticalBlock"] {
+            gap: 0.25rem;
+        }
+        div[data-testid="stPopoverBody"]:has(.header-menu-marker) [data-testid="stButton"] button {
+            min-height: 2.25rem;
+            padding: 0.3rem 0.75rem;
+        }
+        div[data-testid="stDialog"]:has(.main-menu-dialog-marker) button[kind="primary"] {
+            background: #166534;
+            border-color: #166534;
+            color: white;
+        }
+        div[data-testid="stDialog"]:has(.main-menu-dialog-marker) button[kind="primary"]:hover {
+            background: #14532d;
+            border-color: #14532d;
+        }
         </style>
         """,
         unsafe_allow_html=True,
     )
-    st.markdown("<div class='builder-topbar'>", unsafe_allow_html=True)
-    cols = st.columns([3.1, 0.35, 0.9, 0.9, 1, 0.9, 0.9, 0.9, 0.9], gap="small", vertical_alignment="center")
+    on_home_page = st.session_state["page"] == "Home"
+    cols = st.columns([1] if on_home_page else [5, 1, 1], gap="small", vertical_alignment="center")
     with cols[0]:
-        st.markdown("<div class='builder-brand'>Shade-GIS</div>", unsafe_allow_html=True)
-    for index, page in enumerate(pages, start=2):
-        with cols[index]:
-            st.button(
-                page,
-                key=f"nav_{page}",
-                type="primary" if st.session_state["page"] == page else "secondary",
-                width="stretch",
-                on_click=set_page,
-                args=(page,),
-            )
-    st.markdown("</div>", unsafe_allow_html=True)
+        st.button("Shade-GIS", key="nav_home", on_click=request_main_menu)
+    if not on_home_page:
+        for column, label, menu_pages in [
+            (cols[1], "Data", data_pages),
+            (cols[2], "Build", build_pages),
+        ]:
+            with column:
+                with st.popover(label, width="stretch"):
+                    st.markdown("<span class='header-menu-marker'></span>", unsafe_allow_html=True)
+                    for button_label, page in menu_pages:
+                        st.button(
+                            button_label,
+                            key=f"nav_{page}",
+                            type="primary" if st.session_state["page"] == page else "secondary",
+                            width="stretch",
+                        on_click=set_page,
+                        args=(page,),
+                    )
+    if st.session_state.get("pending_main_menu"):
+        render_main_menu_confirmation()
     return st.session_state["page"]
 
 
@@ -1049,7 +1491,9 @@ def main() -> None:
     if st.session_state.get("page") in {"Methodology", "Methods"}:
         st.session_state["page"] = "Docs"
     page = render_header()
-    if page == "Labels":
+    if page == "Home":
+        render_home_page()
+    elif page == "Labels":
         render_labels_page()
     elif page == "Visuals":
         render_visuals_page()

@@ -295,9 +295,18 @@ def list_projects(path: Path | None = None) -> list[dict[str, Any]]:
     with connect(path) as conn:
         rows = conn.execute(
             """
-            SELECT id, name, agency, region, visibility, dataset_version, updated_at
-            FROM projects
-            ORDER BY updated_at DESC, name COLLATE NOCASE
+            SELECT p.id, p.name, p.agency, p.region, p.visibility, p.dataset_version, p.updated_at,
+                   COUNT(s.stop_id) AS location_count,
+                   COALESCE(SUM(CASE WHEN s.review_status IN (
+                       'Reviewed', 'Crowd Reviewed', 'Expert Reviewed', 'Accepted', 'Archived'
+                   ) THEN 1 ELSE 0 END), 0) AS reviewed_count,
+                   COUNT(s.stop_id) - COALESCE(SUM(CASE WHEN s.review_status IN (
+                       'Reviewed', 'Crowd Reviewed', 'Expert Reviewed', 'Accepted', 'Archived'
+                   ) THEN 1 ELSE 0 END), 0) AS awaiting_review_count
+            FROM projects AS p
+            LEFT JOIN stops AS s ON s.project_id = p.id
+            GROUP BY p.id, p.name, p.agency, p.region, p.visibility, p.dataset_version, p.updated_at
+            ORDER BY p.updated_at DESC, p.name COLLATE NOCASE
             """
         ).fetchall()
     return [dict(row) for row in rows]

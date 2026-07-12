@@ -30,3 +30,6 @@ def test_save_project_updates_metadata_without_corrupting_stops(db_path, project
     assert bundle["project"]["dataset_version"] == "test-2"
     assert len(bundle["stops"]) == 2
     assert projects[0]["id"] == project_id
+    assert projects[0]["location_count"] == 2
+    assert projects[0]["reviewed_count"] == 0
+    assert projects[0]["awaiting_review_count"] == 2
