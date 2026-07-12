@@ -44,7 +44,8 @@ def test_runtime_and_generated_bundle_pin_pandas_below_three():
     builder_source = Path("builder_app.py").read_text(encoding="utf-8")
 
     assert "pandas>=2.2,<3" in requirements
-    assert '"streamlit>=1.57,<2\\npandas>=2.2,<3\\n' in builder_source
+    assert "pyarrow>=24,<25" in requirements
+    assert '"streamlit>=1.57,<2\\npandas>=2.2,<3\\npyarrow>=24,<25\\n' in builder_source
 
 
 def test_app_py_is_builder_entrypoint():
@@ -152,8 +153,8 @@ def test_data_page_uses_progress_dashboard_and_collapsed_dataset_preview():
     assert 'st.subheader("Dataset Status")' in source
     assert 'st.markdown("#### Work Queue")' in source
     assert 'st.expander("Dataset Preview", expanded=False)' in source
-    assert "st.dataframe(streamlit_safe_dataframe(visible_stops" in source
-    assert "st.dataframe(stops," not in source
+    assert "render_dataframe_table(visible_stops)" in source
+    assert "st.dataframe(" not in source
     assert 'st.subheader("Dataset Health")' not in source
 
 

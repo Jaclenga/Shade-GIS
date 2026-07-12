@@ -1,9 +1,3 @@
-import json
-import logging
-from datetime import date, datetime, time
-from decimal import Decimal
-from numbers import Number
-
 from builder_app import *
 from shade_gis.data_quality import DATA_QUALITY_ISSUES, ISSUE_BY_KEY, evaluate_data_quality
 from shade_gis.shade_dimensions import normalize_shade_coverage
@@ -14,7 +8,6 @@ DATASET_ATTENTION_STATUSES = {"Needs Review", "Disputed"}
 DATASET_STATUS_OPTIONS = ["Needs Review", "Reviewed", "Unlabeled"]
 DATASET_QUEUE_PAGE_SIZES = [10, 25, 50]
 DATASET_PREVIEW_PAGE_SIZES = [25, 50, 100]
-LOGGER = logging.getLogger(__name__)
 
 
 def manual_entry_dataframe(records: list[dict[str, str]]) -> pd.DataFrame:
@@ -30,90 +23,31 @@ def manual_entry_dataframe(records: list[dict[str, str]]) -> pd.DataFrame:
     )
 
 
-def _json_compatible_display_value(value: Any) -> Any:
-    if isinstance(value, dict):
-        return {str(key): _json_compatible_display_value(item) for key, item in value.items()}
-    if isinstance(value, (list, tuple)):
-        return [_json_compatible_display_value(item) for item in value]
-    if isinstance(value, set):
-        items = [_json_compatible_display_value(item) for item in value]
-        return sorted(items, key=lambda item: json.dumps(item, sort_keys=True, default=str))
-    if value is None or value is pd.NA or value is pd.NaT:
-        return None
-    if isinstance(value, (datetime, date, time)):
-        return value.isoformat()
-    if isinstance(value, Decimal):
-        return str(value)
-    if isinstance(value, bytes):
-        return value.decode("utf-8", errors="replace")
-    if isinstance(value, (str, Number, bool)):
-        return value
-    try:
-        if bool(pd.isna(value)):
-            return None
-    except (TypeError, ValueError):
-        pass
-    return str(value)
-
-
-def _normalize_display_value(value: Any) -> Any:
-    if isinstance(value, (dict, list, tuple, set)):
-        return json.dumps(
-            _json_compatible_display_value(value),
-            ensure_ascii=True,
-            sort_keys=True,
-        )
-    return _json_compatible_display_value(value)
-
-
-def dataframe_diagnostics(frame: pd.DataFrame) -> dict[str, Any]:
-    """Describe dtypes and Python cell types without logging cell values."""
-    columns = []
-    for position, column in enumerate(frame.columns):
-        series = frame.iloc[:, position]
-        columns.append(
-            {
-                "position": position,
-                "name": str(column),
-                "dtype": str(series.dtype),
-                "python_types": sorted(
-                    {f"{type(value).__module__}.{type(value).__qualname__}" for value in series.tolist()}
-                ),
-                "uses_string_dtype": isinstance(series.dtype, pd.StringDtype),
-            }
-        )
-    return {
-        "shape": list(frame.shape),
-        "column_names": [str(column) for column in frame.columns],
-        "dtypes": [str(dtype) for dtype in frame.dtypes],
-        "columns": columns,
-        "has_string_dtype": any(item["uses_string_dtype"] for item in columns),
-        "has_duplicate_columns": bool(frame.columns.duplicated().any()),
-    }
-
-
-def log_dataframe_diagnostics(name: str, frame: pd.DataFrame) -> None:
-    LOGGER.warning(
-        "DataFrame diagnostics [%s]: %s",
-        name,
-        json.dumps(dataframe_diagnostics(frame), ensure_ascii=True, sort_keys=True),
-    )
-
-
-def streamlit_safe_dataframe(frame: pd.DataFrame) -> pd.DataFrame:
-    """Return an Arrow-safe display copy while preserving primitive dtypes."""
+def dataframe_html(frame: pd.DataFrame, column_labels: dict[str, str] | None = None) -> str:
+    """Build an escaped HTML table without Streamlit's PyArrow dataframe path."""
     if frame.columns.duplicated().any():
         duplicates = [str(column) for column in frame.columns[frame.columns.duplicated()].tolist()]
         raise ValueError(f"Display dataframe contains duplicate columns: {duplicates}")
+    display = frame.rename(columns=column_labels or {})
+    return display.to_html(
+        index=False,
+        escape=True,
+        border=0,
+        classes="data-page-table",
+        na_rep="",
+    )
 
-    display = frame.copy()
-    for column in display.columns:
-        series = display[column]
-        if isinstance(series.dtype, pd.StringDtype) or isinstance(series.dtype, pd.api.extensions.ExtensionDtype):
-            series = series.astype(object)
-        if series.dtype == object:
-            display[column] = series.map(_normalize_display_value).astype(object)
-    return display
+
+def render_dataframe_table(frame: pd.DataFrame, column_labels: dict[str, str] | None = None) -> None:
+    if frame.empty:
+        st.caption("No rows to display.")
+        return
+    st.markdown(
+        '<div style="max-width:100%;overflow-x:auto">'
+        f"{dataframe_html(frame, column_labels)}"
+        "</div>",
+        unsafe_allow_html=True,
+    )
 
 
 def dataset_status_table(
@@ -262,9 +196,7 @@ def render_data_quality_dashboard(stops: pd.DataFrame, images: pd.DataFrame) -> 
             "must be resolved."
         )
 
-    quality_summary = report.summary_table()
-    log_dataframe_diagnostics("data_quality_summary", quality_summary)
-    st.dataframe(streamlit_safe_dataframe(quality_summary), width="stretch", hide_index=True)
+    render_dataframe_table(report.summary_table())
 
     st.markdown("#### Validation checks")
     for issue in DATA_QUALITY_ISSUES:
@@ -326,7 +258,7 @@ def render_data_quality_dashboard(stops: pd.DataFrame, images: pd.DataFrame) -> 
     paging[2].caption(
         f"{len(affected):,} {display_label} · Page {page:,} of {page_count:,}"
     )
-    st.dataframe(streamlit_safe_dataframe(visible), width="stretch", hide_index=True)
+    render_dataframe_table(visible)
 
 
 def render_dataset_status(
@@ -402,11 +334,7 @@ def render_dataset_status(
             f"{len(filtered):,} stops · Page {int(requested_page):,} of {page_count:,} · "
             f"{metrics['unlabeled_stops']:,} unlabeled overall"
         )
-        st.dataframe(
-            streamlit_safe_dataframe(dataset_work_queue_display(visible)),
-            width="stretch",
-            hide_index=True,
-        )
+        render_dataframe_table(dataset_work_queue_display(visible))
 
     with st.expander("Dataset Preview", expanded=False):
         st.caption("Browse the project dataset one page at a time. Only the visible page is rendered.")
@@ -446,7 +374,7 @@ def render_dataset_status(
             f"Showing rows {first_row:,}–{last_row:,} of {len(stops):,} · "
             f"Page {preview_page:,} of {preview_page_count:,}"
         )
-        st.dataframe(streamlit_safe_dataframe(visible_stops), width="stretch", hide_index=True)
+        render_dataframe_table(visible_stops)
 
 def render_project_storage_controls() -> None:
     projects = list_projects()
@@ -540,7 +468,7 @@ def render_data_page() -> None:
                     zip_format = detect_zip_import_format(contents)
                     if zip_format == "GTFS":
                         raw, metadata = parse_gtfs_zip(contents)
-                        st.dataframe(streamlit_safe_dataframe(raw.head(25)), width="stretch")
+                        render_dataframe_table(raw.head(25))
                         if st.button("Use uploaded GTFS stops", type="primary", key=f"{key_prefix}_gtfs"):
                             mapping = {field: field for field in REQUIRED_STOP_FIELDS + OPTIONAL_FIELDS if field in raw.columns}
                             metadata.update({"original_filename": filename})
@@ -704,25 +632,15 @@ def render_data_page() -> None:
     render_data_quality_dashboard(st.session_state["stops"], images)
 
     st.subheader("Shade Source Taxonomy")
-    st.dataframe(
-        streamlit_safe_dataframe(pd.DataFrame(SHADE_SOURCE_TAXONOMY)),
-        width="stretch",
-        hide_index=True,
-        column_config={
-            "shade_source": st.column_config.TextColumn("Shade Source"),
-            "operational_definition": st.column_config.TextColumn("Operational Definition"),
-        },
+    render_dataframe_table(
+        pd.DataFrame(SHADE_SOURCE_TAXONOMY),
+        {"shade_source": "Shade Source", "operational_definition": "Operational Definition"},
     )
 
     st.subheader("Shade Coverage Taxonomy")
-    st.dataframe(
-        streamlit_safe_dataframe(pd.DataFrame(SHADE_COVERAGE_TAXONOMY)),
-        width="stretch",
-        hide_index=True,
-        column_config={
-            "shade_coverage": st.column_config.TextColumn("Shade Coverage"),
-            "operational_definition": st.column_config.TextColumn("Operational Definition"),
-        },
+    render_dataframe_table(
+        pd.DataFrame(SHADE_COVERAGE_TAXONOMY),
+        {"shade_coverage": "Shade Coverage", "operational_definition": "Operational Definition"},
     )
 
     labels = list_shade_labels(project_id) if project_id else pd.DataFrame()
