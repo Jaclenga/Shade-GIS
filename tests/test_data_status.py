@@ -12,6 +12,7 @@ from shade_gis.pages.data_page import (
     dataset_work_queue_display,
     filter_dataset_work_queue,
     manual_entry_dataframe,
+    streamlit_safe_dataframe,
 )
 
 
@@ -55,28 +56,34 @@ def status_fixture() -> tuple[pd.DataFrame, pd.DataFrame]:
     return stops, labels
 
 
-def test_manual_entry_dataframe_uses_python_backed_string_columns():
+def test_manual_entry_dataframe_uses_plain_object_columns():
     template = manual_entry_dataframe([{"stop_id": "1001", "stop_name": "Main & First"}])
 
     assert len(template) == 1
     assert template.columns.is_unique
-    assert all(isinstance(dtype, pd.StringDtype) for dtype in template.dtypes)
-    assert all(dtype.storage == "python" for dtype in template.dtypes)
+    assert template.dtypes.eq(object).all()
     assert template.iloc[0]["stop_id"] == "1001"
     assert template.iloc[0]["stop_name"] == "Main & First"
     assert template.iloc[0].drop(["stop_id", "stop_name"]).eq("").all()
 
 
-def test_manual_entry_dataframe_repeatedly_crosses_arrow_boundary_in_subprocess():
+def test_streamlit_safe_dataframe_crosses_arrow_boundary_in_subprocess():
     script = """
+import pandas as pd
 import pyarrow as pa
-from shade_gis.pages.data_page import manual_entry_dataframe
+from shade_gis.pages.data_page import streamlit_safe_dataframe
 
-template = manual_entry_dataframe([{"stop_id": "1001", "stop_name": "Main & First"}])
+unsafe = pd.DataFrame({
+    "Status": pd.Series(["Pass", pd.NA], dtype=pd.StringDtype(storage="python")),
+    "Affected": [0, 1],
+})
+template = streamlit_safe_dataframe(unsafe)
+assert template["Status"].dtype == object
+assert template["Status"].tolist() == ["Pass", None]
 for _ in range(250):
     table = pa.Table.from_pandas(template, preserve_index=False)
-assert table.num_rows == 1
-assert all(str(field.type) == "string" for field in table.schema)
+assert table.num_rows == 2
+assert str(table.schema.field("Status").type) == "string"
 """
     completed = subprocess.run(
         [sys.executable, "-c", script],
@@ -87,6 +94,21 @@ assert all(str(field.type) == "string" for field in table.schema)
     )
 
     assert completed.returncode == 0, completed.stdout + completed.stderr
+
+
+def test_streamlit_safe_dataframe_preserves_non_string_dtypes():
+    unsafe = pd.DataFrame(
+        {
+            "Status": pd.Series(["Pass", pd.NA], dtype=pd.StringDtype(storage="python")),
+            "Affected": [0, 1],
+        }
+    )
+
+    display = streamlit_safe_dataframe(unsafe)
+
+    assert display["Status"].dtype == object
+    assert display["Status"].tolist() == ["Pass", None]
+    assert display["Affected"].dtype == unsafe["Affected"].dtype
 
 
 def test_dataset_status_combines_final_labels_raw_labels_and_review_state():

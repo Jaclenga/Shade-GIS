@@ -32,11 +32,19 @@ def test_builder_and_published_runtime_disable_arrow_string_inference():
 
     for filename in ["builder_app.py", "published_app.py"]:
         source = Path(filename).read_text(encoding="utf-8")
-        assert 'pd.options.mode.string_storage = "python"' in source
+        assert "pd.options.future.infer_string = False" in source
 
     inferred = pd.DataFrame({"value": [""]})
-    assert pd.options.mode.string_storage == "python"
-    assert type(inferred["value"].array).__name__ == "StringArray"
+    assert pd.options.future.infer_string is False
+    assert inferred["value"].dtype == object
+
+
+def test_runtime_and_generated_bundle_pin_pandas_below_three():
+    requirements = Path("requirements/requirements.txt").read_text(encoding="utf-8")
+    builder_source = Path("builder_app.py").read_text(encoding="utf-8")
+
+    assert "pandas>=2.2,<3" in requirements
+    assert '"streamlit>=1.57,<2\\npandas>=2.2,<3\\n' in builder_source
 
 
 def test_app_py_is_builder_entrypoint():
@@ -144,7 +152,7 @@ def test_data_page_uses_progress_dashboard_and_collapsed_dataset_preview():
     assert 'st.subheader("Dataset Status")' in source
     assert 'st.markdown("#### Work Queue")' in source
     assert 'st.expander("Dataset Preview", expanded=False)' in source
-    assert "st.dataframe(visible_stops" in source
+    assert "st.dataframe(streamlit_safe_dataframe(visible_stops" in source
     assert "st.dataframe(stops," not in source
     assert 'st.subheader("Dataset Health")' not in source
 

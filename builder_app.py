@@ -18,11 +18,10 @@ import pandas as pd
 import pydeck as pdk
 import streamlit as st
 
-# Pandas 3 otherwise infers Arrow-backed strings when pyarrow is installed.
-# Keep ordinary app frames on the Python-backed string path so malformed or
-# rapidly rerun UI input cannot take the whole Streamlit process down in native
-# Arrow code. Explicit ``string[pyarrow]`` columns remain available when needed.
-pd.options.mode.string_storage = "python"
+# Keep ordinary strings as Python objects. Streamlit serializes every dataframe
+# through PyArrow; pandas extension-string arrays have caused process-fatal
+# native crashes at that boundary in CI.
+pd.options.future.infer_string = False
 
 import published_app
 from builder_about_page import render_builder_about_page
@@ -956,7 +955,7 @@ def build_github_deploy_bundle(repo_name: str, deploy_mode: str = "existing") ->
             bundle.writestr("shade_study_raw_labels.csv", raw_labels.to_csv(index=False))
         bundle.writestr(
             "requirements.txt",
-            "streamlit>=1.57,<2\npandas>=2,<4\npydeck>=0.8,<1\npsycopg[binary]>=3.2,<4\n",
+            "streamlit>=1.57,<2\npandas>=2.2,<3\npydeck>=0.8,<1\npsycopg[binary]>=3.2,<4\n",
         )
         bundle.writestr(".streamlit/config.toml", "[server]\nheadless = true\n\n[browser]\ngatherUsageStats = false\n")
         bundle.writestr(
