@@ -152,6 +152,9 @@ def test_data_page_uses_progress_dashboard_and_collapsed_dataset_preview():
 
     assert 'st.subheader("Dataset Status")' in source
     assert 'st.markdown("#### Work Queue")' in source
+    assert "with st.expander(queue_label, expanded=False)" in source
+    assert '"Show stops"' in source
+    assert '"Open labeling workspace →"' in source
     assert 'st.expander("Dataset Preview", expanded=False)' in source
     assert "render_dataframe_table(visible_stops)" in source
     assert "st.dataframe(" not in source

@@ -293,48 +293,66 @@ def render_dataset_status(
             f"({float(metrics['review_completion']) * 100:.1f}%)."
         )
 
-    st.markdown("#### Work Queue")
-    filters = st.columns([2, 1.2])
-    selected_statuses = filters[0].multiselect(
-        "Status",
-        DATASET_STATUS_OPTIONS,
-        default=["Needs Review", "Unlabeled"],
-        key="dataset_queue_statuses",
+    attention_count = int(metrics["stops_needing_review"]) + int(metrics["unlabeled_stops"])
+    queue_label = (
+        f"Work queue · {attention_count:,} stops need attention"
+        if attention_count
+        else "Work queue · All caught up"
     )
-    stop_search = filters[1].text_input(
-        "Search stop ID",
-        key="dataset_queue_stop_search",
-        placeholder="e.g. 4254",
-    )
-    filtered = filter_dataset_work_queue(status, selected_statuses, stop_search)
-    if filtered.empty:
-        st.info("No stops match the work queue filters.")
-    else:
-        paging = st.columns([1, 1, 3], vertical_alignment="bottom")
-        page_size = paging[0].selectbox(
-            "Rows per page",
-            DATASET_QUEUE_PAGE_SIZES,
-            index=1,
-            key="dataset_queue_page_size",
+    with st.expander(queue_label, expanded=False):
+        st.markdown("#### Work Queue")
+        st.caption(
+            "Choose the stops you want to work on. Stops that need review appear first; "
+            "open the labeling workspace when you are ready to resolve them."
         )
-        page_count = max(1, math.ceil(len(filtered) / int(page_size)))
-        current_page = st.session_state.get("dataset_queue_page", 1)
-        if not isinstance(current_page, int) or current_page < 1 or current_page > page_count:
-            st.session_state["dataset_queue_page"] = min(max(int(current_page or 1), 1), page_count)
-        requested_page = paging[1].number_input(
-            "Page",
-            min_value=1,
-            max_value=page_count,
-            step=1,
-            key="dataset_queue_page",
+        filters = st.columns([2, 1.2])
+        selected_statuses = filters[0].multiselect(
+            "Show stops",
+            DATASET_STATUS_OPTIONS,
+            default=["Needs Review", "Unlabeled"],
+            key="dataset_queue_statuses",
+            help="Needs Review has submitted information to check. Unlabeled still needs a first label.",
         )
-        start = (int(requested_page) - 1) * int(page_size)
-        visible = filtered.iloc[start : start + int(page_size)]
-        paging[2].caption(
-            f"{len(filtered):,} stops · Page {int(requested_page):,} of {page_count:,} · "
-            f"{metrics['unlabeled_stops']:,} unlabeled overall"
+        stop_search = filters[1].text_input(
+            "Find a stop",
+            key="dataset_queue_stop_search",
+            placeholder="Enter a stop ID",
         )
-        render_dataframe_table(dataset_work_queue_display(visible))
+        filtered = filter_dataset_work_queue(status, selected_statuses, stop_search)
+        if filtered.empty:
+            st.info("No stops match these choices. Try showing another group or clearing the search.")
+        else:
+            paging = st.columns([1, 1, 3], vertical_alignment="bottom")
+            page_size = paging[0].selectbox(
+                "Stops per page",
+                DATASET_QUEUE_PAGE_SIZES,
+                index=1,
+                key="dataset_queue_page_size",
+            )
+            page_count = max(1, math.ceil(len(filtered) / int(page_size)))
+            current_page = st.session_state.get("dataset_queue_page", 1)
+            if not isinstance(current_page, int) or current_page < 1 or current_page > page_count:
+                st.session_state["dataset_queue_page"] = min(max(int(current_page or 1), 1), page_count)
+            requested_page = paging[1].number_input(
+                "Page",
+                min_value=1,
+                max_value=page_count,
+                step=1,
+                key="dataset_queue_page",
+            )
+            start = (int(requested_page) - 1) * int(page_size)
+            visible = filtered.iloc[start : start + int(page_size)]
+            paging[2].caption(
+                f"Showing {start + 1:,}–{start + len(visible):,} of {len(filtered):,} matching stops"
+            )
+            render_dataframe_table(dataset_work_queue_display(visible))
+            st.button(
+                "Open labeling workspace →",
+                type="primary",
+                key="dataset_queue_open_labels",
+                on_click=set_page,
+                args=("Labels",),
+            )
 
     with st.expander("Dataset Preview", expanded=False):
         st.caption("Browse the project dataset one page at a time. Only the visible page is rendered.")
