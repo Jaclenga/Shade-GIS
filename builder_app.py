@@ -558,6 +558,7 @@ def github_new_repo_url(project: dict[str, Any], repo_name: str) -> str:
 
 PUBLISHED_APP_SOURCE_PATH = APP_DIR / "published_app.py"
 PUBLIC_VOTING_SOURCE_PATH = APP_DIR / "public_voting.py"
+EXISTING_REPO_PREVIEW_DIR = "preview_app"
 
 
 def published_app_source() -> str:
@@ -568,20 +569,144 @@ def public_voting_source() -> str:
     return PUBLIC_VOTING_SOURCE_PATH.read_text(encoding="utf-8")
 
 
+def powershell_literal(value: Any) -> str:
+    return "'" + str(value).replace("'", "''") + "'"
+
+
+def streamlit_entrypoint_path(deploy_mode: str) -> str:
+    if deploy_mode == "create":
+        return "app.py"
+    if deploy_mode == "existing":
+        return f"{EXISTING_REPO_PREVIEW_DIR}/app.py"
+    raise ValueError("deploy_mode must be 'create' or 'existing'")
+
+
+def deploy_launcher_script(
+    bundle_name: str,
+    repo_name: str,
+    branch: str = "main",
+    deploy_mode: str = "existing",
+    visibility: str = "private",
+) -> str:
+    if deploy_mode not in {"create", "existing"}:
+        raise ValueError("deploy_mode must be 'create' or 'existing'")
+    if visibility not in {"public", "private"}:
+        raise ValueError("visibility must be 'public' or 'private'")
+
+    if deploy_mode == "existing":
+        repository_verification = """        gh repo view $RepositoryName --json nameWithOwner
+        if ($LASTEXITCODE -ne 0) {
+            throw "GitHub repository '$RepositoryName' was not found or is not accessible."
+        }
+"""
+        publish_command = """        & $DeployScript.FullName `
+            -Mode existing `
+            -RepositoryName $RepositoryName `
+            -Branch $Branch
+"""
+    else:
+        repository_verification = ""
+        allow_public = " -AllowPublicTarget" if visibility == "public" else ""
+        publish_command = f"""        & $DeployScript.FullName `
+            -Mode create `
+            -RepositoryName $RepositoryName `
+            -Branch $Branch `
+            -Visibility $Visibility{allow_public}
+"""
+
+    return f"""& {{
+    Set-StrictMode -Version Latest
+    $ErrorActionPreference = "Stop"
+
+    $BundleName = {powershell_literal(bundle_name)}
+    $RepositoryName = {powershell_literal(repo_name)}
+    $Branch = {powershell_literal(branch)}
+    $Visibility = {powershell_literal(visibility)}
+
+    if ([string]::IsNullOrWhiteSpace($RepositoryName)) {{
+        throw "Enter a GitHub repository before running this deployment block."
+    }}
+
+    foreach ($CommandName in @("git", "gh")) {{
+        if (-not (Get-Command $CommandName -ErrorAction SilentlyContinue)) {{
+            throw "Required command '$CommandName' was not found in PATH."
+        }}
+    }}
+
+    $DownloadsDirectory = Join-Path $env:USERPROFILE "Downloads"
+    $DocumentsDirectory = Join-Path $env:USERPROFILE "Documents"
+    $BundleStem = [System.IO.Path]::GetFileNameWithoutExtension($BundleName)
+    $BundleNamePattern = "^" + [Regex]::Escape($BundleStem) + "( \\([0-9]+\\))?\\.zip$"
+    $ZipCandidate = Get-ChildItem -LiteralPath $DownloadsDirectory -Filter "$BundleStem*.zip" -File |
+        Where-Object {{ $_.Name -match $BundleNamePattern }} |
+        Sort-Object LastWriteTime -Descending |
+        Select-Object -First 1
+
+    if (-not $ZipCandidate) {{
+        $ShadeBundles = @(Get-ChildItem -LiteralPath $DownloadsDirectory -Filter "*.zip" -File |
+            Where-Object {{ $_.Name -like "*shade*" }} |
+            Sort-Object LastWriteTime -Descending)
+        $Available = if ($ShadeBundles.Count) {{
+            ($ShadeBundles.Name -join ", ")
+        }} else {{
+            "none"
+        }}
+        throw "Could not find '$BundleName' or a numbered browser copy in $DownloadsDirectory. Available shade ZIP files: $Available. Download a fresh bundle or update `$BundleName."
+    }}
+
+    $ZipPath = $ZipCandidate.FullName
+    Write-Host "Using newest deployment bundle: $($ZipCandidate.Name)"
+
+    $BundleBaseName = [System.IO.Path]::GetFileNameWithoutExtension($ZipPath)
+    $ExtractTo = Join-Path $DocumentsDirectory $BundleBaseName
+    if (Test-Path -LiteralPath $ExtractTo) {{
+        $ExtractTo = Join-Path $DocumentsDirectory ($BundleBaseName + "-deploy-" + (Get-Date -Format "yyyyMMdd-HHmmss"))
+    }}
+
+    Expand-Archive -LiteralPath $ZipPath -DestinationPath $ExtractTo -Force
+    $DeployScript = Get-ChildItem -LiteralPath $ExtractTo -Filter "deploy_to_github.ps1" -File -Recurse |
+        Select-Object -First 1
+    if (-not $DeployScript) {{
+        throw "The ZIP was extracted to '$ExtractTo', but deploy_to_github.ps1 was not found anywhere inside it."
+    }}
+
+    Push-Location -LiteralPath $DeployScript.Directory.FullName
+    try {{
+        gh auth status
+        if ($LASTEXITCODE -ne 0) {{
+            throw "GitHub CLI authentication failed. Run 'gh auth login' and retry."
+        }}
+{repository_verification}{publish_command}        if ($LASTEXITCODE -ne 0) {{
+            throw "deploy_to_github.ps1 exited with code $LASTEXITCODE."
+        }}
+    }} finally {{
+        Pop-Location
+    }}
+}}"""
+
+
 def deploy_readme(repo_name: str, project: dict[str, Any], deploy_mode: str = "existing") -> str:
     app_name = project.get("name", "Shade Study")
     folder_name = slugify_repo_name(repo_name.rstrip("/").split("/")[-1].replace(".git", ""))
+    launcher_script = deploy_launcher_script(f"{folder_name}.zip", repo_name, deploy_mode=deploy_mode)
+    main_file_path = streamlit_entrypoint_path(deploy_mode)
     if deploy_mode == "create":
         publish_intro = "create the target repository used for this bundle"
-        verification_line = ""
-        publish_command = f'./deploy_to_github.ps1 -Mode create -RepositoryName "{repo_name}" -Branch "main" -Visibility private'
+        published_layout = (
+            "The new repository contains only this public preview app and its runtime files. "
+            "It does not contain the Shade-GIS builder."
+        )
     else:
         publish_intro = "publish into the target repository used for this bundle"
-        verification_line = f'gh repo view "{repo_name}"\n'
-        publish_command = f'./deploy_to_github.ps1 -Mode existing -RepositoryName "{repo_name}" -Branch "main"'
+        published_layout = (
+            f"The helper installs the public preview under `{EXISTING_REPO_PREVIEW_DIR}/` and leaves the "
+            "repository's root app and Shade-GIS builder files untouched."
+        )
     return f"""# {app_name}
 
-This repository was generated by Shade Study Builder. It contains a published Streamlit app rendered from the builder state at export time.
+This bundle was generated by Shade Study Builder. It contains only the public preview rendered from the builder state at export time, not the Shade-GIS builder interface.
+
+{published_layout}
 
 ## Files
 
@@ -613,23 +738,11 @@ uses the local SQLite fallback, whose files are ephemeral and may be lost when t
 ## After Downloading The Zip
 
 1. Click the download button. By default, your browser should save the bundle to your Downloads folder as `{folder_name}.zip`.
+   If that filename already exists, browser copies such as `{folder_name} (1).zip` are supported automatically; the launcher selects the newest exact-or-numbered copy.
 2. Open PowerShell and run this one copy-paste block to {publish_intro}:
 
 ```powershell
-$BundleName = "{folder_name}.zip"
-$ZipPath = Join-Path (Join-Path $env:USERPROFILE "Downloads") $BundleName
-$ExtractTo = Join-Path (Join-Path $env:USERPROFILE "Documents") "{folder_name}"
-if (-not (Test-Path $ZipPath)) {{
-    throw "Expected the deploy bundle at $ZipPath. If your browser saved it somewhere else, move it to Downloads or update `$ZipPath."
-}}
-Expand-Archive -Path $ZipPath -DestinationPath $ExtractTo -Force
-Set-Location $ExtractTo
-if (-not (Test-Path ".\\deploy_to_github.ps1")) {{
-    throw "deploy_to_github.ps1 was not found. Check that `$ExtractTo points to the extracted deploy bundle folder, then run Set-Location `$ExtractTo."
-}}
-git --version
-gh auth status
-{verification_line}{publish_command}
+{launcher_script}
 ```
 
 If GitHub CLI is not authenticated, run:
@@ -664,7 +777,7 @@ Before committing, the script prints `git status`, `git diff --stat`, and a stag
 
 For a new repository, the helper initializes Git in the extracted bundle, stages only generated app files, commits those files, creates the GitHub repository, and pushes the branch. Public repository creation is blocked unless you explicitly add `-AllowPublicTarget`.
 
-For an existing private repository, the helper verifies repository visibility when it can, clones the target repository into a temporary `_shade_gis_publish_*` folder under PowerShell's temp path, checks out the requested branch, copies only generated app/runtime files into that checkout, commits any changes, pushes back to GitHub, and cleans up the temporary folder. Your existing repository history is preserved. Protected files such as `.git/`, `.github/`, `README.md`, `LICENSE`, `.env*`, and `secrets.toml` are not copied in existing-repository mode.
+For an existing private repository, the helper verifies repository visibility when it can, clones the target repository into a temporary `_shade_gis_publish_*` folder under PowerShell's temp path, checks out the requested branch, copies only generated app/runtime files into `{EXISTING_REPO_PREVIEW_DIR}/`, commits any changes, pushes back to GitHub, and cleans up the temporary folder. Your existing repository history and root app are preserved. Protected files such as `.git/`, `.github/`, `.streamlit/`, `README.md`, `LICENSE`, `.env*`, and `secrets.toml` are not copied in existing-repository mode.
 
 ## Run Locally
 
@@ -679,7 +792,7 @@ After the repository is on GitHub, create a Streamlit Community Cloud app with:
 
 - repository: `{repo_name}`
 - branch: `main`
-- main file path: `app.py`
+- main file path: `{main_file_path}`
 """
 
 
@@ -687,7 +800,6 @@ def deploy_script(repo_name: str) -> str:
     return f"""param(
     [Alias("TargetRepo")]
     [string]$RepositoryName = "{repo_name}",
-    [ValidateSet("public", "private")]
     [string]$Visibility = "private",
     [ValidateSet("create", "existing")]
     [string]$Mode = "create",
@@ -707,16 +819,12 @@ if (-not (Get-Command gh -ErrorAction SilentlyContinue)) {{
     throw "GitHub CLI is not installed or not on PATH."
 }}
 
-if ($Visibility -eq "public" -and -not $AllowPublicTarget) {{
-    throw "Refusing to create a public repository without -AllowPublicTarget. Re-run with -Visibility private or add -AllowPublicTarget."
-}}
-
 function Invoke-Native {{
     param(
         [string]$Command,
         [string[]]$Arguments
     )
-    & $Command @Arguments
+    & $Command @Arguments | Out-Host
     if ($LASTEXITCODE -ne 0) {{
         throw "$Command $($Arguments -join ' ') failed with exit code $LASTEXITCODE."
     }}
@@ -790,6 +898,7 @@ function Show-ProtectedFileWarnings {{
     $protectedPaths = @(
         ".git",
         ".github",
+        ".streamlit",
         "README.md",
         "LICENSE",
         ".env",
@@ -808,39 +917,46 @@ function Show-ProtectedFileWarnings {{
 
 function Copy-SafeBundleFiles {{
     param([string]$Destination)
+    $previewDirectory = Join-Path $Destination "{EXISTING_REPO_PREVIEW_DIR}"
     $items = @(
         "app.py",
         "public_voting.py",
         "shade_study_stops.csv",
         "shade_study_raw_labels.csv",
         "shade_study_config.json",
-        "requirements.txt",
-        ".streamlit/config.toml"
+        "requirements.txt"
     )
     Show-ProtectedFileWarnings
+    if (-not (Test-Path $previewDirectory)) {{
+        New-Item -ItemType Directory -Path $previewDirectory -Force | Out-Null
+    }}
     foreach ($item in $items) {{
         if (Test-Path $item -PathType Leaf) {{
-            $destinationPath = Join-Path $Destination $item
-            $destinationParent = Split-Path -Parent $destinationPath
-            if ($destinationParent -and -not (Test-Path $destinationParent)) {{
-                New-Item -ItemType Directory -Path $destinationParent -Force | Out-Null
-            }}
+            $destinationPath = Join-Path $previewDirectory $item
             if (Test-Path $destinationPath) {{
-                Write-Host "Updating generated file: $item"
+                Write-Host "Updating generated preview file: {EXISTING_REPO_PREVIEW_DIR}/$item"
             }} else {{
-                Write-Host "Adding generated file: $item"
+                Write-Host "Adding generated preview file: {EXISTING_REPO_PREVIEW_DIR}/$item"
             }}
             Copy-Item -LiteralPath $item -Destination $destinationPath -Force
         }}
+    }}
+    $optionalRawLabels = Join-Path $previewDirectory "shade_study_raw_labels.csv"
+    if (-not (Test-Path "shade_study_raw_labels.csv" -PathType Leaf) -and (Test-Path $optionalRawLabels)) {{
+        Remove-Item -LiteralPath $optionalRawLabels -Force
+        Write-Host "Removed stale generated preview file: {EXISTING_REPO_PREVIEW_DIR}/shade_study_raw_labels.csv"
     }}
 }}
 
 function Stage-PublishFiles {{
     param([string[]]$Paths)
-    foreach ($path in $Paths) {{
-        if (Test-Path $path) {{
-            Invoke-Native "git" @("add", "--", $path)
-        }}
+    $existingPaths = @($Paths | Where-Object {{ Test-Path $_ }})
+    if (-not $existingPaths.Count) {{
+        return
+    }}
+    & git add -- $existingPaths
+    if ($LASTEXITCODE -ne 0) {{
+        throw "Failed to stage generated deployment files."
     }}
 }}
 
@@ -855,18 +971,25 @@ function Commit-And-Push {{
     Write-Host "Working tree diff summary:"
     Invoke-Native "git" @("diff", "--stat")
     Stage-PublishFiles -Paths $Paths
+    Write-Host "Repository status after staging:"
+    Invoke-Native "git" @("status")
     Write-Host "Staged diff summary:"
     Invoke-Native "git" @("diff", "--cached", "--stat")
-    $stagedChanges = Invoke-NativeOutput "git" @("diff", "--cached", "--name-only")
-    if (-not $stagedChanges) {{
+    & git diff --cached --quiet
+    $diffExitCode = $LASTEXITCODE
+    if ($diffExitCode -eq 0) {{
         Write-Host "No changes to publish."
-        return
+        return $false
+    }}
+    if ($diffExitCode -ne 1) {{
+        throw "git diff failed with exit code $diffExitCode."
     }}
     Confirm-Publish "Review the status and diff summary for branch '$TargetBranch'."
-    Invoke-Native "git" @("commit", "-m", "Publish shade study app")
+    Invoke-Native "git" @("commit", "-m", "Update generated Shade-GIS deployment")
     if (-not $SkipPush) {{
         Invoke-Native "git" @("push", "origin", $TargetBranch)
     }}
+    return $true
 }}
 
 if ($Mode -eq "existing") {{
@@ -874,13 +997,7 @@ if ($Mode -eq "existing") {{
     $remoteUrl = Get-RemoteUrl
     $publishDir = Join-Path $env:TEMP ("_shade_gis_publish_" + [guid]::NewGuid().ToString("N"))
     $existingPublishFiles = @(
-        "app.py",
-        "public_voting.py",
-        "shade_study_stops.csv",
-        "shade_study_raw_labels.csv",
-        "shade_study_config.json",
-        "requirements.txt",
-        ".streamlit/config.toml"
+        "{EXISTING_REPO_PREVIEW_DIR}"
     )
     try {{
         if ($RepositoryUrl.Trim() -or $RepositoryName -match "^https?://") {{
@@ -904,17 +1021,31 @@ if ($Mode -eq "existing") {{
         Copy-SafeBundleFiles -Destination $publishDir
         Push-Location $publishDir
         try {{
-            Commit-And-Push -TargetBranch $Branch -Paths $existingPublishFiles
+            $publishedChanges = Commit-And-Push -TargetBranch $Branch -Paths $existingPublishFiles
         }} finally {{
             Pop-Location
         }}
-        Write-Host "Published to existing repository $RepositoryName on branch $Branch."
+        if ($publishedChanges) {{
+            Write-Host "Published changes to $RepositoryName on branch $Branch."
+        }} else {{
+            Write-Host "Existing repository already matches the generated deployment; nothing was pushed."
+        }}
     }} finally {{
         if ($publishDir -and (Test-Path $publishDir)) {{
             Remove-Item -LiteralPath $publishDir -Recurse -Force
         }}
     }}
     exit 0
+}}
+
+# Visibility is a create-only option. Validate it after the existing workflow
+# exits so PowerShell does not reject an irrelevant value during parameter binding.
+if ($Visibility -notin @("public", "private")) {{
+    throw "Visibility must be 'public' or 'private' when creating a repository."
+}}
+
+if ($Visibility -eq "public" -and -not $AllowPublicTarget) {{
+    throw "Refusing to create a public repository without -AllowPublicTarget. Re-run with -Visibility private or add -AllowPublicTarget."
 }}
 
 if (-not (Test-Path ".git")) {{
@@ -934,8 +1065,12 @@ $newRepoFiles = @(
     ".gitignore",
     ".streamlit/config.toml"
 )
-Commit-And-Push -TargetBranch $Branch -Paths $newRepoFiles -SkipPush
+$createdCommit = Commit-And-Push -TargetBranch $Branch -Paths $newRepoFiles -SkipPush
+if (-not $createdCommit) {{
+    throw "No generated deployment changes were staged for the new repository."
+}}
 Invoke-Native "gh" @("repo", "create", $RepositoryName, "--$Visibility", "--source=.", "--remote=origin", "--push")
+Write-Host "Created and published repository $RepositoryName on branch $Branch."
 """
 
 

@@ -16,6 +16,7 @@ def test_core_modules_compile_without_bytecode_writes():
         "shade_gis/pages/preview_page.py",
         "shade_gis/pages/agreement_page.py",
         "shade_gis/pages/voting_page.py",
+        "shade_gis/pages/deploy_page.py",
     ]:
         source = Path(filename).read_text(encoding="utf-8")
         compile(source, filename, "exec")

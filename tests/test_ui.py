@@ -438,6 +438,41 @@ def test_builder_navigation_pages_render(playwright_api, streamlit_server: Strea
                         page.get_by_role("heading", name="Summary Statistics", exact=True)
                     ).to_be_visible(timeout=60_000)
                     wait_for_streamlit_idle(playwright_api, page, streamlit_server)
+                elif nav_label == "Deploy":
+                    playwright_api.expect(
+                        page.get_by_role("radio", name="Existing repository", exact=True)
+                    ).to_be_checked(timeout=30_000)
+                    repository_input = page.get_by_label("Repository", exact=True)
+                    playwright_api.expect(repository_input).to_be_visible(timeout=30_000)
+                    playwright_api.expect(page.get_by_label("Branch", exact=True)).to_have_value("main")
+                    download_button = page.get_by_role(
+                        "button", name="🚀 Download deployment bundle", exact=True
+                    )
+                    playwright_api.expect(download_button).to_be_disabled(timeout=30_000)
+                    playwright_api.expect(
+                        page.get_by_text("Repository required", exact=True)
+                    ).to_be_visible(timeout=30_000)
+                    playwright_api.expect(
+                        page.get_by_text("PowerShell commands appear after a repository is configured.", exact=True)
+                    ).to_be_visible(timeout=30_000)
+
+                    repository_input.fill("owner/test-shade-study")
+                    repository_input.press("Tab")
+                    page.wait_for_timeout(700)
+                    wait_for_streamlit_idle(playwright_api, page, streamlit_server)
+                    download_button = page.get_by_test_id("stDownloadButton").get_by_role("button")
+                    playwright_api.expect(download_button).to_be_enabled(timeout=60_000)
+                    playwright_api.expect(
+                        page.get_by_text("Ready to publish", exact=True)
+                    ).to_be_visible(timeout=30_000)
+                    commands_expander = page.get_by_text("Show PowerShell commands", exact=True)
+                    commands_expander.click()
+                    playwright_api.expect(
+                        page.get_by_text("Set-StrictMode -Version Latest", exact=False)
+                    ).to_be_visible(timeout=30_000)
+                    playwright_api.expect(
+                        page.get_by_text("Advanced deployment options", exact=True)
+                    ).to_be_visible(timeout=30_000)
 
             confirm_main_menu_return(page)
             playwright_api.expect(

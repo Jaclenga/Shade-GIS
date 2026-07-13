@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 import json
 import zipfile
+from pathlib import Path
 
 import pandas as pd
 
@@ -11,8 +12,10 @@ import published_app
 from builder_app import (
     build_github_deploy_bundle,
     dataframe_to_geojson,
+    deploy_launcher_script,
     deploy_readme,
     deploy_script,
+    streamlit_entrypoint_path,
     study_config_json,
 )
 from platform_store import add_shade_label, create_project, list_shade_labels
@@ -58,9 +61,17 @@ def test_export_csv_geojson_raw_labels_and_config(db_path, project, taxonomy, me
 
     bundle_bytes = build_github_deploy_bundle("owner/test-shade-study")
     with zipfile.ZipFile(io.BytesIO(bundle_bytes)) as bundle:
-        assert "public_voting.py" in bundle.namelist()
+        bundle_names = set(bundle.namelist())
+        assert "public_voting.py" in bundle_names
+        assert "builder_app.py" not in bundle_names
+        assert "platform_store.py" not in bundle_names
+        assert not any(name.startswith("shade_gis/") for name in bundle_names)
         assert "psycopg[binary]>=3.2,<4" in bundle.read("requirements.txt").decode("utf-8")
         assert "*.sqlite3" in bundle.read(".gitignore").decode("utf-8")
+        bundle_readme = bundle.read("README.md").decode("utf-8")
+        assert bundle_readme.count("& {") >= 1
+        assert "[string]::IsNullOrWhiteSpace($RepositoryName)" in bundle_readme
+        assert 'Filter "deploy_to_github.ps1" -File -Recurse' in bundle_readme
         deployed_config = json.loads(bundle.read("shade_study_config.json"))
         assert deployed_config["visualization"]["voting"]["enabled"] is False
         assert deployed_config["visualization"]["voting"]["options"] == [
@@ -137,6 +148,10 @@ def test_deploy_script_supports_existing_private_repositories():
     assert 'Invoke-Native "git" @("clone", $remoteUrl, $publishDir)' in script
     assert "Clone command completed but publish directory was not created" in script
     assert 'Copy-SafeBundleFiles -Destination $publishDir' in script
+    assert '$previewDirectory = Join-Path $Destination "preview_app"' in script
+    assert '$destinationPath = Join-Path $previewDirectory $item' in script
+    assert '$existingPublishFiles = @(\n        "preview_app"\n    )' in script
+    assert '".streamlit"' in script
     assert 'README.md' in script
     assert '.env.*' in script
     assert '"public_voting.py"' in script
@@ -148,21 +163,141 @@ def test_deploy_script_supports_existing_private_repositories():
     assert 'Remove-Item -LiteralPath $publishDir -Recurse -Force' in script
 
 
+def test_deploy_script_stages_changes_and_only_reports_success_after_push():
+    script = deploy_script("owner/private-shade-study")
+
+    stage_files = script.index('$existingPaths = @($Paths | Where-Object { Test-Path $_ })')
+    stage_command = script.index('& git add -- $existingPaths')
+    status_after_staging = script.index('Write-Host "Repository status after staging:"')
+    staged_summary = script.index('Write-Host "Staged diff summary:"')
+    diff_check = script.index('& git diff --cached --quiet')
+    commit = script.index('Invoke-Native "git" @("commit", "-m", "Update generated Shade-GIS deployment")')
+    push = script.index('Invoke-Native "git" @("push", "origin", $TargetBranch)')
+    conditional_success = script.index('if ($publishedChanges)')
+    success_message = script.index('Write-Host "Published changes to $RepositoryName on branch $Branch."')
+
+    assert stage_files < stage_command < status_after_staging < staged_summary < diff_check < commit < push
+    assert push < conditional_success < success_message
+    assert '$diffExitCode = $LASTEXITCODE' in script
+    assert 'if ($diffExitCode -eq 0)' in script
+    assert 'if ($diffExitCode -ne 1)' in script
+    assert 'throw "Failed to stage generated deployment files."' in script
+    assert '& $Command @Arguments | Out-Host' in script
+    assert 'return $false' in script
+    assert 'return $true' in script
+    assert '$publishedChanges = Commit-And-Push' in script
+    assert 'Existing repository already matches the generated deployment; nothing was pushed.' in script
+    assert 'Write-Host "Published to existing repository $RepositoryName on branch $Branch."' not in script
+    assert '$createdCommit = Commit-And-Push -TargetBranch $Branch -Paths $newRepoFiles -SkipPush' in script
+    assert 'No generated deployment changes were staged for the new repository.' in script
+
+
+def test_deploy_script_validates_visibility_only_for_create_mode():
+    script = deploy_script("owner/private-shade-study")
+
+    assert '[ValidateSet("public", "private")]' not in script
+    assert '[string]$Visibility = "private"' in script
+
+    existing_mode = script.index('if ($Mode -eq "existing")')
+    existing_exit = script.index("    exit 0", existing_mode)
+    visibility_validation = script.index('if ($Visibility -notin @("public", "private"))')
+    public_creation_guard = script.index('if ($Visibility -eq "public" -and -not $AllowPublicTarget)')
+    create_repository = script.index('Invoke-Native "gh" @("repo", "create"')
+
+    assert existing_mode < existing_exit < visibility_validation < public_creation_guard < create_repository
+    assert "Visibility must be 'public' or 'private' when creating a repository." in script
+    assert '"--$Visibility"' in script
+
+
+def test_deploy_launcher_is_one_guarded_block_with_bundle_discovery():
+    script = deploy_launcher_script(
+        "private-shade-study.zip",
+        "owner/private-shade-study",
+        branch="release",
+        deploy_mode="existing",
+    )
+
+    assert script.startswith("& {")
+    assert 'Set-StrictMode -Version Latest' in script
+    assert '$ErrorActionPreference = "Stop"' in script
+    assert "$BundleName = 'private-shade-study.zip'" in script
+    assert "$RepositoryName = 'owner/private-shade-study'" in script
+    assert "$Branch = 'release'" in script
+    assert "[string]::IsNullOrWhiteSpace($RepositoryName)" in script
+    assert 'Get-ChildItem -LiteralPath $DownloadsDirectory -Filter "$BundleStem*.zip" -File' in script
+    assert '$BundleNamePattern = "^" + [Regex]::Escape($BundleStem) + "( \\([0-9]+\\))?\\.zip$"' in script
+    assert 'Where-Object { $_.Name -match $BundleNamePattern }' in script
+    assert 'Sort-Object LastWriteTime -Descending' in script
+    assert 'Could not find \'$BundleName\' or a numbered browser copy' in script
+    assert 'Write-Host "Using newest deployment bundle: $($ZipCandidate.Name)"' in script
+    assert '$ZipPath = Join-Path $DownloadsDirectory $BundleName' not in script
+    assert 'Available shade ZIP files: $Available' in script
+    assert 'Get-ChildItem -LiteralPath $ExtractTo -Filter "deploy_to_github.ps1" -File -Recurse' in script
+    assert 'Push-Location -LiteralPath $DeployScript.Directory.FullName' in script
+    assert '\n        gh repo view $RepositoryName --json nameWithOwner' in script
+    assert '\n        & $DeployScript.FullName `' in script
+    assert '-Mode existing `' in script
+
+
+def test_deploy_launcher_preserves_public_create_safeguard():
+    script = deploy_launcher_script(
+        "new-study.zip",
+        "new-study",
+        deploy_mode="create",
+        visibility="public",
+    )
+
+    assert 'gh repo view $RepositoryName' not in script
+    assert '-Mode create `' in script
+    assert '-Visibility $Visibility -AllowPublicTarget' in script
+
+
+def test_streamlit_entrypoint_separates_builder_repo_from_public_preview():
+    assert streamlit_entrypoint_path("existing") == "preview_app/app.py"
+    assert streamlit_entrypoint_path("create") == "app.py"
+
+
+def test_deploy_page_hides_commands_until_existing_repository_is_entered():
+    source = Path("shade_gis/pages/deploy_page.py").read_text(encoding="utf-8")
+
+    assert "max-width: 920px" in source
+    assert 'deployment_ready = deploy_mode == "create" or bool(repo_target)' in source
+    assert 'if deployment_ready' in source
+    assert 'else b""' in source
+    assert 'disabled=not deployment_ready' in source
+    assert 'key="deploy_primary_action"' in source
+    assert '"🚀 Download deployment bundle"' in source
+    assert 'st.subheader("Deployment status")' in source
+    assert "render_progress_steps(deployment_ready, downloaded, published)" in source
+    assert 'st.expander("Show PowerShell commands", expanded=False)' in source
+    assert 'st.expander("Advanced deployment options", expanded=False)' in source
+    assert 'st.success("Published Successfully")' in source
+    assert 'Streamlit main file: `{main_file_path}`' in source
+    assert 'runtime files into `preview_app/`' in source
+    assert '"View on GitHub"' in source
+    assert '"Deploy on Streamlit"' in source
+    assert source.count("st.code(") == 1
+    assert "deploy_launcher_script(" in source
+    assert 'gh repo view "{repo_target}"' not in source
+
+
 def test_deploy_readme_documents_existing_private_repo_flow(project):
     readme = deploy_readme("owner/private-shade-study", project)
 
     assert "After Downloading The Zip" in readme
     assert "By default, your browser should save the bundle to your Downloads folder" in readme
-    assert '$BundleName = "private-shade-study.zip"' in readme
-    assert '$ZipPath = Join-Path (Join-Path $env:USERPROFILE "Downloads") $BundleName' in readme
-    assert '$ExtractTo = Join-Path (Join-Path $env:USERPROFILE "Documents") "private-shade-study"' in readme
-    assert "Expected the deploy bundle at $ZipPath" in readme
-    assert "Expand-Archive -Path $ZipPath -DestinationPath $ExtractTo -Force" in readme
-    assert "Set-Location $ExtractTo" in readme
-    assert 'Test-Path ".\\deploy_to_github.ps1"' in readme
-    assert "extracted deploy bundle folder" in readme
+    assert "$BundleName = 'private-shade-study.zip'" in readme
+    assert '$BundleNamePattern = "^" + [Regex]::Escape($BundleStem)' in readme
+    assert 'Where-Object { $_.Name -match $BundleNamePattern }' in readme
+    assert 'Using newest deployment bundle' in readme
+    assert "numbered browser copy" in readme
+    assert "[string]::IsNullOrWhiteSpace($RepositoryName)" in readme
+    assert 'Filter "$BundleStem*.zip"' in readme
+    assert "Expand-Archive -LiteralPath $ZipPath -DestinationPath $ExtractTo -Force" in readme
+    assert 'Filter "deploy_to_github.ps1" -File -Recurse' in readme
+    assert "not found anywhere inside it" in readme
     assert "gh auth status" in readme
-    assert 'gh repo view "owner/private-shade-study"' in readme
+    assert 'gh repo view $RepositoryName --json nameWithOwner' in readme
     assert "Could not resolve to a Repository" in readme
     assert '-Mode create -RepositoryName "owner/private-shade-study"' in readme
     assert '-Mode existing -RepositoryName "owner/private-shade-study" -Branch "main"' in readme
@@ -175,6 +310,9 @@ def test_deploy_readme_documents_existing_private_repo_flow(project):
     assert ".env*" in readme
     assert "SHADE_GIS_VOTE_DATABASE_URL" in readme
     assert "local SQLite fallback" in readme
+    assert "only the public preview" in readme
+    assert "root app and Shade-GIS builder files untouched" in readme
+    assert "main file path: `preview_app/app.py`" in readme
 
 
 def test_deploy_readme_create_mode_does_not_verify_missing_repo(project):
@@ -183,3 +321,5 @@ def test_deploy_readme_create_mode_does_not_verify_missing_repo(project):
     assert 'gh repo view "owner/new-shade-study"' not in readme
     assert '-Mode create -RepositoryName "owner/new-shade-study"' in readme
     assert "create the target repository used for this bundle" in readme
+    assert "new repository contains only this public preview app" in readme
+    assert "main file path: `app.py`" in readme

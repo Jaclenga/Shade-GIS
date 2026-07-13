@@ -6,7 +6,7 @@ Shade-GIS follows a project-based builder approach that keeps local prototyping 
 
 | Category | Badges and Links |
 | --- | --- |
-| Tests | [![Tests](https://github.com/Jaclenga/Shade-GIS/actions/workflows/tests.yml/badge.svg)](https://github.com/Jaclenga/Shade-GIS/actions/workflows/tests.yml) |
+| Tests | [Test workflow](.github/workflows/tests.yml) |
 | License | [MIT License](LICENSE) |
 | Documentation | [Platform schema](docs/platform_schema.md) - [Changelog](CHANGELOG.md) |
 | Community | [Contributing](CONTRIBUTING.md) - [Support](SUPPORT.md) - [Governance](GOVERNANCE.md) |
@@ -152,7 +152,7 @@ Use the quick start below for a local builder run. For schema details, see [docs
 Clone the repository and install runtime dependencies:
 
 ```bash
-git clone https://github.com/Jaclenga/Shade-GIS.git
+git clone https://github.com/OWNER/REPO.git
 cd Shade-GIS
 pip install -r requirements/requirements.txt
 ```
@@ -328,23 +328,31 @@ Normal `pytest` runs exclude tests marked `ui`; GitHub Actions runs the UI suite
 
 ## Deployment
 
-The builder itself can be deployed as a Streamlit app with:
+The repository-root `app.py` is the Shade-GIS builder entrypoint for local administration. Do not use it as the main file for a public study deployment.
 
-- Main file: `app.py`
-- Python dependencies: `requirements.txt` at the repository root, which delegates to `requirements/requirements.txt`
+To publish a rendered study, use the builder's `Deploy` page. The generated bundle contains only the standalone public preview and its required runtime files:
 
-To publish a rendered study app, use the builder's `Deploy` page. The generated bundle can create a new GitHub repository or publish into a pre-existing private repository that your GitHub account can access.
+- New-repository mode creates a repository whose root `app.py` is the public preview. Use `app.py` as the Streamlit main file.
+- Existing-repository mode writes the standalone runtime under `preview_app/` without replacing the repository-root builder. Use `preview_app/app.py` as the Streamlit main file.
 
 After downloading the bundle, the browser should save it to your Downloads folder. The default commands assume that location:
 
 ```powershell
 $BundleName = "your-shade-study.zip"
-$ZipPath = Join-Path (Join-Path $env:USERPROFILE "Downloads") $BundleName
-$ExtractTo = Join-Path (Join-Path $env:USERPROFILE "Documents") "your-shade-study"
-if (-not (Test-Path $ZipPath)) {
-    throw "Expected the deploy bundle at $ZipPath. If your browser saved it somewhere else, move it to Downloads or update `$ZipPath."
+$DownloadsDirectory = Join-Path $env:USERPROFILE "Downloads"
+$BundleStem = [System.IO.Path]::GetFileNameWithoutExtension($BundleName)
+$BundleNamePattern = "^" + [Regex]::Escape($BundleStem) + "( \([0-9]+\))?\.zip$"
+$ZipCandidate = Get-ChildItem -LiteralPath $DownloadsDirectory -Filter "$BundleStem*.zip" -File |
+    Where-Object { $_.Name -match $BundleNamePattern } |
+    Sort-Object LastWriteTime -Descending |
+    Select-Object -First 1
+if (-not $ZipCandidate) {
+    throw "Expected $BundleName or a numbered browser copy in $DownloadsDirectory. Download a fresh bundle and retry."
 }
-Expand-Archive -Path $ZipPath -DestinationPath $ExtractTo -Force
+$ZipPath = $ZipCandidate.FullName
+$ExtractTo = Join-Path (Join-Path $env:USERPROFILE "Documents") "your-shade-study"
+Write-Host "Using newest deployment bundle: $($ZipCandidate.Name)"
+Expand-Archive -LiteralPath $ZipPath -DestinationPath $ExtractTo -Force
 Set-Location $ExtractTo
 if (-not (Test-Path ".\deploy_to_github.ps1")) {
     throw "deploy_to_github.ps1 was not found. Check that `$ExtractTo points to the extracted deploy bundle folder, then run Set-Location `$ExtractTo."
@@ -354,7 +362,7 @@ gh auth status
 gh repo view OWNER/REPO
 ```
 
-Only change `$BundleName` if the downloaded zip has a different filename. `$ExtractTo` is the folder PowerShell will create for the extracted app files.
+If the filename already exists, browsers may save newer downloads as `your-shade-study (1).zip`, `your-shade-study (2).zip`, and so on. The generated launcher recognizes only the exact bundle name or those numbered copies and automatically uses the newest one, so you do not need to rename the file. Only change `$BundleName` if you intentionally renamed the bundle. `$ExtractTo` is the folder PowerShell will create for the extracted app files.
 Run `.\deploy_to_github.ps1` only after `Set-Location $ExtractTo`; the helper is generated inside the extracted deploy bundle, not inside the builder source folder.
 
 If GitHub CLI is not authenticated, run `gh auth login`. If Windows blocks the downloaded script, run `Unblock-File .\deploy_to_github.ps1` once from the extracted bundle folder.
@@ -362,13 +370,13 @@ Before publishing into an existing private repository, verify the exact reposito
 
 ```powershell
 gh auth status
-gh repo view Jaclenga/sunbelt-shade-project
+gh repo view OWNER/REPO
 ```
 
 If that verification works, deploy with the same owner/name:
 
 ```powershell
-.\deploy_to_github.ps1 -Mode existing -RepositoryName "Jaclenga/sunbelt-shade-project" -Branch "main"
+.\deploy_to_github.ps1 -Mode existing -RepositoryName "OWNER/REPO" -Branch "main"
 ```
 
 If GitHub reports that it "Could not resolve to a Repository", the signed-in account does not have access to that private repo, or the repo owner/name is different.
@@ -387,9 +395,9 @@ For an existing private repository:
 
 Before committing, the helper prints `git status`, `git diff --stat`, and a staged diff summary, then asks you to type `PUBLISH`. Add `-Yes` only when you intentionally want non-interactive publishing.
 
-In existing-repository mode, the helper verifies private repo visibility when it can, clones the target repo into a temporary `_shade_gis_publish_*` folder under PowerShell's temp path, checks out the selected branch, copies only generated app/runtime files into that checkout, commits changes, pushes back to GitHub, and cleans up the temporary folder. It does not copy protected files such as `.git/`, `.github/`, `README.md`, `LICENSE`, `.env*`, or `secrets.toml`. In new-repository mode, it initializes Git in the extracted bundle, stages only generated app files, creates the GitHub repository, and pushes the branch. Public publishing requires the explicit `-AllowPublicTarget` flag.
+In existing-repository mode, the helper verifies private repo visibility when it can, clones the target repo into a temporary `_shade_gis_publish_*` folder under PowerShell's temp path, checks out the selected branch, copies only generated app/runtime files into `preview_app/`, commits changes, pushes back to GitHub, and cleans up the temporary folder. It does not replace the root app or copy protected files such as `.git/`, `.github/`, `.streamlit/`, `README.md`, `LICENSE`, `.env*`, or `secrets.toml`. In new-repository mode, it initializes Git in the extracted preview-only bundle, stages only generated app files, creates the GitHub repository, and pushes the branch. Public publishing requires the explicit `-AllowPublicTarget` flag.
 
-The generated repository can then be connected to Streamlit Community Cloud or another Streamlit host with `app.py` as the main file. Private repositories require the deployment host to have access to the repository. When public voting is enabled, add a PostgreSQL connection URL as the `SHADE_GIS_VOTE_DATABASE_URL` deployment secret before relying on vote persistence.
+The generated repository can then be connected to Streamlit Community Cloud or another Streamlit host. Select `app.py` for a new preview-only repository or `preview_app/app.py` when publishing into an existing repository. Private repositories require the deployment host to have access to the repository. When public voting is enabled, add a PostgreSQL connection URL as the `SHADE_GIS_VOTE_DATABASE_URL` deployment secret before relying on vote persistence.
 
 ## License and Citation
 
