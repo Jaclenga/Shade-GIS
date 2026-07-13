@@ -244,9 +244,15 @@ remains visible but disabled when no annotations exist, which keeps the export l
 project progresses. Dataset source, format, row count, and import timestamp are shown separately in
 the `Dataset Provenance` section below the file catalog rather than as an unlabeled dataframe.
 
-The `Deploy` page also exports a GitHub-ready ZIP bundle for the rendered public app. The public
-Streamlit source is maintained in `published_app.py`, which the builder preview imports and the
-deploy bundle copies as its standalone `app.py`. The bundle includes:
+The `Deploy` page presents publishing as a four-stage wizard: `Check project`, `Prepare website`,
+`Publish`, and `Verify website`. It detects the local GitHub repository and default branch, reduces
+readiness failures to one outcome-level blocker, builds the public package, updates the repository
+from a clean temporary clone, and verifies a known public URL. Existing connected Streamlit sites
+redeploy automatically after the repository update. First-time Streamlit hosting still requires the
+provider's one-time browser authorization.
+
+The public Streamlit source is maintained in `published_app.py`, which the builder preview imports
+and the deployment service packages as its standalone `app.py`. The package includes:
 
 - Standalone `app.py` for the public Streamlit experience.
 - `public_voting.py` with the configured crowd interface and vote-store implementation.
@@ -255,18 +261,12 @@ deploy bundle copies as its standalone `app.py`. The bundle includes:
 - `shade_study_config.json` with project metadata, taxonomy, methodology copy, visualization settings, and import log.
 - `requirements.txt`, `.streamlit/config.toml`, generated `README.md`, `.gitignore`, and optional `deploy_to_github.ps1` helper.
 
-The deploy helper supports creating a new GitHub repository or publishing the generated files into
-a pre-existing private repository that the authenticated GitHub CLI account can access.
-After downloading the ZIP, the command examples assume the browser saved the bundle to the user's
-standard Downloads folder, expand that expected path, enter the extracted folder, confirm Git and
-GitHub CLI authentication, verify existing private repository access with `gh repo view OWNER/REPO`,
-verify that `deploy_to_github.ps1` exists in that extracted folder, and then run the generated helper.
-The helper is generated inside the deploy bundle and is not available
-from the builder source tree. Existing private repositories are visibility-checked when possible, cloned into a temporary
-`_shade_gis_publish_*` folder under PowerShell's temp path, updated with an allowlist of generated
-app/runtime files, previewed with `git status` and `git diff --stat`, confirmed by the user, pushed
-to the requested branch, and cleaned up. Protected repository files such as `.git/`, `.github/`,
-`README.md`, `LICENSE`, `.env*`, and `secrets.toml` are not copied in existing-repository mode.
+Repository, branch, hosting, Git, PowerShell, workflow, package contents, and diagnostic output are
+hidden under `Advanced settings` or `View technical details`. The ZIP download and generated
+`deploy_to_github.ps1` helper remain available there as a manual fallback. The helper is generated
+inside the package rather than the builder source tree and preserves the existing repository's
+protected `.git/`, `.github/`, `.streamlit/`, root `README.md`, `LICENSE`, `.env*`, and
+`secrets.toml` paths.
 
 Import log `imported_at` values are stored as timezone-aware local timestamps with a UTC offset.
 File imports also record the original filename when available; API imports record the source URL.

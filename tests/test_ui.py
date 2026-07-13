@@ -319,7 +319,7 @@ def test_builder_navigation_pages_render(playwright_api, streamlit_server: Strea
         "Voting": "Public Voting",
         "Docs": "Project Documentation",
         "Preview": "Tampa Bus Stop Shade Study",
-        "Deploy": "Deploy",
+        "Deploy": "Publish website",
     }
     with playwright_api.sync_playwright() as playwright:
         browser = playwright.chromium.launch()
@@ -440,38 +440,30 @@ def test_builder_navigation_pages_render(playwright_api, streamlit_server: Strea
                     wait_for_streamlit_idle(playwright_api, page, streamlit_server)
                 elif nav_label == "Deploy":
                     playwright_api.expect(
-                        page.get_by_role("radio", name="Existing repository", exact=True)
-                    ).to_be_checked(timeout=30_000)
-                    repository_input = page.get_by_label("Repository", exact=True)
-                    playwright_api.expect(repository_input).to_be_visible(timeout=30_000)
-                    playwright_api.expect(page.get_by_label("Branch", exact=True)).to_have_value("main")
-                    download_button = page.get_by_role(
-                        "button", name="🚀 Download deployment bundle", exact=True
+                        page.get_by_role("heading", name="Publish website", exact=True)
+                    ).to_be_visible(timeout=30_000)
+                    playwright_api.expect(page.get_by_text("Ready to publish", exact=True)).to_be_visible(
+                        timeout=30_000
                     )
-                    playwright_api.expect(download_button).to_be_disabled(timeout=30_000)
+                    publish_button = page.get_by_role("button", name="Publish app", exact=True)
+                    playwright_api.expect(publish_button).to_be_enabled(timeout=30_000)
+                    for stage in ["Check project", "Prepare website", "Publish", "Verify website"]:
+                        playwright_api.expect(page.get_by_text(stage, exact=True)).to_be_visible(timeout=30_000)
                     playwright_api.expect(
-                        page.get_by_text("Repository required", exact=True)
+                        page.get_by_text("This usually takes 1–3 minutes.", exact=True)
                     ).to_be_visible(timeout=30_000)
-                    playwright_api.expect(
-                        page.get_by_text("PowerShell commands appear after a repository is configured.", exact=True)
-                    ).to_be_visible(timeout=30_000)
+                    playwright_api.expect(page.get_by_label("Repository", exact=True)).to_be_hidden()
 
-                    repository_input.fill("owner/test-shade-study")
-                    repository_input.press("Tab")
-                    page.wait_for_timeout(700)
-                    wait_for_streamlit_idle(playwright_api, page, streamlit_server)
-                    download_button = page.get_by_test_id("stDownloadButton").get_by_role("button")
-                    playwright_api.expect(download_button).to_be_enabled(timeout=60_000)
+                    advanced = page.get_by_text("Advanced settings", exact=True)
+                    advanced.click()
+                    repository_input = page.get_by_label("Repository", exact=True)
+                    playwright_api.expect(repository_input).to_have_value("Jaclenga/Shade-GIS", timeout=30_000)
+                    playwright_api.expect(page.get_by_label("Default branch", exact=True)).to_have_value("main")
                     playwright_api.expect(
-                        page.get_by_text("Ready to publish", exact=True)
+                        page.get_by_role("button", name="Download website package", exact=True)
                     ).to_be_visible(timeout=30_000)
-                    commands_expander = page.get_by_text("Show PowerShell commands", exact=True)
-                    commands_expander.click()
                     playwright_api.expect(
                         page.get_by_text("Set-StrictMode -Version Latest", exact=False)
-                    ).to_be_visible(timeout=30_000)
-                    playwright_api.expect(
-                        page.get_by_text("Advanced deployment options", exact=True)
                     ).to_be_visible(timeout=30_000)
 
             confirm_main_menu_return(page)

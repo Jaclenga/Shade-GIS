@@ -330,74 +330,18 @@ Normal `pytest` runs exclude tests marked `ui`; GitHub Actions runs the UI suite
 
 The repository-root `app.py` is the Shade-GIS builder entrypoint for local administration. Do not use it as the main file for a public study deployment.
 
-To publish a rendered study, use the builder's `Deploy` page. The generated bundle contains only the standalone public preview and its required runtime files:
+To publish a rendered study, open the builder's **Deploy** page. Shade-GIS automatically detects the current repository, default branch, project readiness, and any known website address. The normal workflow has one action: **Publish app**. It then:
 
-- New-repository mode creates a repository whose root `app.py` is the public preview. Use `app.py` as the Streamlit main file.
-- Existing-repository mode writes the standalone runtime under `preview_app/` without replacing the repository-root builder. Use `preview_app/app.py` as the Streamlit main file.
+1. checks the project;
+2. prepares a standalone website package;
+3. commits and pushes only the generated website files from a clean temporary clone; and
+4. polls and verifies the public website when its address is known.
 
-After downloading the bundle, the browser should save it to your Downloads folder. The default commands assume that location:
+Existing repositories receive the standalone runtime under `preview_app/` without replacing the repository-root builder; the hosting entrypoint is `preview_app/app.py`. A newly created preview-only repository uses `app.py` at its root. Repository, branch, hosting, build, diagnostic, and command details remain available under **Advanced settings** and **View technical details**.
 
-```powershell
-$BundleName = "your-shade-study.zip"
-$DownloadsDirectory = Join-Path $env:USERPROFILE "Downloads"
-$BundleStem = [System.IO.Path]::GetFileNameWithoutExtension($BundleName)
-$BundleNamePattern = "^" + [Regex]::Escape($BundleStem) + "( \([0-9]+\))?\.zip$"
-$ZipCandidate = Get-ChildItem -LiteralPath $DownloadsDirectory -Filter "$BundleStem*.zip" -File |
-    Where-Object { $_.Name -match $BundleNamePattern } |
-    Sort-Object LastWriteTime -Descending |
-    Select-Object -First 1
-if (-not $ZipCandidate) {
-    throw "Expected $BundleName or a numbered browser copy in $DownloadsDirectory. Download a fresh bundle and retry."
-}
-$ZipPath = $ZipCandidate.FullName
-$ExtractTo = Join-Path (Join-Path $env:USERPROFILE "Documents") "your-shade-study"
-Write-Host "Using newest deployment bundle: $($ZipCandidate.Name)"
-Expand-Archive -LiteralPath $ZipPath -DestinationPath $ExtractTo -Force
-Set-Location $ExtractTo
-if (-not (Test-Path ".\deploy_to_github.ps1")) {
-    throw "deploy_to_github.ps1 was not found. Check that `$ExtractTo points to the extracted deploy bundle folder, then run Set-Location `$ExtractTo."
-}
-git --version
-gh auth status
-gh repo view OWNER/REPO
-```
+An already-connected Streamlit Community Cloud app updates automatically after Shade-GIS pushes a new version. Streamlit requires a one-time browser authorization for the first deployment; the wizard links directly to that setup and then verifies the returned website address. Private repositories require the deployment host to have repository access. When public voting is enabled, add a PostgreSQL connection URL as the `SHADE_GIS_VOTE_DATABASE_URL` deployment secret before relying on vote persistence.
 
-If the filename already exists, browsers may save newer downloads as `your-shade-study (1).zip`, `your-shade-study (2).zip`, and so on. The generated launcher recognizes only the exact bundle name or those numbered copies and automatically uses the newest one, so you do not need to rename the file. Only change `$BundleName` if you intentionally renamed the bundle. `$ExtractTo` is the folder PowerShell will create for the extracted app files.
-Run `.\deploy_to_github.ps1` only after `Set-Location $ExtractTo`; the helper is generated inside the extracted deploy bundle, not inside the builder source folder.
-
-If GitHub CLI is not authenticated, run `gh auth login`. If Windows blocks the downloaded script, run `Unblock-File .\deploy_to_github.ps1` once from the extracted bundle folder.
-Before publishing into an existing private repository, verify the exact repository owner/name and account access:
-
-```powershell
-gh auth status
-gh repo view OWNER/REPO
-```
-
-If that verification works, deploy with the same owner/name:
-
-```powershell
-.\deploy_to_github.ps1 -Mode existing -RepositoryName "OWNER/REPO" -Branch "main"
-```
-
-If GitHub reports that it "Could not resolve to a Repository", the signed-in account does not have access to that private repo, or the repo owner/name is different.
-
-For a new repository:
-
-```powershell
-.\deploy_to_github.ps1 -Mode create -RepositoryName "your-shade-study" -Branch "main" -Visibility private
-```
-
-For an existing private repository:
-
-```powershell
-.\deploy_to_github.ps1 -Mode existing -RepositoryName "OWNER/REPO" -Branch "main"
-```
-
-Before committing, the helper prints `git status`, `git diff --stat`, and a staged diff summary, then asks you to type `PUBLISH`. Add `-Yes` only when you intentionally want non-interactive publishing.
-
-In existing-repository mode, the helper verifies private repo visibility when it can, clones the target repo into a temporary `_shade_gis_publish_*` folder under PowerShell's temp path, checks out the selected branch, copies only generated app/runtime files into `preview_app/`, commits changes, pushes back to GitHub, and cleans up the temporary folder. It does not replace the root app or copy protected files such as `.git/`, `.github/`, `.streamlit/`, `README.md`, `LICENSE`, `.env*`, or `secrets.toml`. In new-repository mode, it initializes Git in the extracted preview-only bundle, stages only generated app files, creates the GitHub repository, and pushes the branch. Public publishing requires the explicit `-AllowPublicTarget` flag.
-
-The generated repository can then be connected to Streamlit Community Cloud or another Streamlit host. Select `app.py` for a new preview-only repository or `preview_app/app.py` when publishing into an existing repository. Private repositories require the deployment host to have access to the repository. When public voting is enabled, add a PostgreSQL connection URL as the `SHADE_GIS_VOTE_DATABASE_URL` deployment secret before relying on vote persistence.
+If automatic publishing is unavailable, expand **Advanced settings** and use **Download website package**. That manual fallback includes the guarded `deploy_to_github.ps1` helper and a generated README with the repository, branch, Downloads-folder discovery, authentication checks, and copy/paste-ready PowerShell command. Existing-repository mode still protects `.git/`, `.github/`, `.streamlit/`, root `README.md`, `LICENSE`, `.env*`, and `secrets.toml` from replacement.
 
 ## License and Citation
 

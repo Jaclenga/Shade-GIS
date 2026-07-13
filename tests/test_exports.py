@@ -257,28 +257,25 @@ def test_streamlit_entrypoint_separates_builder_repo_from_public_preview():
     assert streamlit_entrypoint_path("create") == "app.py"
 
 
-def test_deploy_page_hides_commands_until_existing_repository_is_entered():
+def test_deploy_page_is_an_outcome_oriented_wizard_with_advanced_fallback():
     source = Path("shade_gis/pages/deploy_page.py").read_text(encoding="utf-8")
 
-    assert "max-width: 920px" in source
-    assert 'deployment_ready = deploy_mode == "create" or bool(repo_target)' in source
-    assert 'if deployment_ready' in source
-    assert 'else b""' in source
-    assert 'disabled=not deployment_ready' in source
-    assert 'key="deploy_primary_action"' in source
-    assert '"🚀 Download deployment bundle"' in source
-    assert 'st.subheader("Deployment status")' in source
-    assert "render_progress_steps(deployment_ready, downloaded, published)" in source
-    assert 'st.expander("Show PowerShell commands", expanded=False)' in source
-    assert 'st.expander("Advanced deployment options", expanded=False)' in source
-    assert 'st.success("Published Successfully")' in source
-    assert 'Streamlit main file: `{main_file_path}`' in source
-    assert 'runtime files into `preview_app/`' in source
-    assert '"View on GitHub"' in source
-    assert '"Deploy on Streamlit"' in source
-    assert source.count("st.code(") == 1
+    assert "max-width: 900px" in source
+    assert 'STAGES = ("Check project", "Prepare website", "Publish", "Verify website")' in source
+    assert 'st.button("Publish app", type="primary", width="stretch")' in source
+    assert "This usually takes 1–3 minutes." in source
+    assert 'st.expander("Advanced settings", expanded=expanded)' in source
+    assert 'st.expander("View technical details", expanded=False)' in source
+    assert '"Open website"' in source
+    assert "Copy link" in source
+    assert '"Publish update"' in source
+    assert '"Unpublish"' in source
+    assert "Manual fallback" in source
+    assert '"Download website package"' in source
+    assert source.count("st.code(") == 2
     assert "deploy_launcher_script(" in source
-    assert 'gh repo view "{repo_target}"' not in source
+    assert 'st.radio("Publish mode"' not in source
+    assert '"Download deployment bundle"' not in source
 
 
 def test_deploy_readme_documents_existing_private_repo_flow(project):

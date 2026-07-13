@@ -14,6 +14,9 @@ pre-release phase while the reusable platform stabilizes.
   per-row downloads, and a separate Dataset Provenance section.
 
 ### Changed
+- Deploy is now a nontechnical publishing wizard with automatic repository and branch detection,
+  one-click packaging and repository updates, four plain-language stages, website verification,
+  success/update/unpublish actions, and the former ZIP/PowerShell workflow retained as an advanced fallback.
 - Builder Docs and public methodology taxonomy tables keep configured category ordering without
   displaying the internal `sort_order` field.
 - Progress-oriented Dataset Status dashboard with coverage/review progress bars, a filtered work
