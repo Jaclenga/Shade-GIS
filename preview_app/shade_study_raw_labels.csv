@@ -1,0 +1,8 @@
+id,project_id,stop_id,image_id,labeler_id,labeler_role,shade_category,shade_coverage,shade_sources,confidence,notes,source,created_at,metadata_source_label,metadata_stop_name
+eae45d82-c933-45f0-ae11-0efc1fd1f372,61647656-222c-4312-a61f-6fe1b168a743,7588,,,Reviewer,Constructed Shade,Significant,Constructed,0.7,,manual_review,2026-07-05T12:50:34-04:00,Manual review,Dale Mabry Hwy @ Pinewood St
+cbc8a6bf-4b08-4d78-ac20-2110ad008785,61647656-222c-4312-a61f-6fe1b168a743,7589,,,Reviewer,Constructed Shade,Significant,Constructed,0.7,,manual_review,2026-07-05T12:50:09-04:00,Manual review,Dale Mabry Hwy @ Pinewood St
+d37277ea-2ac8-42e5-b4b1-4accf5499125,61647656-222c-4312-a61f-6fe1b168a743,7589,,,Reviewer,Constructed Shade,Significant,Constructed,0.7,,manual_review,2026-07-05T12:49:27-04:00,Manual review,Dale Mabry Hwy @ Pinewood St
+af7efcce-874e-493e-ba76-d42a2299a19c,61647656-222c-4312-a61f-6fe1b168a743,7589,,,Reviewer,Constructed Shade,Significant,Constructed,0.7,,manual_review,2026-07-05T12:49:24-04:00,Manual review,Dale Mabry Hwy @ Pinewood St
+57e28f1c-a141-4e7e-af31-62bab357cd14,61647656-222c-4312-a61f-6fe1b168a743,4254,,,Reviewer,Constructed Shade,Significant,Constructed,1.0,,manual_review,2026-07-05T11:57:11-04:00,Manual review,Britton Plaza Transfer Center
+d329cd57-0a66-43ea-9f95-7591e62d1e42,61647656-222c-4312-a61f-6fe1b168a743,4254,,Jack Lenga,Reviewer,Intentional Built Shade,Significant,Intentional Built,1.0,,manual_review,2026-07-05T10:50:11-04:00,Manual review,Britton Plaza Transfer Center
+1b6d9519-2a92-4764-9f66-ee0fa5161bb9,61647656-222c-4312-a61f-6fe1b168a743,4254,,Jack Lenga,Reviewer,Intentional Built Shade,Significant,Intentional Built,0.75,,manual_review,2026-07-05T10:49:41-04:00,Manual review,Britton Plaza Transfer Center

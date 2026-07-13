@@ -1,0 +1,5 @@
+streamlit>=1.57,<2
+pandas>=2.2,<3
+pyarrow>=24,<25
+pydeck>=0.8,<1
+psycopg[binary]>=3.2,<4
