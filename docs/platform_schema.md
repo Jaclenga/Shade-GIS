@@ -95,7 +95,7 @@ Optional fields:
 | `municipality` | Local jurisdiction or neighborhood label. |
 | `shading` | Current derived coverage category used by maps and filters. |
 | `shade_coverage` | Coverage dimension: `No Shade`, `Limited Shade`, or `Significant Shade`. |
-| `shade_sources` | Semicolon-separated source dimension: `Natural`, `Constructed`, `Manmade`, or multiple values. |
+| `shade_sources` | Semicolon-separated source dimension: `Natural`, `Purpose-built`, `Incidental`, or multiple values. |
 | `review_status` | Workflow status such as unlabeled, accepted, or disputed. |
 | `confidence` | Reviewer or model confidence. |
 | `ridership` | Ridership measure used for prioritization. |
@@ -133,8 +133,8 @@ The core source taxonomy is:
 | Shade Source | Operational Definition |
 | --- | --- |
 | `Natural` | Trees, palms, hedges, or other vegetation visibly shade the waiting area. |
-| `Constructed` | A designated, purpose-built bus shelter, awning, canopy, overhang, or similar passenger shelter visibly shades the waiting area. |
-| `Manmade` | A nearby building or other non-shelter built feature visibly shades the waiting area. |
+| `Purpose-built` | A designated bus shelter, awning, canopy, overhang, or similar passenger shelter visibly shades the waiting area. |
+| `Incidental` | A nearby building or other non-shelter built feature visibly shades the waiting area. |
 
 The core coverage taxonomy is:
 

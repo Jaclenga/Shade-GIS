@@ -6,7 +6,7 @@ from typing import Any
 
 
 SHADE_COVERAGE_OPTIONS = ["No Shade", "Limited Shade", "Significant Shade"]
-SHADE_SOURCE_OPTIONS = ["Natural", "Constructed", "Manmade"]
+SHADE_SOURCE_OPTIONS = ["Natural", "Purpose-built", "Incidental"]
 
 SHADE_COVERAGE_TAXONOMY = [
     {
@@ -29,14 +29,14 @@ SHADE_SOURCE_TAXONOMY = [
         "operational_definition": "Trees, palms, hedges, or other vegetation visibly shade the waiting area.",
     },
     {
-        "shade_source": "Constructed",
+        "shade_source": "Purpose-built",
         "operational_definition": (
             "A designated, purpose-built bus shelter, awning, canopy, overhang, or similar passenger shelter "
             "visibly shades the waiting area."
         ),
     },
     {
-        "shade_source": "Manmade",
+        "shade_source": "Incidental",
         "operational_definition": "A nearby building or other non-shelter built feature visibly shades the waiting area.",
     },
 ]
@@ -86,18 +86,23 @@ _SOURCE_ALIASES = {
     "tree": "Natural",
     "trees": "Natural",
     "vegetation": "Natural",
-    "constructed": "Constructed",
-    "constructed shade": "Constructed",
-    "intentional built": "Constructed",
-    "intentional built shade": "Constructed",
-    "intentional constructed": "Constructed",
-    "shelter": "Constructed",
-    "canopy": "Constructed",
-    "manmade": "Manmade",
-    "manmade shade": "Manmade",
-    "incidental built": "Manmade",
-    "incidental built shade": "Manmade",
-    "building": "Manmade",
+    "purpose-built": "Purpose-built",
+    "purpose built": "Purpose-built",
+    "purpose-built shade": "Purpose-built",
+    "constructed": "Purpose-built",
+    "constructed shade": "Purpose-built",
+    "intentional built": "Purpose-built",
+    "intentional built shade": "Purpose-built",
+    "intentional constructed": "Purpose-built",
+    "shelter": "Purpose-built",
+    "canopy": "Purpose-built",
+    "incidental": "Incidental",
+    "incidental shade": "Incidental",
+    "manmade": "Incidental",
+    "manmade shade": "Incidental",
+    "incidental built": "Incidental",
+    "incidental built shade": "Incidental",
+    "building": "Incidental",
 }
 
 

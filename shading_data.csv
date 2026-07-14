@@ -327,7 +327,7 @@ stop_id,shading,heat_vulnerability_index,heat_vulnerability_label,tree_canopy_pc
 1314,Unknown,Unknown,Unknown,Unknown,Unknown,Unknown,None,Unlabeled,,,
 1316,Unknown,Unknown,Unknown,Unknown,Unknown,Unknown,None,Unlabeled,,,
 1317,Unknown,Unknown,Unknown,Unknown,Unknown,Unknown,None,Unlabeled,,,
-1360,Limited,7.011290,Moderate Vulnerability,0.170934,103.000000,Limited,Manmade,Accepted,Manual review,Project Admin,Jack Lenga
+1360,Limited,7.011290,Moderate Vulnerability,0.170934,103.000000,Limited,Incidental,Accepted,Manual review,Project Admin,Jack Lenga
 1370,No Shade,7.011290,Moderate Vulnerability,0.170934,103.000000,No Shade,None,Accepted,Manual review,Project Admin,Jack Lenga
 1412,Unknown,3.817485,Least Vulnerable,0.440022,95.000000,Unknown,None,Unlabeled,,,
 1414,Unknown,3.229042,Least Vulnerable,0.523692,92.000000,Unknown,None,Unlabeled,,,
@@ -454,9 +454,9 @@ stop_id,shading,heat_vulnerability_index,heat_vulnerability_label,tree_canopy_pc
 1741,No Shade,5.960416,Low Vulnerability,0.291769,103.000000,No Shade,None,Accepted,Manual review,Project Admin,Jack Lenga
 1742,Limited,5.960416,Low Vulnerability,0.291769,103.000000,Limited,Natural,Accepted,Manual review,Project Admin,Jack Lenga
 1743,Limited,5.960416,Low Vulnerability,0.291769,103.000000,Limited,Natural,Accepted,Manual review,Project Admin,Jack Lenga
-1744,Significant,5.960416,Low Vulnerability,0.291769,103.000000,Significant,Constructed,Accepted,Manual review,Project Admin,Jack Lenga
+1744,Significant,5.960416,Low Vulnerability,0.291769,103.000000,Significant,Purpose-built,Accepted,Manual review,Project Admin,Jack Lenga
 1745,Unknown,7.290058,Moderate Vulnerability,0.210831,102.000000,Unknown,None,Unlabeled,,,
-1746,Significant,7.290058,Moderate Vulnerability,0.210831,102.000000,Significant,Constructed,Accepted,Manual review,Project Admin,Jack Lenga
+1746,Significant,7.290058,Moderate Vulnerability,0.210831,102.000000,Significant,Purpose-built,Accepted,Manual review,Project Admin,Jack Lenga
 1748,Unknown,7.290058,Moderate Vulnerability,0.210831,102.000000,Unknown,None,Unlabeled,,,
 1749,Unknown,6.215726,Low Vulnerability,0.137940,103.000000,Unknown,None,Unlabeled,,,
 1751,Unknown,6.215726,Low Vulnerability,0.137940,103.000000,Unknown,None,Unlabeled,,,
@@ -483,9 +483,9 @@ stop_id,shading,heat_vulnerability_index,heat_vulnerability_label,tree_canopy_pc
 1803,Unknown,6.543161,Moderate Vulnerability,0.197273,102.000000,Unknown,None,Unlabeled,,,
 1804,Unknown,6.581797,Moderate Vulnerability,0.276428,103.000000,Unknown,None,Unlabeled,,,
 1805,No Shade,5.896932,Low Vulnerability,0.367026,101.000000,No Shade,None,Accepted,Manual review,Project Admin,Jack Lenga
-1806,Significant,5.896932,Low Vulnerability,0.367026,101.000000,Significant,Constructed,Accepted,Manual review,Project Admin,Jack Lenga
-1807,Limited,5.896932,Low Vulnerability,0.367026,101.000000,Limited,Natural; Manmade,Accepted,Manual review,Project Admin,Jack Lenga
-1808,Significant,5.896932,Low Vulnerability,0.367026,101.000000,Significant,Constructed,Accepted,Manual review,Project Admin,Jack Lenga
+1806,Significant,5.896932,Low Vulnerability,0.367026,101.000000,Significant,Purpose-built,Accepted,Manual review,Project Admin,Jack Lenga
+1807,Limited,5.896932,Low Vulnerability,0.367026,101.000000,Limited,Natural; Incidental,Accepted,Manual review,Project Admin,Jack Lenga
+1808,Significant,5.896932,Low Vulnerability,0.367026,101.000000,Significant,Purpose-built,Accepted,Manual review,Project Admin,Jack Lenga
 1809,No Shade,4.599468,Low Vulnerability,0.438521,99.000000,No Shade,None,Accepted,Manual review,Project Admin,Jack Lenga
 1810,Unknown,4.599468,Low Vulnerability,0.438521,99.000000,Unknown,None,Unlabeled,,,
 1812,Unknown,5.270659,Low Vulnerability,0.369216,100.000000,Unknown,None,Unlabeled,,,
@@ -524,19 +524,19 @@ stop_id,shading,heat_vulnerability_index,heat_vulnerability_label,tree_canopy_pc
 1858,Unknown,6.889865,Moderate Vulnerability,0.303434,102.000000,Unknown,None,Unlabeled,,,
 1859,Unknown,6.889865,Moderate Vulnerability,0.303434,102.000000,Unknown,None,Unlabeled,,,
 1860,No Shade,7.290058,Moderate Vulnerability,0.210831,102.000000,No Shade,None,Accepted,Manual review,Project Admin,Jack Lenga
-1861,Significant,6.581797,Moderate Vulnerability,0.276428,103.000000,Significant,Constructed,Accepted,Manual review,Project Admin,Jack Lenga
+1861,Significant,6.581797,Moderate Vulnerability,0.276428,103.000000,Significant,Purpose-built,Accepted,Manual review,Project Admin,Jack Lenga
 1863,No Shade,6.581797,Moderate Vulnerability,0.276428,103.000000,No Shade,None,Accepted,Manual review,Project Admin,Jack Lenga
 1864,No Shade,6.581797,Moderate Vulnerability,0.276428,103.000000,No Shade,None,Accepted,Manual review,Project Admin,Jack Lenga
 1865,No Shade,6.581797,Moderate Vulnerability,0.276428,103.000000,No Shade,None,Accepted,Manual review,Project Admin,Jack Lenga
 1866,Unknown,6.543161,Moderate Vulnerability,0.197273,102.000000,Unknown,None,Unlabeled,,,
-1867,Significant,6.543161,Moderate Vulnerability,0.197273,102.000000,Significant,Constructed,Accepted,Manual review,Project Admin,Jack Lenga
+1867,Significant,6.543161,Moderate Vulnerability,0.197273,102.000000,Significant,Purpose-built,Accepted,Manual review,Project Admin,Jack Lenga
 1868,Limited,7.011290,Moderate Vulnerability,0.170934,103.000000,Limited,Natural,Accepted,Manual review,Project Admin,Jack Lenga
 1869,Significant,7.011290,Moderate Vulnerability,0.170934,103.000000,Significant,Natural,Accepted,Manual review,Project Admin,Jack Lenga
 1870,No Shade,4.935914,Low Vulnerability,0.380099,99.000000,No Shade,None,Accepted,Manual review,Project Admin,Jack Lenga
 1871,Unknown,4.935914,Low Vulnerability,0.380099,99.000000,Unknown,None,Unlabeled,,,
 1872,Limited,4.935914,Low Vulnerability,0.380099,99.000000,Limited,Natural,Accepted,Manual review,Project Admin,Jack Lenga
 1873,No Shade,4.935914,Low Vulnerability,0.380099,99.000000,No Shade,None,Accepted,Manual review,Project Admin,Jack Lenga
-1874,Significant,5.973496,Low Vulnerability,0.503678,98.000000,Significant,Constructed,Accepted,Manual review,Project Admin,Jack Lenga
+1874,Significant,5.973496,Low Vulnerability,0.503678,98.000000,Significant,Purpose-built,Accepted,Manual review,Project Admin,Jack Lenga
 1875,Unknown,5.973496,Low Vulnerability,0.503678,98.000000,Unknown,None,Unlabeled,,,
 1876,Unknown,5.973496,Low Vulnerability,0.503678,98.000000,Unknown,None,Unlabeled,,,
 1878,Limited,5.896932,Low Vulnerability,0.367026,101.000000,Limited,Natural,Accepted,Manual review,Project Admin,Jack Lenga
@@ -1159,7 +1159,7 @@ stop_id,shading,heat_vulnerability_index,heat_vulnerability_label,tree_canopy_pc
 4330,Unknown,Unknown,Unknown,Unknown,Unknown,Unknown,None,Unlabeled,,,
 4333,Unknown,Unknown,Unknown,Unknown,Unknown,Unknown,None,Unlabeled,,,
 4340,Unknown,Unknown,Unknown,Unknown,Unknown,Unknown,None,Unlabeled,,,
-4341,Significant,7.011290,Moderate Vulnerability,0.170934,103.000000,Significant,Constructed,Accepted,Manual review,Project Admin,Jack Lenga
+4341,Significant,7.011290,Moderate Vulnerability,0.170934,103.000000,Significant,Purpose-built,Accepted,Manual review,Project Admin,Jack Lenga
 4345,Unknown,5.822485,Moderate Vulnerability,0.319283,95.000000,Unknown,None,Unlabeled,,,
 4346,Unknown,7.252794,Moderate Vulnerability,0.273851,99.000000,Unknown,None,Unlabeled,,,
 4347,Unknown,5.066517,Low Vulnerability,0.483642,96.000000,Unknown,None,Unlabeled,,,
@@ -1359,7 +1359,7 @@ stop_id,shading,heat_vulnerability_index,heat_vulnerability_label,tree_canopy_pc
 4986,Unknown,5.982347,Moderate Vulnerability,0.392756,97.000000,Unknown,None,Unlabeled,,,
 4987,Unknown,5.791592,Moderate Vulnerability,0.383018,93.000000,Unknown,None,Unlabeled,,,
 4989,Unknown,5.866855,Low Vulnerability,0.458680,98.000000,Unknown,None,Unlabeled,,,
-4993,Significant,6.581797,Moderate Vulnerability,0.276428,103.000000,Significant,Constructed,Accepted,Manual review,Project Admin,Jack Lenga
+4993,Significant,6.581797,Moderate Vulnerability,0.276428,103.000000,Significant,Purpose-built,Accepted,Manual review,Project Admin,Jack Lenga
 4994,Unknown,6.461519,Moderate Vulnerability,0.229019,101.000000,Unknown,None,Unlabeled,,,
 4996,Unknown,6.461519,Moderate Vulnerability,0.229019,101.000000,Unknown,None,Unlabeled,,,
 4997,Unknown,6.719151,Moderate Vulnerability,0.261420,100.000000,Unknown,None,Unlabeled,,,
@@ -1935,7 +1935,7 @@ stop_id,shading,heat_vulnerability_index,heat_vulnerability_label,tree_canopy_pc
 7331,Unknown,Unknown,Unknown,Unknown,Unknown,Unknown,None,Unlabeled,,,
 7332,Unknown,Unknown,Unknown,Unknown,Unknown,Unknown,None,Unlabeled,,,
 7333,Unknown,Unknown,Unknown,Unknown,Unknown,Unknown,None,Unlabeled,,,
-7335,Significant,7.011290,Moderate Vulnerability,0.170934,103.000000,Significant,Constructed,Accepted,Manual review,Project Admin,Jack Lenga
+7335,Significant,7.011290,Moderate Vulnerability,0.170934,103.000000,Significant,Purpose-built,Accepted,Manual review,Project Admin,Jack Lenga
 7340,Unknown,Unknown,Unknown,Unknown,Unknown,Unknown,None,Unlabeled,,,
 7341,Unknown,Unknown,Unknown,Unknown,Unknown,Unknown,None,Unlabeled,,,
 7342,Unknown,Unknown,Unknown,Unknown,Unknown,Unknown,None,Unlabeled,,,
@@ -2296,7 +2296,7 @@ stop_id,shading,heat_vulnerability_index,heat_vulnerability_label,tree_canopy_pc
 8124,Unknown,6.943495,Moderate Vulnerability,0.262382,99.000000,Unknown,None,Unlabeled,,,
 8125,Unknown,Unknown,Unknown,Unknown,Unknown,Unknown,None,Unlabeled,,,
 8126,Unknown,6.543161,Moderate Vulnerability,0.197273,102.000000,Unknown,None,Unlabeled,,,
-8127,Limited,7.290058,Moderate Vulnerability,0.210831,102.000000,Limited,Natural; Manmade,Accepted,Manual review,Project Admin,Jack Lenga
+8127,Limited,7.290058,Moderate Vulnerability,0.210831,102.000000,Limited,Natural; Incidental,Accepted,Manual review,Project Admin,Jack Lenga
 8129,Unknown,6.461519,Moderate Vulnerability,0.229019,101.000000,Unknown,None,Unlabeled,,,
 8130,Unknown,Unknown,Unknown,Unknown,Unknown,Unknown,None,Unlabeled,,,
 8131,Unknown,6.884210,Moderate Vulnerability,0.268238,102.000000,Unknown,None,Unlabeled,,,

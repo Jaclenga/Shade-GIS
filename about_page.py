@@ -52,9 +52,9 @@ def render_about_page(
         | Shade Source | Operational Definition |
         | --- | --- |
         | Natural | Trees, palms, hedges, or other vegetation visibly shade the waiting area |
-        | Constructed | A designated, purpose-built bus shelter, awning, canopy, overhang, or similar passenger shelter visibly shades the waiting area |
-        | Manmade | A nearby building, wall, or other non-shelter built feature visibly shades the waiting area |
-        | Natural; Constructed; Manmade | More than one source type visibly shades the waiting area |
+        | Purpose-built | A designated bus shelter, awning, canopy, overhang, or similar passenger shelter visibly shades the waiting area |
+        | Incidental | A nearby building, wall, or other non-shelter built feature visibly shades the waiting area |
+        | Natural; Purpose-built; Incidental | More than one source type visibly shades the waiting area |
 
         ### Shade Coverage
 
@@ -64,9 +64,9 @@ def render_about_page(
         | Limited | Shade visibly reaches part of the waiting area, but does not cover most of it |
         | Significant | Shade visibly covers most of the waiting area or seating area |
 
-        Trees, utility poles, signs, and nearby buildings are not classified as Constructed unless they are clearly
+        Trees, utility poles, signs, and nearby buildings are not classified as Purpose-built unless they are clearly
         intended to provide passenger shade or weather protection. Nearby buildings that visibly shade the waiting
-        area should be coded as Manmade.
+        area should be coded as Incidental.
 
         `shade_sources` and `shade_coverage` are stored separately. The map-facing `shading` value mirrors
         coverage, while source labels remain available in their own field for filters, charts, exports, and review.
@@ -75,9 +75,9 @@ def render_about_page(
 
         | Visible condition | Shade Source | Shade Coverage |
         | --- | --- | --- |
-        | Bus shelter and trees both visibly shade the waiting area | Natural; Constructed | Limited or Significant, depending on coverage |
-        | Purpose-built bus shelter visibly shades where riders would wait | Constructed | Limited or Significant, depending on coverage |
-        | Large building casts shade onto the stop but is not intended as passenger shelter | Manmade | Limited or Significant, depending on coverage |
+        | Bus shelter and trees both visibly shade the waiting area | Natural; Purpose-built | Limited or Significant, depending on coverage |
+        | Purpose-built bus shelter visibly shades where riders would wait | Purpose-built | Limited or Significant, depending on coverage |
+        | Large building casts shade onto the stop but is not intended as passenger shelter | Incidental | Limited or Significant, depending on coverage |
         | Only a small sign or pole shadow reaches the stop | None | None unless it visibly shades the waiting area |
         | Trees are nearby but do not visibly shade the waiting area | None | None |
         | Hedges or shrubs visibly shade the bench or waiting area | Natural | Limited or Significant, depending on coverage |

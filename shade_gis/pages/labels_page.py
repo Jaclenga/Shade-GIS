@@ -677,6 +677,22 @@ def shade_category_from_coverage_and_sources(shade_coverage: str, shade_sources:
     return normalize_shade_coverage(shade_coverage, "Needs Review")
 
 
+def raw_label_widget_key(stop_id: str, field: str) -> str:
+    """Keep draft raw-label inputs isolated to the stop being labeled."""
+    return f"raw_label:{stop_id}:{field}"
+
+
+def raw_label_form_defaults(selected_stop: pd.Series) -> tuple[str, list[str]]:
+    current_category = str(selected_stop.get("shading", "") or "").strip()
+    current_coverage = str(selected_stop.get("shade_coverage", "") or "")
+    coverage = coverage_from_category(current_category, current_coverage)
+    sources = normalized_shade_sources(selected_stop.get("shade_sources", ""))
+    if not sources:
+        inferred_source = infer_shade_sources_from_category(current_category)
+        sources = [inferred_source] if inferred_source else []
+    return coverage, ([] if coverage == "No Shade" else sources)
+
+
 
 def apply_label_to_current_stop(
     stop_id: str,
@@ -754,26 +770,25 @@ def render_raw_label_collection(
 
     render_shared_label_reference_map(stops, selected_stop_id, taxonomy)
 
-    with st.form("raw_label_form", clear_on_submit=False):
+    coverage_default, existing_sources = raw_label_form_defaults(selected_stop)
+    form_key = raw_label_widget_key(selected_stop_id, "form")
+    with st.form(form_key, clear_on_submit=False):
         st.subheader("Submit Raw Shade Label")
         render_label_code_helper(taxonomy, "Raw label/code definitions")
-        current_category = str(selected_stop.get("shading", "")).strip()
         manual_source_index = LABEL_SOURCE_OPTIONS.index("Manual review") if "Manual review" in LABEL_SOURCE_OPTIONS else 0
         default_role = "Reviewer" if "Reviewer" in LABELER_ROLE_OPTIONS else LABELER_ROLE_OPTIONS[0]
 
         st.markdown("##### Label")
         coverage_labels = SHADE_COVERAGE_OPTIONS
-        current_coverage = str(selected_stop.get("shade_coverage", "") or "")
-        coverage_default = coverage_from_category(current_category, current_coverage)
-        coverage_label_default = coverage_default
-        coverage_index = coverage_labels.index(coverage_label_default) if coverage_label_default in coverage_labels else 0
-        coverage_label = st.selectbox("Coverage", coverage_labels, index=coverage_index, key="label_coverage")
+        coverage_index = coverage_labels.index(coverage_default) if coverage_default in coverage_labels else 0
+        coverage_label = st.selectbox(
+            "Coverage",
+            coverage_labels,
+            index=coverage_index,
+            key=raw_label_widget_key(selected_stop_id, "coverage"),
+        )
         shade_coverage = coverage_label
 
-        existing_sources = normalized_shade_sources(selected_stop.get("shade_sources", ""))
-        if not existing_sources:
-            inferred_source = infer_shade_sources_from_category(current_category)
-            existing_sources = [inferred_source] if inferred_source else []
         selected_sources = []
         st.markdown("Shade source")
         source_cols = st.columns(len(SHADE_SOURCE_OPTIONS))
@@ -782,7 +797,7 @@ def render_raw_label_collection(
                 if st.checkbox(
                     source,
                     value=source in existing_sources and shade_coverage != "No Shade",
-                    key=f"label_source_{source.lower()}",
+                    key=raw_label_widget_key(selected_stop_id, f"source:{source}"),
                     disabled=shade_coverage == "No Shade",
                 ):
                     selected_sources.append(source)
@@ -791,27 +806,42 @@ def render_raw_label_collection(
         shade_category = shade_category_from_coverage_and_sources(shade_coverage, shade_sources)
 
         st.markdown("##### Assessment")
-        _, confidence = render_confidence_level_buttons("Confidence", 0.7, "label_confidence_level")
+        _, confidence = render_confidence_level_buttons(
+            "Confidence",
+            0.7,
+            raw_label_widget_key(selected_stop_id, "confidence"),
+        )
 
         st.markdown("##### Optional")
-        notes = st.text_area("Notes", key="label_notes", height=80)
+        notes = st.text_area(
+            "Notes",
+            key=raw_label_widget_key(selected_stop_id, "notes"),
+            height=80,
+        )
 
         with st.expander("Advanced", expanded=False):
-            labeler_id = st.text_input("Reviewer", key="labeler_id")
+            labeler_id = st.text_input(
+                "Reviewer",
+                key=raw_label_widget_key(selected_stop_id, "reviewer"),
+            )
             labeler_role = default_role
             source_label = st.selectbox(
                 "Label source",
                 LABEL_SOURCE_OPTIONS,
                 index=manual_source_index,
-                key="label_source",
+                key=raw_label_widget_key(selected_stop_id, "input_source"),
             )
-            image_id = st.text_input("Image reference", key="label_image_id")
+            image_id = st.text_input(
+                "Image reference",
+                key=raw_label_widget_key(selected_stop_id, "image_id"),
+            )
 
         action_cols = st.columns([2, 1], vertical_alignment="bottom")
         with action_cols[0]:
             apply_current = st.checkbox(
                 "Update map label immediately",
                 value=False,
+                key=raw_label_widget_key(selected_stop_id, "apply_current"),
                 help="The raw label is always saved. This additionally updates the current stop fields used by maps and exports.",
             )
         with action_cols[1]:

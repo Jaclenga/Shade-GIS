@@ -121,7 +121,7 @@ def test_legacy_combined_labels_are_split_into_coverage_and_sources(project, tax
     assert prepared.loc["legacy-1", "shading"] == "Limited Shade"
     assert prepared.loc["legacy-1", "shade_sources"] == "Natural"
     assert prepared.loc["legacy-2", "shade_coverage"] == "Needs Review"
-    assert prepared.loc["legacy-2", "shade_sources"] == "Constructed"
+    assert prepared.loc["legacy-2", "shade_sources"] == "Purpose-built"
 
 
 def test_api_url_guard_blocks_private_and_credentialed_urls(monkeypatch):

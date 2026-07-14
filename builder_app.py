@@ -234,12 +234,12 @@ DEFAULT_METHODOLOGY = {
         "means shade visibly reaches part of the waiting area, but does not cover most of it; `Significant Shade` "
         "means shade visibly covers most of the waiting area or seating area.\n\n"
         "Shade source definitions: `Natural` means trees, palms, hedges, or other vegetation visibly shade "
-        "the waiting area; `Constructed` means a designated, purpose-built bus shelter, awning, canopy, "
-        "overhang, or similar passenger shelter visibly shades the waiting area; `Manmade` means a nearby "
+        "the waiting area; `Purpose-built` means a designated bus shelter, awning, canopy, "
+        "overhang, or similar passenger shelter visibly shades the waiting area; `Incidental` means a nearby "
         "building or other non-shelter built feature visibly shades the waiting area.\n\n"
-        "Trees, utility poles, signs, and nearby buildings should not be classified as `Constructed` unless "
+        "Trees, utility poles, signs, and nearby buildings should not be classified as `Purpose-built` unless "
         "they are clearly intended to provide passenger shade or weather protection. Nearby buildings that "
-        "visibly shade the waiting area should be coded as `Manmade`. Store raw labels and consensus labels "
+        "visibly shade the waiting area should be coded as `Incidental`. Store raw labels and consensus labels "
         "so future reviewers can reproduce decisions."
     ),
     "data_sources": (

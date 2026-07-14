@@ -31,7 +31,7 @@ def test_default_custom_charts_count_sources_and_coverage():
     stops = pd.DataFrame(
         [
             {"shade_sources": "Natural", "shade_coverage": "Limited"},
-            {"shade_sources": "Constructed", "shade_coverage": "Significant"},
+            {"shade_sources": "Purpose-built", "shade_coverage": "Significant"},
         ]
     )
     visualization = {"custom_charts": []}
@@ -142,7 +142,7 @@ def test_legacy_mixed_dashboard_and_duplicate_source_charts_migrate_once():
 def test_source_count_chart_splits_semicolon_values():
     stops = pd.DataFrame(
         [
-            {"shade_sources": "Natural; Manmade", "shade_coverage": "Limited"},
+            {"shade_sources": "Natural; Incidental", "shade_coverage": "Limited"},
             {"shade_sources": "Natural; Intentional Built", "shade_coverage": "Significant Shade"},
             {"shade_sources": "Incidental Built", "shade_coverage": "No Shade"},
             {"shade_sources": "", "shade_coverage": "No Shade"},
@@ -161,7 +161,7 @@ def test_source_count_chart_splits_semicolon_values():
 
     assert x_column == "shade_sources"
     assert y_column == "records"
-    assert counts == {"Natural": 2, "Manmade": 2, "Constructed": 1}
+    assert counts == {"Natural": 2, "Incidental": 2, "Purpose-built": 1}
 
 
 def test_coverage_count_chart_uses_schema_codes():
@@ -212,7 +212,7 @@ def test_published_source_count_chart_splits_semicolon_values():
     stops = pd.DataFrame(
         [
             {"shade_sources": "Natural; Intentional Built"},
-            {"shade_sources": "Constructed"},
+            {"shade_sources": "Purpose-built"},
             {"shade_sources": ""},
         ]
     )
@@ -228,7 +228,7 @@ def test_published_source_count_chart_splits_semicolon_values():
     counts = dict(zip(data[x_column], data[y_column], strict=True))
 
     assert y_column == "stops"
-    assert counts == {"Constructed": 2, "Natural": 1}
+    assert counts == {"Purpose-built": 2, "Natural": 1}
 
 
 def test_published_map_matches_visuals_map_renderer():

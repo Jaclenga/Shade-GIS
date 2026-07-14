@@ -85,3 +85,71 @@ def test_init_database_adds_deployment_settings_column_to_existing_database(db_p
     with sqlite3.connect(db_path) as conn:
         columns = {row[1] for row in conn.execute("PRAGMA table_info(project_settings)")}
     assert "deployment_json" in columns
+
+
+def test_init_database_migrates_retired_shade_source_labels(
+    db_path, project, taxonomy, methodology, visualization, minimal_stops
+):
+    project_id = create_project(
+        project, taxonomy, methodology, visualization, minimal_stops, [], db_path
+    )
+    with sqlite3.connect(db_path) as conn:
+        conn.execute(
+            "UPDATE stops SET shading = ?, shade_sources = ? WHERE project_id = ? AND stop_id = ?",
+            ("Constructed Shade", "Natural; Manmade", project_id, "1001"),
+        )
+        conn.execute(
+            """
+            INSERT INTO shade_labels (
+                id, project_id, stop_id, shade_category, shade_sources, source, metadata_json, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                "legacy-label",
+                project_id,
+                "1001",
+                "Constructed Shade",
+                "Constructed; Manmade",
+                "manual",
+                '{"source_label": "Manmade"}',
+                "2026-07-14T00:00:00-04:00",
+            ),
+        )
+        conn.execute(
+            """
+            INSERT INTO review_history (
+                id, project_id, stop_id, action, metadata_json, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (
+                "legacy-review",
+                project_id,
+                "1001",
+                "label_updated",
+                '{"from_sources": "Constructed", "to_sources": "Manmade"}',
+                "2026-07-14T00:00:00-04:00",
+            ),
+        )
+        conn.commit()
+
+    init_database(db_path)
+
+    with sqlite3.connect(db_path) as conn:
+        stop = conn.execute(
+            "SELECT shading, shade_sources FROM stops WHERE project_id = ? AND stop_id = ?",
+            (project_id, "1001"),
+        ).fetchone()
+        label = conn.execute(
+            "SELECT shade_category, shade_sources, metadata_json FROM shade_labels WHERE id = 'legacy-label'"
+        ).fetchone()
+        review_metadata = conn.execute(
+            "SELECT metadata_json FROM review_history WHERE id = 'legacy-review'"
+        ).fetchone()[0]
+
+    assert stop == ("Purpose-built Shade", "Natural; Incidental")
+    assert label == (
+        "Purpose-built Shade",
+        "Purpose-built; Incidental",
+        '{"source_label": "Incidental"}',
+    )
+    assert review_metadata == '{"from_sources": "Purpose-built", "to_sources": "Incidental"}'

@@ -542,7 +542,7 @@ stop_id,stop_name,stop_lat,stop_lon,agency,routes,municipality,shading,shade_cov
 5853,Brandon HCC @ Nancy Watkins Dr,27.970814,-82.328321,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Unknown,5853,,,,
 4284,Brandon Mall,27.931964,-82.324899,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Unknown,4284,,,,
 4363,Brandon Regional Hospital,27.934071,-82.286533,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Unknown,4363,,,,
-4254,Britton Plaza Transfer Center,27.906859,-82.504092,Hillsborough Area Regional Transit (HART),,,Significant Shade,Significant Shade,Constructed,Accepted,1.0,,0.0,Moderate Vulnerability,4254,,0.262382,6.943495,99.0
+4254,Britton Plaza Transfer Center,27.906859,-82.504092,Hillsborough Area Regional Transit (HART),,,Significant Shade,Significant Shade,Purpose-built,Accepted,1.0,,0.0,Moderate Vulnerability,4254,,0.262382,6.943495,99.0
 4044,Broadway Av @ 50th St WS,27.961674,-82.402859,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Moderate Vulnerability,4044,,0.233091,6.071134,97.0
 3580,Brorein St @ Hyde Park Ave,27.943199,-82.464109,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Moderate Vulnerability,3580,,0.160096,6.84357,101.0
 3578,Brorein St @ Parker St,27.94347,-82.460659,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Moderate Vulnerability,3578,,0.160096,6.84357,101.0
@@ -721,7 +721,7 @@ stop_id,stop_name,stop_lat,stop_lon,agency,routes,municipality,shading,shade_cov
 2079,Cypress St @ Dale Mabry Hwy,27.952027,-82.504774,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Moderate Vulnerability,2079,,0.210831,7.290058,102.0
 2045,Cypress St @ Excelda Av,27.952051,-82.490288,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Moderate Vulnerability,2045,,0.202803,6.331413,101.0
 2087,Cypress St @ Excelda Av,27.951912,-82.490307,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Moderate Vulnerability,2087,,0.202803,6.331413,101.0
-8127,Cypress St @ Gramercy Ln,27.952249,-82.503651,Hillsborough Area Regional Transit (HART),,,Limited Shade,Limited Shade,Natural; Manmade,Unlabeled,,,50.0,Moderate Vulnerability,8127,,0.210831,7.290058,102.0
+8127,Cypress St @ Gramercy Ln,27.952249,-82.503651,Hillsborough Area Regional Transit (HART),,,Limited Shade,Limited Shade,Natural; Incidental,Unlabeled,,,50.0,Moderate Vulnerability,8127,,0.210831,7.290058,102.0
 2050,Cypress St @ Himes Ave,27.952205,-82.501292,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Moderate Vulnerability,2050,,0.210831,7.290058,102.0
 2080,Cypress St @ Himes Ave,27.952033,-82.501829,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Moderate Vulnerability,2080,,0.210831,7.290058,102.0
 7720,Cypress St @ Howard Av,27.952151,-82.48326,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Low Vulnerability,7720,,0.183996,5.810642,102.0
@@ -773,7 +773,7 @@ stop_id,stop_name,stop_lat,stop_lon,agency,routes,municipality,shading,shade_cov
 1813,Dale Mabry Hwy @ Angeles St,27.927606,-82.505919,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Low Vulnerability,1813,,0.369216,5.270659,100.0
 5049,Dale Mabry Hwy @ Angeles St,27.927701,-82.505758,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Moderate Vulnerability,5049,,0.414541,6.462734,98.0
 1742,Dale Mabry Hwy @ Azeele St,27.941026,-82.505627,Hillsborough Area Regional Transit (HART),,,Limited Shade,Limited Shade,Natural,Unlabeled,,,50.0,Low Vulnerability,1742,,0.291769,5.960416,103.0
-1807,Dale Mabry Hwy @ Azeele St,27.94127,-82.505799,Hillsborough Area Regional Transit (HART),,,Limited Shade,Limited Shade,Natural; Manmade,Unlabeled,,,50.0,Low Vulnerability,1807,,0.367026,5.896932,101.0
+1807,Dale Mabry Hwy @ Azeele St,27.94127,-82.505799,Hillsborough Area Regional Transit (HART),,,Limited Shade,Limited Shade,Natural; Incidental,Unlabeled,,,50.0,Low Vulnerability,1807,,0.367026,5.896932,101.0
 1720,Dale Mabry Hwy @ Ballast Point Blvd,27.889882,-82.506174,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Low Vulnerability,1720,,0.359378,5.659075,99.0
 4516,Dale Mabry Hwy @ Ballast Point Blvd,27.889639,-82.506489,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Moderate Vulnerability,4516,,0.112427,7.703222,104.0
 1733,Dale Mabry Hwy @ Barcelona St,27.921741,-82.505845,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Least Vulnerable,1733,,0.437845,3.39665,100.0
@@ -792,7 +792,7 @@ stop_id,stop_name,stop_lat,stop_lon,agency,routes,municipality,shading,shade_cov
 1797,Dale Mabry Hwy @ Cherry St,27.961223,-82.505675,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Low Vulnerability,1797,,0.13794,6.215726,103.0
 1749,Dale Mabry Hwy @ Chestnut St,27.958316,-82.505468,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Low Vulnerability,1749,,0.13794,6.215726,103.0
 1743,Dale Mabry Hwy @ Cleveland St,27.942837,-82.505598,Hillsborough Area Regional Transit (HART),,,Limited Shade,Limited Shade,Natural,Unlabeled,,,50.0,Low Vulnerability,1743,,0.291769,5.960416,103.0
-1806,Dale Mabry Hwy @ Cleveland St,27.943063,-82.50578,Hillsborough Area Regional Transit (HART),,,Significant Shade,Significant Shade,Constructed,Unlabeled,,,0.0,Low Vulnerability,1806,,0.367026,5.896932,101.0
+1806,Dale Mabry Hwy @ Cleveland St,27.943063,-82.50578,Hillsborough Area Regional Transit (HART),,,Significant Shade,Significant Shade,Purpose-built,Unlabeled,,,0.0,Low Vulnerability,1806,,0.367026,5.896932,101.0
 5457,Dale Mabry Hwy @ Colby Rd F/S,28.056376,-82.50367,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Unknown,5457,,,,
 5752,Dale Mabry Hwy @ Colby Rd N/S,28.056545,-82.50406,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Unknown,5752,,,,
 1728,Dale Mabry Hwy @ Corona St,27.913978,-82.50595,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Moderate Vulnerability,1728,,0.401892,6.47635,98.0
@@ -801,7 +801,7 @@ stop_id,stop_name,stop_lat,stop_lon,agency,routes,municipality,shading,shade_cov
 7773,Dale Mabry Hwy @ Cypress Meadows Rd,28.111306,-82.502678,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Unknown,7773,,,,
 1748,Dale Mabry Hwy @ Cypress St,27.951912,-82.5055,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Moderate Vulnerability,1748,,0.210831,7.290058,102.0
 1741,Dale Mabry Hwy @ Dale Av,27.939277,-82.505626,Hillsborough Area Regional Transit (HART),,,No Shade,No Shade,,Unlabeled,,,50.0,Low Vulnerability,1741,,0.291769,5.960416,103.0
-1808,Dale Mabry Hwy @ Dale Av,27.939531,-82.505808,Hillsborough Area Regional Transit (HART),,,Significant Shade,Significant Shade,Constructed,Unlabeled,,,0.0,Low Vulnerability,1808,,0.367026,5.896932,101.0
+1808,Dale Mabry Hwy @ Dale Av,27.939531,-82.505808,Hillsborough Area Regional Transit (HART),,,Significant Shade,Significant Shade,Purpose-built,Unlabeled,,,0.0,Low Vulnerability,1808,,0.367026,5.896932,101.0
 1726,Dale Mabry Hwy @ El Prado Blvd,27.911433,-82.506009,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Moderate Vulnerability,1726,,0.401892,6.47635,98.0
 1822,Dale Mabry Hwy @ El Prado Blvd,27.911767,-82.506163,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Low Vulnerability,1822,,0.425511,5.305594,100.0
 7011,Dale Mabry Hwy @ Elmwood Terrace,27.877728,-82.506577,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Low Vulnerability,7011,,0.367297,5.096536,99.0
@@ -814,7 +814,7 @@ stop_id,stop_name,stop_lat,stop_lon,agency,routes,municipality,shading,shade_cov
 1722,Dale Mabry Hwy @ Gandy Blvd,27.894448,-82.506127,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Moderate Vulnerability,1722,,0.262382,6.943495,99.0
 1825,Dale Mabry Hwy @ Gandy Blvd,27.895119,-82.506401,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Low Vulnerability,1825,,0.286923,5.26945,99.0
 5461,Dale Mabry Hwy @ Grand Plaza North,28.080153,-82.506589,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Unknown,5461,,,,
-1746,Dale Mabry Hwy @ Gray St,27.948867,-82.505536,Hillsborough Area Regional Transit (HART),,,Significant Shade,Significant Shade,Constructed,Unlabeled,,,0.0,Moderate Vulnerability,1746,,0.210831,7.290058,102.0
+1746,Dale Mabry Hwy @ Gray St,27.948867,-82.505536,Hillsborough Area Regional Transit (HART),,,Significant Shade,Significant Shade,Purpose-built,Unlabeled,,,0.0,Moderate Vulnerability,1746,,0.210831,7.290058,102.0
 1803,Dale Mabry Hwy @ Gray St,27.948947,-82.505781,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Moderate Vulnerability,1803,,0.197273,6.543161,102.0
 1764,Dale Mabry Hwy @ Handy Rd,28.075196,-82.506633,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Unknown,1764,,,,
 7954,Dale Mabry Hwy @ Hoedt Rd,28.094241,-82.502012,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Unknown,7954,,,,
@@ -824,7 +824,7 @@ stop_id,stop_name,stop_lat,stop_lon,agency,routes,municipality,shading,shade_cov
 1836,Dale Mabry Hwy @ Interbay Blvd,27.872833,-82.506514,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Moderate Vulnerability,1836,,0.287274,6.568173,99.0
 1738,Dale Mabry Hwy @ Jetton Av,27.932665,-82.505681,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Least Vulnerable,1738,,0.417422,2.07808,96.0
 5047,Dale Mabry Hwy @ Jetton Av,27.932674,-82.505863,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Low Vulnerability,5047,,0.369216,5.270659,100.0
-1744,Dale Mabry Hwy @ Kennedy Blvd,27.944521,-82.505604,Hillsborough Area Regional Transit (HART),,,Significant Shade,Significant Shade,Constructed,Unlabeled,,,0.0,Low Vulnerability,1744,,0.291769,5.960416,103.0
+1744,Dale Mabry Hwy @ Kennedy Blvd,27.944521,-82.505604,Hillsborough Area Regional Transit (HART),,,Significant Shade,Significant Shade,Purpose-built,Unlabeled,,,0.0,Low Vulnerability,1744,,0.291769,5.960416,103.0
 1754,Dale Mabry Hwy @ Lake Carroll Way,28.043554,-82.504562,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Unknown,1754,,,,
 5758,Dale Mabry Hwy @ Lake Carroll Way,28.043629,-82.504905,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Unknown,5758,,,,
 1799,Dale Mabry Hwy @ Laurel St,27.955577,-82.505709,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Moderate Vulnerability,1799,,0.229019,6.461519,101.0
@@ -848,8 +848,8 @@ stop_id,stop_name,stop_lat,stop_lon,agency,routes,municipality,shading,shade_cov
 1716,Dale Mabry Hwy @ Oklahoma Ave,27.883767,-82.50627,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Moderate Vulnerability,1716,,0.296406,6.284052,100.0
 1830,Dale Mabry Hwy @ Oklahoma Ave,27.884108,-82.506566,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Low Vulnerability,1830,,0.329958,5.403042,99.0
 1796,Dale Mabry Hwy @ Palmetto St,27.964285,-82.505643,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Low Vulnerability,1796,,0.13794,6.215726,103.0
-7588,Dale Mabry Hwy @ Pinewood St,27.868765,-82.506501,Hillsborough Area Regional Transit (HART),,,Significant Shade,Significant Shade,Constructed,Needs Review,0.7,,0.0,Moderate Vulnerability,7588,,0.328843,6.528086,97.0
-7589,Dale Mabry Hwy @ Pinewood St,27.868928,-82.506157,Hillsborough Area Regional Transit (HART),,,Significant Shade,Significant Shade,Constructed,Accepted,0.7,,0.0,Low Vulnerability,7589,,0.318475,5.364192,95.0
+7588,Dale Mabry Hwy @ Pinewood St,27.868765,-82.506501,Hillsborough Area Regional Transit (HART),,,Significant Shade,Significant Shade,Purpose-built,Needs Review,0.7,,0.0,Moderate Vulnerability,7588,,0.328843,6.528086,97.0
+7589,Dale Mabry Hwy @ Pinewood St,27.868928,-82.506157,Hillsborough Area Regional Transit (HART),,,Significant Shade,Significant Shade,Purpose-built,Accepted,0.7,,0.0,Low Vulnerability,7589,,0.318475,5.364192,95.0
 1718,Dale Mabry Hwy @ Rogers Ave,27.886675,-82.506232,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Low Vulnerability,1718,,0.359378,5.659075,99.0
 1828,Dale Mabry Hwy @ Rogers Ave,27.886963,-82.50653,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Low Vulnerability,1828,,0.329958,5.403042,99.0
 1805,Dale Mabry Hwy @ Roland St,27.944025,-82.505782,Hillsborough Area Regional Transit (HART),,,No Shade,No Shade,,Unlabeled,,,50.0,Low Vulnerability,1805,,0.367026,5.896932,101.0
@@ -1419,7 +1419,7 @@ stop_id,stop_name,stop_lat,stop_lon,agency,routes,municipality,shading,shade_cov
 7684,Kennedy Blvd @ Ashley Dr,27.94695,-82.460165,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Low Vulnerability,7684,,0.083622,5.028071,102.0
 1841,Kennedy Blvd @ Brevard Av,27.94473,-82.466349,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Moderate Vulnerability,1841,,0.160096,6.84357,101.0
 1898,Kennedy Blvd @ Brevard Av,27.944494,-82.466785,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Moderate Vulnerability,1898,,0.160096,6.84357,101.0
-1861,Kennedy Blvd @ Church Av,27.944964,-82.507614,Hillsborough Area Regional Transit (HART),,,Significant Shade,Significant Shade,Constructed,Unlabeled,,,0.0,Moderate Vulnerability,1861,,0.276428,6.581797,103.0
+1861,Kennedy Blvd @ Church Av,27.944964,-82.507614,Hillsborough Area Regional Transit (HART),,,Significant Shade,Significant Shade,Purpose-built,Unlabeled,,,0.0,Moderate Vulnerability,1861,,0.276428,6.581797,103.0
 1878,Kennedy Blvd @ Church Av,27.944675,-82.507543,Hillsborough Area Regional Transit (HART),,,Limited Shade,Limited Shade,Natural,Unlabeled,,,50.0,Low Vulnerability,1878,,0.367026,5.896932,101.0
 1863,Kennedy Blvd @ Clark Av,27.944971,-82.511785,Hillsborough Area Regional Transit (HART),,,No Shade,No Shade,,Unlabeled,,,50.0,Moderate Vulnerability,1863,,0.276428,6.581797,103.0
 1876,Kennedy Blvd @ Clark Av,27.944681,-82.512068,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Low Vulnerability,1876,,0.503678,5.973496,98.0
@@ -1431,17 +1431,17 @@ stop_id,stop_name,stop_lat,stop_lon,agency,routes,municipality,shading,shade_cov
 1858,Kennedy Blvd @ Glen Av,27.944893,-82.499556,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Moderate Vulnerability,1858,,0.303434,6.889865,102.0
 1853,Kennedy Blvd @ Gomez Av,27.944859,-82.491029,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Low Vulnerability,1853,,0.284992,5.155698,100.0
 1885,Kennedy Blvd @ Gomez Av,27.944675,-82.491396,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Elevated Vulnerability,1885,,0.25579,8.546644,103.0
-4993,Kennedy Blvd @ Grady Av,27.944972,-82.510287,Hillsborough Area Regional Transit (HART),,,Significant Shade,Significant Shade,Constructed,Unlabeled,,,0.0,Moderate Vulnerability,4993,,0.276428,6.581797,103.0
+4993,Kennedy Blvd @ Grady Av,27.944972,-82.510287,Hillsborough Area Regional Transit (HART),,,Significant Shade,Significant Shade,Purpose-built,Unlabeled,,,0.0,Moderate Vulnerability,4993,,0.276428,6.581797,103.0
 6941,Kennedy Blvd @ Gray Ct,27.944644,-82.498594,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Low Vulnerability,6941,,0.291769,5.960416,103.0
 1883,Kennedy Blvd @ Henderson Blvd,27.944645,-82.495678,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Moderate Vulnerability,1883,,0.332033,7.664625,103.0
-1867,Kennedy Blvd @ Hesperides St,27.944992,-82.519965,Hillsborough Area Regional Transit (HART),,,Significant Shade,Significant Shade,Constructed,Unlabeled,,,0.0,Moderate Vulnerability,1867,,0.197273,6.543161,102.0
+1867,Kennedy Blvd @ Hesperides St,27.944992,-82.519965,Hillsborough Area Regional Transit (HART),,,Significant Shade,Significant Shade,Purpose-built,Unlabeled,,,0.0,Moderate Vulnerability,1867,,0.197273,6.543161,102.0
 1872,Kennedy Blvd @ Hesperides St,27.944675,-82.520299,Hillsborough Area Regional Transit (HART),,,Limited Shade,Limited Shade,Natural,Unlabeled,,,50.0,Low Vulnerability,1872,,0.380099,4.935914,99.0
 1859,Kennedy Blvd @ Himes Av,27.944896,-82.501384,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Moderate Vulnerability,1859,,0.303434,6.889865,102.0
 1880,Kennedy Blvd @ Himes Av,27.944651,-82.501763,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Low Vulnerability,1880,,0.291769,5.960416,103.0
 1849,Kennedy Blvd @ Howard Av,27.944812,-82.482788,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Low Vulnerability,1849,,0.183996,5.810642,102.0
 1890,Kennedy Blvd @ Howard Av,27.944651,-82.483267,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Low Vulnerability,1890,,0.196956,5.3163,103.0
 1865,Kennedy Blvd @ Hubert Av,27.944986,-82.515885,Hillsborough Area Regional Transit (HART),,,No Shade,No Shade,,Unlabeled,,,50.0,Moderate Vulnerability,1865,,0.276428,6.581797,103.0
-1874,Kennedy Blvd @ Hubert Av,27.944669,-82.516199,Hillsborough Area Regional Transit (HART),,,Significant Shade,Significant Shade,Constructed,Unlabeled,,,0.0,Low Vulnerability,1874,,0.503678,5.973496,98.0
+1874,Kennedy Blvd @ Hubert Av,27.944669,-82.516199,Hillsborough Area Regional Transit (HART),,,Significant Shade,Significant Shade,Purpose-built,Unlabeled,,,0.0,Low Vulnerability,1874,,0.503678,5.973496,98.0
 1839,Kennedy Blvd @ Hyde Park Av,27.945778,-82.46349,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Moderate Vulnerability,1839,,0.160096,6.84357,101.0
 1899,Kennedy Blvd @ Hyde Park Av,27.94531,-82.464164,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Moderate Vulnerability,1899,,0.160096,6.84357,101.0
 1857,Kennedy Blvd @ Lincoln Av,27.944883,-82.497304,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Moderate Vulnerability,1857,,0.303434,6.889865,102.0
@@ -2285,7 +2285,7 @@ stop_id,stop_name,stop_lat,stop_lon,agency,routes,municipality,shading,shade_cov
 1414,Westshore Blvd @ Bradley St,27.860932,-82.527025,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Least Vulnerable,1414,,0.523692,3.229042,92.0
 5014,Westshore Blvd @ Cypress St,27.951446,-82.524315,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Moderate Vulnerability,5014,,0.229019,6.461519,101.0
 7546,Westshore Blvd @ Cypress St,27.952669,-82.523992,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Moderate Vulnerability,7546,,0.229019,6.461519,101.0
-1360,Westshore Blvd @ Gray St,27.948711,-82.524018,Hillsborough Area Regional Transit (HART),,,Limited Shade,Limited Shade,Manmade,Unlabeled,,,50.0,Moderate Vulnerability,1360,,0.170934,7.01129,103.0
+1360,Westshore Blvd @ Gray St,27.948711,-82.524018,Hillsborough Area Regional Transit (HART),,,Limited Shade,Limited Shade,Incidental,Unlabeled,,,50.0,Moderate Vulnerability,1360,,0.170934,7.01129,103.0
 1370,Westshore Blvd @ Gray St,27.948421,-82.524362,Hillsborough Area Regional Transit (HART),,,No Shade,No Shade,,Unlabeled,,,50.0,Moderate Vulnerability,1370,,0.170934,7.01129,103.0
 7676,Westshore Blvd @ Laurel St,27.955667,-82.524278,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Moderate Vulnerability,7676,,0.229019,6.461519,101.0
 7677,Westshore Blvd @ Laurel St,27.956211,-82.523995,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Moderate Vulnerability,7677,,0.229019,6.461519,101.0
@@ -2294,8 +2294,8 @@ stop_id,stop_name,stop_lat,stop_lon,agency,routes,municipality,shading,shade_cov
 4880,Westshore Blvd @ North B St,27.946329,-82.524056,Hillsborough Area Regional Transit (HART),,,Limited Shade,Limited Shade,Natural,Unlabeled,,,50.0,Moderate Vulnerability,4880,,0.170934,7.01129,103.0
 7674,Westshore Blvd @ Spruce St,27.959263,-82.524282,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Moderate Vulnerability,7674,,0.229019,6.461519,101.0
 7675,Westshore Blvd @ Union St,27.957488,-82.52426,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Moderate Vulnerability,7675,,0.229019,6.461519,101.0
-4341,Westshore Plaza,27.948801,-82.525507,Hillsborough Area Regional Transit (HART),,,Significant Shade,Significant Shade,Constructed,Unlabeled,,,0.0,Moderate Vulnerability,4341,,0.170934,7.01129,103.0
-7335,Westshore Plaza,27.94881,-82.525598,Hillsborough Area Regional Transit (HART),,,Significant Shade,Significant Shade,Constructed,Unlabeled,,,0.0,Moderate Vulnerability,7335,,0.170934,7.01129,103.0
+4341,Westshore Plaza,27.948801,-82.525507,Hillsborough Area Regional Transit (HART),,,Significant Shade,Significant Shade,Purpose-built,Unlabeled,,,0.0,Moderate Vulnerability,4341,,0.170934,7.01129,103.0
+7335,Westshore Plaza,27.94881,-82.525598,Hillsborough Area Regional Transit (HART),,,Significant Shade,Significant Shade,Purpose-built,Unlabeled,,,0.0,Moderate Vulnerability,7335,,0.170934,7.01129,103.0
 7736,Whiting St @ Tampa St,27.945365,-82.457026,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Low Vulnerability,7736,,0.083622,5.028071,102.0
 7530,Wimauma Walmart,27.714302,-82.334086,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Unknown,7530,,,,
 7977,Wiregrass Park n Ride,28.191079,-82.349385,Hillsborough Area Regional Transit (HART),,,Needs Review,Needs Review,,Unlabeled,,,50.0,Unknown,7977,,,,

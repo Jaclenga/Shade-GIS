@@ -283,6 +283,34 @@ def connect(path: Path | None = None) -> sqlite3.Connection:
     return conn
 
 
+def migrate_shade_source_labels(conn: sqlite3.Connection) -> None:
+    """Replace retired source labels in persisted project data and audit metadata."""
+    label_columns = [
+        ("stops", "shading"),
+        ("stops", "shade_sources"),
+        ("stops", "extra_json"),
+        ("shade_labels", "shade_category"),
+        ("shade_labels", "shade_sources"),
+        ("shade_labels", "metadata_json"),
+        ("review_history", "metadata_json"),
+        ("images", "metadata_json"),
+        ("import_logs", "metadata_json"),
+        ("releases", "artifact_manifest_json"),
+        ("project_settings", "methodology_json"),
+        ("project_settings", "visualization_json"),
+    ]
+    for table, column in label_columns:
+        replacement = (
+            f'''REPLACE(REPLACE("{column}", 'Constructed', 'Purpose-built'), '''
+            "'Manmade', 'Incidental')"
+        )
+        conn.execute(
+            f'''UPDATE "{table}"
+                SET "{column}" = {replacement}
+                WHERE "{column}" LIKE '%Constructed%' OR "{column}" LIKE '%Manmade%' '''
+        )
+
+
 def init_database(path: Path | None = None) -> Path:
     db_path = Path(path) if path is not None else database_path()
     with connect(db_path) as conn:
@@ -294,6 +322,7 @@ def init_database(path: Path | None = None) -> Path:
             conn.execute(
                 "ALTER TABLE project_settings ADD COLUMN deployment_json TEXT NOT NULL DEFAULT '{}'"
             )
+        migrate_shade_source_labels(conn)
         conn.commit()
     return db_path
 

@@ -234,7 +234,7 @@ The reviewed example records focus on three shade fields:
 | Field | Meaning in the example dataset |
 | --- | --- |
 | `shade_coverage` | The amount of visible shade reaching the waiting area: `No Shade`, `Limited Shade`, or `Significant Shade`. |
-| `shade_sources` | The visible source of shade reaching the waiting area, such as `Natural`, `Constructed`, `Manmade`, or combined labels when multiple sources are present. |
+| `shade_sources` | The visible source of shade reaching the waiting area, such as `Natural`, `Purpose-built`, `Incidental`, or combined labels when multiple sources are present. |
 | `shading` | The derived coverage category used for coloring, filtering, summaries, and public display. |
 
 Manual coding used the visible waiting area as the unit of analysis. Reviewers should code what appears to shade the place where a rider would reasonably stand or sit while waiting, rather than nearby objects that do not visibly shade that space.
@@ -249,8 +249,8 @@ Shade source definitions:
 | Shade source | Operational definition |
 | --- | --- |
 | `Natural` | Trees, palms, hedges, or other vegetation visibly shade the waiting area. |
-| `Constructed` | A designated, purpose-built bus shelter, awning, canopy, overhang, or similar passenger shelter visibly shades the waiting area. |
-| `Manmade` | A nearby building or other non-shelter built feature visibly shades the waiting area. |
+| `Purpose-built` | A designated bus shelter, awning, canopy, overhang, or similar passenger shelter visibly shades the waiting area. |
+| `Incidental` | A nearby building or other non-shelter built feature visibly shades the waiting area. |
 
 Shade coverage definitions:
 

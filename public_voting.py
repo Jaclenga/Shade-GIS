@@ -14,14 +14,14 @@ import streamlit as st
 
 
 PUBLIC_COVERAGE_OPTIONS = ["No Shade", "Limited Shade", "Significant Shade"]
-PUBLIC_SOURCE_OPTIONS = ["Natural", "Constructed", "Manmade"]
+PUBLIC_SOURCE_OPTIONS = ["Natural", "Purpose-built", "Incidental"]
 PUBLIC_SOURCE_DEFINITIONS = {
     "Natural": "Trees, palms, hedges, or other vegetation visibly shade the waiting area.",
-    "Constructed": (
+    "Purpose-built": (
         "A designated, purpose-built bus shelter, awning, canopy, overhang, or similar passenger shelter "
         "visibly shades the waiting area."
     ),
-    "Manmade": "A nearby building or other non-shelter built feature visibly shades the waiting area.",
+    "Incidental": "A nearby building or other non-shelter built feature visibly shades the waiting area.",
 }
 _PUBLIC_COVERAGE_ALIASES = {
     "no shade": "No Shade",
@@ -38,17 +38,22 @@ _PUBLIC_SOURCE_ALIASES = {
     "tree": "Natural",
     "trees": "Natural",
     "vegetation": "Natural",
-    "constructed": "Constructed",
-    "constructed shade": "Constructed",
-    "intentional built": "Constructed",
-    "intentional built shade": "Constructed",
-    "shelter": "Constructed",
-    "canopy": "Constructed",
-    "manmade": "Manmade",
-    "manmade shade": "Manmade",
-    "incidental built": "Manmade",
-    "incidental built shade": "Manmade",
-    "building": "Manmade",
+    "purpose-built": "Purpose-built",
+    "purpose built": "Purpose-built",
+    "purpose-built shade": "Purpose-built",
+    "constructed": "Purpose-built",
+    "constructed shade": "Purpose-built",
+    "intentional built": "Purpose-built",
+    "intentional built shade": "Purpose-built",
+    "shelter": "Purpose-built",
+    "canopy": "Purpose-built",
+    "incidental": "Incidental",
+    "incidental shade": "Incidental",
+    "manmade": "Incidental",
+    "manmade shade": "Incidental",
+    "incidental built": "Incidental",
+    "incidental built shade": "Incidental",
+    "building": "Incidental",
 }
 
 

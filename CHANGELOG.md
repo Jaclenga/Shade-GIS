@@ -27,7 +27,7 @@ pre-release phase while the reusable platform stabilizes.
   per-browser-session vote handling, consensus thresholds, SQLite development storage, and optional
   shared PostgreSQL persistence for hosted deployments, managed from a dedicated builder page.
 - Canonical separation of shade coverage (`No Shade`, `Limited Shade`, `Significant Shade`) from
-  shade sources (`Natural`, `Constructed`, `Manmade`) across imports, labeling, voting, maps, and exports.
+  shade sources (`Natural`, `Purpose-built`, `Incidental`) across imports, labeling, voting, maps, and exports.
 - Public voting now mirrors raw labeling with a separate multi-checkbox shade-source assessment
   persisted alongside each coverage vote.
 - Public contributor guidance in `CONTRIBUTING.md`.

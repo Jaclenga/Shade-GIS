@@ -353,7 +353,7 @@ def test_raw_label_comparison_table_hides_storage_names():
 
     assert display.loc[0, "Label"] == "Significant Shade"
     assert display.loc[0, "Coverage"] == "Significant Shade"
-    assert display.loc[0, "Sources"] == "Constructed"
+    assert display.loc[0, "Sources"] == "Purpose-built"
     assert display.loc[0, "Confidence"] == "75%"
     assert display.loc[0, "Reviewer"] == "Jack Lenga (Reviewer)"
     assert display.loc[0, "Input"] == "Manual Review"
@@ -377,7 +377,7 @@ def test_label_code_definition_tables_include_core_schema_terms(taxonomy):
         "confidence",
     ]
     assert tables["Coverage codes"]["Code"].tolist() == ["No Shade", "Limited Shade", "Significant Shade"]
-    assert tables["Source codes"]["Code"].tolist() == ["Natural", "Constructed", "Manmade"]
+    assert tables["Source codes"]["Code"].tolist() == ["Natural", "Purpose-built", "Incidental"]
     assert tables["Map label codes"]["Code"].tolist() == [
         "No Shade",
         "Limited Shade",
@@ -621,16 +621,18 @@ def test_sync_label_stop_picker_tracks_selected_stop(monkeypatch, minimal_stops)
 
 def test_infer_shade_sources_from_category():
     assert labels_page.infer_shade_sources_from_category("Significant Natural Shade") == "Natural"
-    assert labels_page.infer_shade_sources_from_category("Constructed Shade") == "Constructed"
-    assert labels_page.infer_shade_sources_from_category("Intentional Built Shade") == "Constructed"
-    assert labels_page.infer_shade_sources_from_category("Manmade Shade") == "Manmade"
-    assert labels_page.infer_shade_sources_from_category("Incidental Built Shade") == "Manmade"
+    assert labels_page.infer_shade_sources_from_category("Purpose-built Shade") == "Purpose-built"
+    assert labels_page.infer_shade_sources_from_category("Constructed Shade") == "Purpose-built"
+    assert labels_page.infer_shade_sources_from_category("Intentional Built Shade") == "Purpose-built"
+    assert labels_page.infer_shade_sources_from_category("Incidental Shade") == "Incidental"
+    assert labels_page.infer_shade_sources_from_category("Manmade Shade") == "Incidental"
+    assert labels_page.infer_shade_sources_from_category("Incidental Built Shade") == "Incidental"
     assert labels_page.infer_shade_sources_from_category("No Shade") == ""
     assert labels_page.infer_shade_sources_from_category("Needs Review") == ""
 
 
 def test_source_and_coverage_taxonomies_match_schema_terms():
-    assert SHADE_SOURCE_OPTIONS == ["Natural", "Constructed", "Manmade"]
+    assert SHADE_SOURCE_OPTIONS == ["Natural", "Purpose-built", "Incidental"]
     assert SHADE_COVERAGE_OPTIONS == ["No Shade", "Limited Shade", "Significant Shade"]
     assert [item["shade_source"] for item in SHADE_SOURCE_TAXONOMY] == SHADE_SOURCE_OPTIONS
     assert [item["shade_coverage"] for item in SHADE_COVERAGE_TAXONOMY] == SHADE_COVERAGE_OPTIONS
@@ -649,14 +651,14 @@ def test_shade_category_from_type_returns_coverage_only():
     assert labels_page.shade_category_from_type("Natural", "Limited") == "Limited Shade"
     assert labels_page.shade_category_from_type("Natural", "Significant") == "Significant Shade"
     assert labels_page.shade_category_from_type("Natural", "No Shade") == "No Shade"
-    assert labels_page.shade_category_from_type("Constructed", "Significant") == "Significant Shade"
+    assert labels_page.shade_category_from_type("Purpose-built", "Significant") == "Significant Shade"
 
 
-def test_normalized_shade_sources_preserves_distinct_constructed_and_manmade():
+def test_normalized_shade_sources_maps_legacy_terms_to_distinct_current_sources():
     assert labels_page.normalized_shade_sources("Natural; Intentional Built; Incidental Built") == [
         "Natural",
-        "Constructed",
-        "Manmade",
+        "Purpose-built",
+        "Incidental",
     ]
 
 
@@ -664,5 +666,33 @@ def test_shade_category_from_coverage_and_sources_derives_map_label():
     assert labels_page.shade_category_from_coverage_and_sources("No Shade", ["Natural"]) == "No Shade"
     assert labels_page.shade_category_from_coverage_and_sources("Limited", ["Natural"]) == "Limited Shade"
     assert labels_page.shade_category_from_coverage_and_sources("Significant", ["Natural"]) == "Significant Shade"
-    assert labels_page.shade_category_from_coverage_and_sources("Limited", ["Manmade", "Natural"]) == "Limited Shade"
-    assert labels_page.shade_category_from_coverage_and_sources("Limited", ["Natural", "Constructed"]) == "Limited Shade"
+    assert labels_page.shade_category_from_coverage_and_sources("Limited", ["Incidental", "Natural"]) == "Limited Shade"
+    assert labels_page.shade_category_from_coverage_and_sources("Limited", ["Natural", "Purpose-built"]) == "Limited Shade"
+
+
+def test_raw_label_form_state_is_scoped_to_each_stop():
+    significant_stop = pd.Series(
+        {
+            "stop_id": "first-stop",
+            "shading": "Significant Shade",
+            "shade_coverage": "Significant Shade",
+            "shade_sources": "Purpose-built",
+        }
+    )
+    limited_stop = pd.Series(
+        {
+            "stop_id": "second-stop",
+            "shading": "Limited Shade",
+            "shade_coverage": "Limited Shade",
+            "shade_sources": "Natural",
+        }
+    )
+
+    assert labels_page.raw_label_form_defaults(significant_stop) == (
+        "Significant Shade",
+        ["Purpose-built"],
+    )
+    assert labels_page.raw_label_form_defaults(limited_stop) == ("Limited Shade", ["Natural"])
+    assert labels_page.raw_label_widget_key("first-stop", "coverage") != labels_page.raw_label_widget_key(
+        "second-stop", "coverage"
+    )

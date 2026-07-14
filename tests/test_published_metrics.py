@@ -8,7 +8,7 @@ import published_app
 def test_safe_chart_has_no_scale_binding_and_drops_non_finite_values() -> None:
     data = pd.DataFrame(
         {
-            "shade_sources": ["Natural", "Constructed", "Unknown"],
+            "shade_sources": ["Natural", "Purpose-built", "Unknown"],
             "stops": [12, float("inf"), float("nan")],
         }
     )
@@ -34,7 +34,7 @@ def test_published_app_separates_legacy_coverage_and_source_labels():
 
     assert normalized["shading"].tolist() == ["Significant Shade", "Significant Shade"]
     assert normalized["shade_coverage"].tolist() == ["Significant Shade", "Significant Shade"]
-    assert normalized["shade_sources"].tolist() == ["Natural", "Constructed"]
+    assert normalized["shade_sources"].tolist() == ["Natural", "Purpose-built"]
 from published_app import summary_metric_cards
 
 
@@ -179,7 +179,7 @@ def test_public_schema_tables_separate_coverage_from_sources() -> None:
         "Significant Shade",
         "Needs Review",
     ]
-    assert sources["Shade Source"].tolist() == ["Natural", "Constructed", "Manmade"]
+    assert sources["Shade Source"].tolist() == ["Natural", "Purpose-built", "Incidental"]
     assert "Limited Natural Shade" not in legend
     assert "Intentional Built Shade" not in legend
     assert "Limited Shade" in legend
@@ -217,7 +217,7 @@ def test_stop_detail_picker_avoids_session_state_default_warning(monkeypatch) ->
                 "stop_id": "1002",
                 "stop_name": "Second Stop",
                 "shading": "Significant",
-                "shade_sources": "Constructed",
+                "shade_sources": "Purpose-built",
                 "review_status": "Accepted",
                 "priority_score": 1.0,
             },

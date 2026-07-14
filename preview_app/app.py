@@ -172,28 +172,33 @@ SHADE_SOURCE_TAXONOMY = [
         "Operational Definition": "Trees, palms, hedges, or other vegetation visibly shade the waiting area.",
     },
     {
-        "Shade Source": "Constructed",
+        "Shade Source": "Purpose-built",
         "Operational Definition": (
             "A designated, purpose-built bus shelter, awning, canopy, overhang, or similar passenger "
             "shelter visibly shades the waiting area."
         ),
     },
     {
-        "Shade Source": "Manmade",
+        "Shade Source": "Incidental",
         "Operational Definition": (
             "A nearby building or other non-shelter built feature visibly shades the waiting area."
         ),
     },
 ]
-SHADE_SOURCE_CHART_CODES = {"natural": "Natural", "constructed": "Constructed", "manmade": "Manmade"}
+SHADE_SOURCE_CHART_CODES = {"natural": "Natural", "purpose-built": "Purpose-built", "incidental": "Incidental"}
 SHADE_SOURCE_CHART_ALIASES = {
-    "intentional built": "Constructed",
-    "intentional built shade": "Constructed",
-    "intentional constructed": "Constructed",
-    "constructed shade": "Constructed",
-    "incidental built": "Manmade",
-    "incidental built shade": "Manmade",
-    "manmade shade": "Manmade",
+    "purpose built": "Purpose-built",
+    "purpose-built shade": "Purpose-built",
+    "constructed": "Purpose-built",
+    "constructed shade": "Purpose-built",
+    "intentional built": "Purpose-built",
+    "intentional built shade": "Purpose-built",
+    "intentional constructed": "Purpose-built",
+    "incidental shade": "Incidental",
+    "incidental built": "Incidental",
+    "incidental built shade": "Incidental",
+    "manmade": "Incidental",
+    "manmade shade": "Incidental",
     "natural shade": "Natural",
 }
 SHADE_COVERAGE_CHART_CODES = {
@@ -332,10 +337,13 @@ def normalize_published_stop_dimensions(stops: pd.DataFrame) -> pd.DataFrame:
         if not sources:
             if any(token in legacy_text for token in ["natural", "tree", "vegetation"]):
                 sources.append("Natural")
-            if any(token in legacy_text for token in ["constructed", "intentional", "shelter", "canopy"]):
-                sources.append("Constructed")
+            if any(
+                token in legacy_text
+                for token in ["purpose-built", "purpose built", "constructed", "intentional", "shelter", "canopy"]
+            ):
+                sources.append("Purpose-built")
             if any(token in legacy_text for token in ["manmade", "incidental", "building"]):
-                sources.append("Manmade")
+                sources.append("Incidental")
         return "" if coverage == "No Shade" else "; ".join(sources)
 
     normalized["shade_sources"] = [

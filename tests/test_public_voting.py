@@ -161,10 +161,10 @@ def test_sqlite_vote_store_upserts_one_vote_per_browser_session(db_path):
     ) == "Significant Shade"
     assert get_existing_vote_details(
         "study-a", "1001", "browser-a", database_url="", sqlite_path=db_path
-    ) == {"coverage_status": "Significant Shade", "shade_sources": ["Constructed"]}
+    ) == {"coverage_status": "Significant Shade", "shade_sources": ["Purpose-built"]}
     assert get_existing_vote_details(
         "study-a", "1001", "browser-b", database_url="", sqlite_path=db_path
-    ) == {"coverage_status": "Limited Shade", "shade_sources": ["Natural", "Manmade"]}
+    ) == {"coverage_status": "Limited Shade", "shade_sources": ["Natural", "Incidental"]}
     assert get_vote_counts(
         "study-a",
         "1001",
@@ -198,7 +198,7 @@ def test_no_shade_vote_clears_sources_and_migrates_an_existing_sqlite_store(db_p
         "1001",
         "browser-a",
         "No Shade",
-        shade_sources=["Natural", "Constructed"],
+        shade_sources=["Natural", "Purpose-built"],
         database_url="",
         sqlite_path=db_path,
     )
