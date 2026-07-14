@@ -151,6 +151,10 @@ from shade_gis.builder_visuals import (
     rgba_from_hex,
     selected_dashboard_sections,
 )
+from shade_gis.deployment import (
+    DEFAULT_DEPLOY_COMMIT_MESSAGE,
+    normalize_deploy_commit_message,
+)
 from shade_gis.shade_dimensions import (
     DEFAULT_COVERAGE_TAXONOMY,
     SHADE_COVERAGE_OPTIONS as CORE_SHADE_COVERAGE_OPTIONS,
@@ -667,11 +671,13 @@ def deploy_launcher_script(
     branch: str = "main",
     deploy_mode: str = "existing",
     visibility: str = "private",
+    commit_message: str = DEFAULT_DEPLOY_COMMIT_MESSAGE,
 ) -> str:
     if deploy_mode not in {"create", "existing"}:
         raise ValueError("deploy_mode must be 'create' or 'existing'")
     if visibility not in {"public", "private"}:
         raise ValueError("visibility must be 'public' or 'private'")
+    commit_message = normalize_deploy_commit_message(commit_message)
 
     if deploy_mode == "existing":
         repository_verification = """        gh repo view $RepositoryName --json nameWithOwner
@@ -682,7 +688,8 @@ def deploy_launcher_script(
         publish_command = """        & $DeployScript.FullName `
             -Mode existing `
             -RepositoryName $RepositoryName `
-            -Branch $Branch
+            -Branch $Branch `
+            -CommitMessage $CommitMessage
 """
     else:
         repository_verification = ""
@@ -691,6 +698,7 @@ def deploy_launcher_script(
             -Mode create `
             -RepositoryName $RepositoryName `
             -Branch $Branch `
+            -CommitMessage $CommitMessage `
             -Visibility $Visibility{allow_public}
 """
 
@@ -702,6 +710,7 @@ def deploy_launcher_script(
     $BundlePath = ""  # Optional: paste the full ZIP path here when it is not in a standard folder.
     $RepositoryName = {powershell_literal(repo_name)}
     $Branch = {powershell_literal(branch)}
+    $CommitMessage = {powershell_literal(commit_message)}
     $Visibility = {powershell_literal(visibility)}
 
     if ([string]::IsNullOrWhiteSpace($RepositoryName)) {{
@@ -797,11 +806,18 @@ def deploy_readme(
     project: dict[str, Any],
     deploy_mode: str = "existing",
     bundle_name: str = "",
+    commit_message: str = DEFAULT_DEPLOY_COMMIT_MESSAGE,
 ) -> str:
     app_name = project.get("name", "Shade Study")
     folder_name = slugify_repo_name(repo_name.rstrip("/").split("/")[-1].replace(".git", ""))
     resolved_bundle_name = bundle_name or f"{folder_name}.zip"
-    launcher_script = deploy_launcher_script(resolved_bundle_name, repo_name, deploy_mode=deploy_mode)
+    commit_message = normalize_deploy_commit_message(commit_message)
+    launcher_script = deploy_launcher_script(
+        resolved_bundle_name,
+        repo_name,
+        deploy_mode=deploy_mode,
+        commit_message=commit_message,
+    )
     main_file_path = streamlit_entrypoint_path(deploy_mode)
     if deploy_mode == "create":
         publish_intro = "create the target repository used for this bundle"
@@ -872,13 +888,13 @@ If GitHub reports that it "Could not resolve to a Repository", check the exact `
 Create a new GitHub repository named `{repo_name}` and push these files:
 
 ```powershell
-./deploy_to_github.ps1 -Mode create -RepositoryName "{repo_name}" -Branch "main" -Visibility private
+./deploy_to_github.ps1 -Mode create -RepositoryName "{repo_name}" -Branch "main" -CommitMessage {powershell_literal(commit_message)} -Visibility private
 ```
 
 Or publish into a pre-existing private repository:
 
 ```powershell
-./deploy_to_github.ps1 -Mode existing -RepositoryName "{repo_name}" -Branch "main"
+./deploy_to_github.ps1 -Mode existing -RepositoryName "{repo_name}" -Branch "main" -CommitMessage {powershell_literal(commit_message)}
 ```
 
 The script requires Git and the GitHub CLI (`gh`) with an authenticated account.
@@ -909,7 +925,11 @@ After the repository is on GitHub, create a Streamlit Community Cloud app with:
 """
 
 
-def deploy_script(repo_name: str) -> str:
+def deploy_script(
+    repo_name: str,
+    commit_message: str = DEFAULT_DEPLOY_COMMIT_MESSAGE,
+) -> str:
+    commit_message = normalize_deploy_commit_message(commit_message)
     return f"""param(
     [Alias("TargetRepo")]
     [string]$RepositoryName = "{repo_name}",
@@ -918,6 +938,7 @@ def deploy_script(repo_name: str) -> str:
     [string]$Mode = "create",
     [string]$RepositoryUrl = "",
     [string]$Branch = "main",
+    [string]$CommitMessage = {powershell_literal(commit_message)},
     [switch]$Yes,
     [switch]$AllowPublicTarget
 )
@@ -974,6 +995,9 @@ function Assert-DeploymentBundle {{
     }}
     if ([string]$manifest.deploy_mode -ne $Mode) {{
         throw "This bundle was created for '$($manifest.deploy_mode)' mode, not '$Mode'. Download a matching package."
+    }}
+    if ([string]$manifest.commit_message -ne $CommitMessage) {{
+        throw "This bundle was created with a different commit message. Download a package using the current deployment settings."
     }}
     foreach ($fileProperty in $manifest.files.PSObject.Properties) {{
         $relativePath = [string]$fileProperty.Name
@@ -1137,7 +1161,7 @@ function Commit-And-Push {{
         throw "git diff failed with exit code $diffExitCode."
     }}
     Confirm-Publish "Review the status and diff summary for branch '$TargetBranch'."
-    Invoke-Native "git" @("commit", "-m", "Update generated Shade-GIS deployment")
+    Invoke-Native "git" @("commit", "-m", $CommitMessage)
     if (-not $SkipPush) {{
         Invoke-Native "git" @("push", "origin", $TargetBranch)
     }}
@@ -1231,9 +1255,14 @@ Write-Host "Created and published repository $RepositoryName on branch $Branch."
 """
 
 
-def build_github_deploy_bundle(repo_name: str, deploy_mode: str = "existing") -> bytes:
+def build_github_deploy_bundle(
+    repo_name: str,
+    deploy_mode: str = "existing",
+    commit_message: str = DEFAULT_DEPLOY_COMMIT_MESSAGE,
+) -> bytes:
     if deploy_mode not in {"create", "existing"}:
         raise ValueError("deploy_mode must be 'create' or 'existing'")
+    commit_message = normalize_deploy_commit_message(commit_message)
     stops = st.session_state["stops"].copy()
     stops["priority_score"] = calculate_priority_scores(stops, st.session_state["visualization"]["priority_weights"])
     config_json = study_config_json()
@@ -1254,7 +1283,7 @@ def build_github_deploy_bundle(repo_name: str, deploy_mode: str = "existing") ->
         ".gitignore": (
             "__pycache__/\n*.pyc\n*.sqlite3\n.streamlit/secrets.toml\n_shade_gis_publish_*/\n"
         ).encode("utf-8"),
-        "deploy_to_github.ps1": deploy_script(repo_name).encode("utf-8"),
+        "deploy_to_github.ps1": deploy_script(repo_name, commit_message).encode("utf-8"),
     }
     if not raw_labels.empty:
         files["shade_study_raw_labels.csv"] = raw_labels.to_csv(index=False).encode("utf-8")
@@ -1266,6 +1295,7 @@ def build_github_deploy_bundle(repo_name: str, deploy_mode: str = "existing") ->
         "project_name": str(st.session_state["project"].get("name", "Shade Study")),
         "repository": repo_name.strip().removesuffix(".git"),
         "deploy_mode": deploy_mode,
+        "commit_message": commit_message,
         "entrypoint": streamlit_entrypoint_path(deploy_mode),
         "files": file_hashes,
     }
@@ -1282,6 +1312,7 @@ def build_github_deploy_bundle(repo_name: str, deploy_mode: str = "existing") ->
         st.session_state["project"],
         deploy_mode,
         bundle_name=bundle_name,
+        commit_message=commit_message,
     ).encode("utf-8")
 
     buffer = io.BytesIO()

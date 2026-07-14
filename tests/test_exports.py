@@ -61,7 +61,11 @@ def test_export_csv_geojson_raw_labels_and_config(db_path, project, taxonomy, me
     assert config["taxonomy"][0]["name"] == taxonomy[0]["name"]
     assert config["import_log"][0]["rows"] == 2
 
-    bundle_bytes = build_github_deploy_bundle("owner/test-shade-study")
+    commit_message = "Publish July field review"
+    bundle_bytes = build_github_deploy_bundle(
+        "owner/test-shade-study",
+        commit_message=commit_message,
+    )
     with zipfile.ZipFile(io.BytesIO(bundle_bytes)) as bundle:
         bundle_names = set(bundle.namelist())
         assert "public_voting.py" in bundle_names
@@ -79,9 +83,15 @@ def test_export_csv_geojson_raw_labels_and_config(db_path, project, taxonomy, me
         assert manifest["schema_version"] == 1
         assert manifest["repository"] == "owner/test-shade-study"
         assert manifest["deploy_mode"] == "existing"
+        assert manifest["commit_message"] == commit_message
         assert manifest["entrypoint"] == "preview_app/app.py"
         assert manifest["files"]["app.py"] == hashlib.sha256(bundle.read("app.py")).hexdigest()
         assert f"test-shade-study-{manifest['bundle_id'][:12]}.zip" in bundle_readme
+        assert "$CommitMessage = 'Publish July field review'" in bundle_readme
+        assert '-CommitMessage $CommitMessage' in bundle_readme
+        assert 'Invoke-Native "git" @("commit", "-m", $CommitMessage)' in bundle.read(
+            "deploy_to_github.ps1"
+        ).decode("utf-8")
         deployed_config = json.loads(bundle.read("shade_study_config.json"))
         assert deployed_config["visualization"]["voting"]["enabled"] is False
         assert deployed_config["visualization"]["voting"]["options"] == [
@@ -204,14 +214,14 @@ def test_deploy_script_supports_existing_private_repositories():
 
 
 def test_deploy_script_stages_changes_and_only_reports_success_after_push():
-    script = deploy_script("owner/private-shade-study")
+    script = deploy_script("owner/private-shade-study", "Publish July field review")
 
     stage_files = script.index('$existingPaths = @($Paths | Where-Object { Test-Path $_ })')
     stage_command = script.index('& git add -- $existingPaths')
     status_after_staging = script.index('Write-Host "Repository status after staging:"')
     staged_summary = script.index('Write-Host "Staged diff summary:"')
     diff_check = script.index('& git diff --cached --quiet')
-    commit = script.index('Invoke-Native "git" @("commit", "-m", "Update generated Shade-GIS deployment")')
+    commit = script.index('Invoke-Native "git" @("commit", "-m", $CommitMessage)')
     push = script.index('Invoke-Native "git" @("push", "origin", $TargetBranch)')
     status_after_publish = script.index('Write-Host "Repository status after commit/push:"')
     conditional_success = script.index('if ($publishedChanges)')
@@ -230,6 +240,8 @@ def test_deploy_script_stages_changes_and_only_reports_success_after_push():
     assert 'Existing repository already matches the generated deployment; nothing was pushed.' in script
     assert 'Invoke-Native "git" @("status", "--short", "--branch")' in script
     assert "function Assert-DeploymentBundle" in script
+    assert "[string]$CommitMessage = 'Publish July field review'" in script
+    assert "[string]$manifest.commit_message -ne $CommitMessage" in script
     assert 'Get-FileHash -LiteralPath $relativePath -Algorithm SHA256' in script
     assert 'throw "This bundle targets' in script
     assert "Assert-DeploymentBundle" in script
@@ -262,6 +274,7 @@ def test_deploy_launcher_is_one_guarded_block_with_bundle_discovery():
         "owner/private-shade-study",
         branch="release",
         deploy_mode="existing",
+        commit_message="Publish July field review",
     )
 
     assert script.startswith("& {")
@@ -271,6 +284,7 @@ def test_deploy_launcher_is_one_guarded_block_with_bundle_discovery():
     assert '$BundlePath = ""' in script
     assert "$RepositoryName = 'owner/private-shade-study'" in script
     assert "$Branch = 'release'" in script
+    assert "$CommitMessage = 'Publish July field review'" in script
     assert "[string]::IsNullOrWhiteSpace($RepositoryName)" in script
     assert '$DocumentsDirectory = [Environment]::GetFolderPath("MyDocuments")' in script
     assert 'if ($env:OneDrive) { Join-Path $env:OneDrive "Downloads" }' in script
@@ -293,6 +307,7 @@ def test_deploy_launcher_is_one_guarded_block_with_bundle_discovery():
     assert '\n        gh repo view $RepositoryName --json nameWithOwner' in script
     assert '\n        & $DeployScript.FullName `' in script
     assert '-Mode existing `' in script
+    assert '-CommitMessage $CommitMessage' in script
 
 
 def test_deploy_launcher_preserves_public_create_safeguard():
@@ -325,8 +340,11 @@ def test_deploy_page_requires_destination_settings_before_publishing():
     assert 'key="deploy_github_username"' in source
     assert '"Destination repository"' in source
     assert 'key="deploy_destination_repository"' in source
+    assert '"Commit message"' in source
+    assert 'key="deploy_commit_message"' in source
     assert 'st.session_state.setdefault("deploy_github_username", "")' in source
     assert 'st.session_state.setdefault("deploy_destination_repository", "")' in source
+    assert 'st.session_state.setdefault("deploy_commit_message", DEFAULT_DEPLOY_COMMIT_MESSAGE)' in source
     assert 'repository = f"{username}/{destination}" if username and destination else ""' in source
     assert '"Repository address"' not in source
     assert "Visibility can only be selected when Shade-GIS creates a new repository." in source
@@ -359,7 +377,11 @@ def test_deploy_page_requires_destination_settings_before_publishing():
 
 
 def test_deploy_readme_documents_existing_private_repo_flow(project):
-    readme = deploy_readme("owner/private-shade-study", project)
+    readme = deploy_readme(
+        "owner/private-shade-study",
+        project,
+        commit_message="Publish July field review",
+    )
 
     assert "After Downloading The Zip" in readme
     assert "By default, your browser should save the content-addressed bundle" in readme
@@ -376,6 +398,8 @@ def test_deploy_readme_documents_existing_private_repo_flow(project):
     assert "not found anywhere inside it" in readme
     assert "gh auth status" in readme
     assert 'gh repo view $RepositoryName --json nameWithOwner' in readme
+    assert "$CommitMessage = 'Publish July field review'" in readme
+    assert "-CommitMessage 'Publish July field review'" in readme
     assert "Could not resolve to a Repository" in readme
     assert '-Mode create -RepositoryName "owner/private-shade-study"' in readme
     assert '-Mode existing -RepositoryName "owner/private-shade-study" -Branch "main"' in readme

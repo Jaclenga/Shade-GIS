@@ -21,6 +21,7 @@ from builder_app import (
     slugify_repo_name,
 )
 from shade_gis.deployment import (
+    DEFAULT_DEPLOY_COMMIT_MESSAGE,
     STREAMLIT_WORKSPACE_URL,
     DeploymentTarget,
     PublishResult,
@@ -29,6 +30,7 @@ from shade_gis.deployment import (
     detect_deployment_target,
     github_repository_url,
     normalize_public_url,
+    normalize_deploy_commit_message,
     public_url_from_sources,
     publish_website,
     repository_has_published_app,
@@ -252,6 +254,7 @@ def _initialize_target_state(detected: DeploymentTarget, project: dict) -> None:
     st.session_state.setdefault("deploy_github_username", "")
     st.session_state.setdefault("deploy_destination_repository", "")
     st.session_state.setdefault("deploy_branch", detected.branch or "main")
+    st.session_state.setdefault("deploy_commit_message", DEFAULT_DEPLOY_COMMIT_MESSAGE)
     st.session_state.setdefault("deploy_mode", "existing" if detected.repository else "create")
     st.session_state.setdefault(
         "deploy_visibility", "public" if project.get("visibility") == "Public" else "private"
@@ -277,6 +280,9 @@ def _current_target(detected: DeploymentTarget, project: dict) -> DeploymentTarg
         mode=mode,
         visibility=str(st.session_state.get("deploy_visibility", "private")),
         public_url=public_url,
+        commit_message=normalize_deploy_commit_message(
+            st.session_state.get("deploy_commit_message")
+        ),
         detected=detected.detected and repository == detected.repository,
     )
     if not target.public_url and target.repository:
@@ -339,6 +345,7 @@ def _render_technical_details(target: DeploymentTarget, result: PublishResult | 
             "branch": target.branch,
             "mode": target.mode,
             "entrypoint": target.entrypoint,
+            "commit_message": target.commit_message,
             "public_url": target.public_url,
             "bundle_files": bundle_file_count(bundle_data),
         }
@@ -437,6 +444,11 @@ def _render_settings(
             help="Required. Enter the repository name only.",
         )
         st.text_input("Default branch", key="deploy_branch")
+        st.text_input(
+            "Commit message",
+            key="deploy_commit_message",
+            help="Used for the Git commit created when this website is published.",
+        )
         st.selectbox(
             "Repository visibility",
             options=["private", "public"],
@@ -479,6 +491,7 @@ def _render_settings(
                     target.branch,
                     target.mode,
                     target.visibility,
+                    target.commit_message,
                 ),
                 language="powershell",
             )
@@ -518,7 +531,11 @@ def render_deploy_page() -> None:
             bundle_error = freshness_issue
         else:
             try:
-                bundle_data = build_github_deploy_bundle(target.repository, target.mode)
+                bundle_data = build_github_deploy_bundle(
+                    target.repository,
+                    target.mode,
+                    target.commit_message,
+                )
             except Exception as exc:  # Builder validation errors are converted into one actionable readiness issue.
                 bundle_error = str(exc).splitlines()[0] or "The project could not be prepared for publishing."
     readiness = deployment_readiness(stops.empty, target, bundle_error)

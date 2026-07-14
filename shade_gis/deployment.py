@@ -37,6 +37,11 @@ CREATED_REPOSITORY_FILES = (
     ".gitignore",
     ".streamlit/config.toml",
 )
+DEFAULT_DEPLOY_COMMIT_MESSAGE = "Publish Shade-GIS website update"
+
+
+def normalize_deploy_commit_message(value: object) -> str:
+    return str(value or "").strip() or DEFAULT_DEPLOY_COMMIT_MESSAGE
 
 
 @dataclass(frozen=True)
@@ -59,6 +64,7 @@ class DeploymentTarget:
     mode: str = "existing"
     visibility: str = "private"
     public_url: str = ""
+    commit_message: str = DEFAULT_DEPLOY_COMMIT_MESSAGE
     detected: bool = False
 
     @property
@@ -365,6 +371,12 @@ def validate_deployment_bundle(bundle_data: bytes, target: DeploymentTarget) -> 
             f"This package was created for {manifest.get('deploy_mode') or 'an unknown'} deployment mode, "
             f"not {target.mode}. Create a fresh package."
         )
+    expected_commit_message = normalize_deploy_commit_message(target.commit_message)
+    if manifest.get("commit_message") != expected_commit_message:
+        raise RuntimeError(
+            "This package was created with a different commit message. "
+            "Create a fresh package using the current deployment settings."
+        )
     file_hashes = manifest.get("files")
     if not isinstance(file_hashes, dict) or not file_hashes:
         raise RuntimeError("The deployment package manifest contains no file hashes.")
@@ -440,7 +452,7 @@ def _publish_existing(
         raise RuntimeError(diff.output or "Shade-GIS could not inspect the prepared website update.")
     _ensure_commit_identity(worktree, logs, runner)
     _checked(
-        ["git", "commit", "-m", "Publish Shade-GIS website update"],
+        ["git", "commit", "-m", normalize_deploy_commit_message(target.commit_message)],
         worktree,
         logs,
         runner,
@@ -466,7 +478,12 @@ def _publish_created(
     _ensure_commit_identity(worktree, logs, runner)
     _checked(["git", "add", "--", *CREATED_REPOSITORY_FILES], worktree, logs, runner)
     _checked(["git", "status", "--short", "--branch"], worktree, logs, runner)
-    _checked(["git", "commit", "-m", "Publish Shade-GIS website"], worktree, logs, runner)
+    _checked(
+        ["git", "commit", "-m", normalize_deploy_commit_message(target.commit_message)],
+        worktree,
+        logs,
+        runner,
+    )
     _checked(
         [
             "gh",

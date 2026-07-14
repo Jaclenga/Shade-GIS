@@ -12,6 +12,7 @@ from pathlib import Path
 import pytest
 
 from shade_gis.deployment import (
+    DEFAULT_DEPLOY_COMMIT_MESSAGE,
     CommandResult,
     DeploymentTarget,
     deployment_readiness,
@@ -32,7 +33,7 @@ def deployment_tmp():
         shutil.rmtree(directory, ignore_errors=True)
 
 
-def _bundle_bytes() -> bytes:
+def _bundle_bytes(commit_message: str = DEFAULT_DEPLOY_COMMIT_MESSAGE) -> bytes:
     files = {
         "app.py": b"print('published')\n",
         "public_voting.py": b"VOTING = True\n",
@@ -46,6 +47,7 @@ def _bundle_bytes() -> bytes:
         "project_name": "Test study",
         "repository": "owner/study",
         "deploy_mode": "existing",
+        "commit_message": commit_message,
         "entrypoint": "preview_app/app.py",
         "files": {name: hashlib.sha256(content).hexdigest() for name, content in files.items()},
     }
@@ -94,6 +96,20 @@ def test_publish_rejects_tampered_bundle_before_git_runs():
     assert "app.py does not match its manifest hash" in result.message
 
 
+def test_publish_rejects_bundle_with_a_different_commit_message():
+    result = publish_website(
+        _bundle_bytes(),
+        DeploymentTarget(
+            repository="owner/study",
+            repository_url="https://github.com/owner/study",
+            commit_message="Publish July field review",
+        ),
+    )
+
+    assert result.success is False
+    assert "different commit message" in result.message
+
+
 def test_detect_deployment_target_uses_origin_and_remote_default_branch(deployment_tmp):
     tmp_path = deployment_tmp
     responses = {
@@ -131,6 +147,7 @@ def test_publish_and_unpublish_existing_repository_automatically(deployment_tmp,
         repository_url="https://github.com/owner/study.git",
         branch="main",
         mode="existing",
+        commit_message="Publish July field review",
     )
     stages: list[str] = []
     observed: dict[str, object] = {"published": False, "pushes": 0, "statuses": 0}
@@ -178,6 +195,9 @@ def test_publish_and_unpublish_existing_repository_automatically(deployment_tmp,
             observed["published"] = not bool(observed["published"])
             observed["pushes"] = int(observed["pushes"]) + 1
             return CommandResult(0)
+        if command[:2] == ("git", "commit"):
+            observed["commit_message"] = args[3]
+            return CommandResult(0)
         if command == ("git", "status", "--short", "--branch"):
             observed["statuses"] = int(observed["statuses"]) + 1
             return CommandResult(0, stdout="## main...origin/main")
@@ -186,7 +206,7 @@ def test_publish_and_unpublish_existing_repository_automatically(deployment_tmp,
         return CommandResult(0)
 
     result = publish_website(
-        _bundle_bytes(),
+        _bundle_bytes(target.commit_message),
         target,
         progress=lambda stage, _message: stages.append(stage),
         runner=fake_runner,
@@ -202,6 +222,7 @@ def test_publish_and_unpublish_existing_repository_automatically(deployment_tmp,
     assert observed["app"] == "print('published')\n"
     assert observed["readme"] == "existing repository\n"
     assert observed["manifest"] is True
+    assert observed["commit_message"] == "Publish July field review"
     assert observed["statuses"] == 2
 
     unpublished = unpublish_website(target, runner=fake_runner)

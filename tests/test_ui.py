@@ -462,6 +462,9 @@ def test_builder_navigation_pages_render(playwright_api, streamlit_server: Strea
                     playwright_api.expect(username_input).to_have_value("")
                     playwright_api.expect(repository_input).to_have_value("")
                     playwright_api.expect(page.get_by_label("Default branch", exact=True)).to_have_value("main")
+                    playwright_api.expect(page.get_by_label("Commit message", exact=True)).to_have_value(
+                        "Publish Shade-GIS website update"
+                    )
                     username_input.fill("Jaclenga")
                     username_input.press("Tab")
                     wait_for_streamlit_idle(playwright_api, page, streamlit_server)
