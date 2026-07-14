@@ -6,6 +6,7 @@ import json
 import pandas as pd
 
 import published_app
+from shade_gis.pages import visuals_page
 from shade_gis.builder_visuals import (
     DEFAULT_VISUALIZATION,
     LEGACY_DEFAULT_METRIC_CARDS,
@@ -16,6 +17,31 @@ from shade_gis.builder_visuals import (
     migrate_legacy_analytics_config,
     selected_dashboard_sections,
 )
+
+
+def test_session_backed_color_picker_uses_only_session_state_for_default(monkeypatch):
+    calls = []
+
+    class FakeStreamlit:
+        session_state = {}
+
+        @staticmethod
+        def color_picker(*args, **kwargs):
+            calls.append((args, kwargs))
+            return FakeStreamlit.session_state[kwargs["key"]]
+
+    monkeypatch.setattr(visuals_page, "st", FakeStreamlit)
+
+    selected = visuals_page.session_backed_color_picker("No Shade", "#dc143c", "shade_color_0")
+    FakeStreamlit.session_state["shade_color_0"] = "#123456"
+    selected_again = visuals_page.session_backed_color_picker("No Shade", "#dc143c", "shade_color_0")
+
+    assert selected == "#dc143c"
+    assert selected_again == "#123456"
+    assert calls == [
+        (("No Shade",), {"key": "shade_color_0"}),
+        (("No Shade",), {"key": "shade_color_0"}),
+    ]
 
 
 def test_public_voting_is_off_by_default_but_fully_configured():

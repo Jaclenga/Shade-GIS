@@ -1,5 +1,13 @@
 from builder_app import *
 
+
+def session_backed_color_picker(label: str, default: Any, key: str) -> str:
+    """Initialize a keyed color once without also passing a widget default."""
+    if key not in st.session_state:
+        st.session_state[key] = normalize_hex_color(default)
+    return st.color_picker(label, key=key)
+
+
 def render_palette_controls(
     visualization: dict[str, Any],
     stops: pd.DataFrame,
@@ -30,7 +38,7 @@ def render_palette_controls(
         for index, item in enumerate(taxonomy):
             name = str(item.get("name", "")).strip() or f"Category {index + 1}"
             with grid[index % 2]:
-                item["color"] = st.color_picker(
+                item["color"] = session_backed_color_picker(
                     name,
                     normalize_hex_color(item.get("color", "#808080")),
                     key=f"shade_color_{index}",
