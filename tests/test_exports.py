@@ -340,8 +340,10 @@ def test_deploy_page_requires_destination_settings_before_publishing():
     assert 'st.expander("Settings", expanded=expanded)' in source
     assert '"GitHub username"' in source
     assert 'key="deploy_github_username"' in source
+    assert 'placeholder="github-user"' in source
     assert '"Destination repository"' in source
     assert 'key="deploy_destination_repository"' in source
+    assert 'placeholder="shade-study-site"' in source
     assert '"Commit message"' in source
     assert 'key="deploy_commit_message"' in source
     assert 'st.session_state.setdefault("deploy_github_username", "")' in source

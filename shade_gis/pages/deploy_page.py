@@ -432,13 +432,13 @@ def _render_settings(
         st.text_input(
             "GitHub username",
             key="deploy_github_username",
-            placeholder="Jaclenga",
+            placeholder="github-user",
             help="Required. Enter the GitHub account or organization that owns the repository.",
         )
         st.text_input(
             "Destination repository",
             key="deploy_destination_repository",
-            placeholder="Shade-GIS",
+            placeholder="shade-study-site",
             help="Required. Enter the repository name only.",
         )
         st.text_input("Default branch", key="deploy_branch")

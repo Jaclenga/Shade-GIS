@@ -62,6 +62,10 @@ def _bundle_bytes(commit_message: str = DEFAULT_DEPLOY_COMMIT_MESSAGE) -> bytes:
     return output.getvalue()
 
 
+def test_default_deploy_commit_message_is_generic():
+    assert DEFAULT_DEPLOY_COMMIT_MESSAGE == "Publish website update"
+
+
 def test_github_repository_slug_supports_detected_remote_formats():
     assert github_repository_slug("https://github.com/owner/study.git") == "owner/study"
     assert github_repository_slug("git@github.com:owner/study.git") == "owner/study"

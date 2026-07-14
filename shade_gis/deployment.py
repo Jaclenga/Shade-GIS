@@ -37,7 +37,7 @@ CREATED_REPOSITORY_FILES = (
     ".gitignore",
     ".streamlit/config.toml",
 )
-DEFAULT_DEPLOY_COMMIT_MESSAGE = "Publish Shade-GIS website update"
+DEFAULT_DEPLOY_COMMIT_MESSAGE = "Publish website update"
 
 
 def normalize_deploy_commit_message(value: object) -> str:
