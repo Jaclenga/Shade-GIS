@@ -235,6 +235,9 @@ def test_deploy_script_supports_existing_private_repositories():
     assert '$rootDataItems = @(' in script
     assert 'Write-Host "Updating generated root data file: $item"' in script
     assert '$rootRawLabels = Join-Path $Destination "shade_study_raw_labels.csv"' in script
+    assert "function Test-LegacyRootPublishedApp" in script
+    assert '$refreshLegacyRootRuntime = Test-LegacyRootPublishedApp' in script
+    assert 'Write-Host "Updated active legacy root runtime: $item"' in script
     assert '$previewDirectory = Join-Path $Destination "preview_app"' in script
     assert '$destinationPath = Join-Path $previewDirectory $item' in script
     assert '$existingPublishFiles = @(\n        "preview_app",' in script
@@ -456,7 +459,8 @@ def test_deploy_readme_documents_existing_private_repo_flow(project):
     assert "SHADE_GIS_VOTE_DATABASE_URL" in readme
     assert "local SQLite fallback" in readme
     assert "only the public preview" in readme
-    assert "root app and Shade-GIS builder source untouched" in readme
+    assert "protects a repository-root Shade-GIS builder" in readme
+    assert "upgrades that active runtime in place" in readme
     assert "refreshes the generated" in readme
     assert "`shade_study_stops.csv`, `shade_study_raw_labels.csv`, and `shade_study_config.json`" in readme
     assert "main file path: `preview_app/app.py`" in readme

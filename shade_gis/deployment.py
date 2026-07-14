@@ -35,6 +35,11 @@ EXISTING_ROOT_DATA_FILES = (
     "shade_study_raw_labels.csv",
     "shade_study_config.json",
 )
+EXISTING_ROOT_RUNTIME_FILES = (
+    "app.py",
+    "public_voting.py",
+    "requirements.txt",
+)
 CREATED_REPOSITORY_FILES = (
     *EXISTING_BUNDLE_FILES,
     "README.md",
@@ -431,6 +436,25 @@ def _ensure_commit_identity(worktree: Path, logs: list[str], runner: CommandRunn
         )
 
 
+def repository_root_uses_legacy_published_app(worktree: Path) -> bool:
+    """Recognize the old generated root runtime without touching a builder entrypoint."""
+    app_path = worktree / "app.py"
+    if not app_path.is_file():
+        return False
+    try:
+        source = app_path.read_text(encoding="utf-8", errors="replace").lower()
+    except OSError:
+        return False
+    builder_markers = (
+        "from builder_app import",
+        "import builder_app",
+        "builder_app.main",
+    )
+    if any(marker in source for marker in builder_markers):
+        return False
+    return "shade_study_config.json" in source and "shade_study_stops.csv" in source
+
+
 def _publish_existing(
     bundle_data: bytes,
     target: DeploymentTarget,
@@ -446,10 +470,18 @@ def _publish_existing(
         runner,
         180,
     )
+    refresh_legacy_root_runtime = repository_root_uses_legacy_published_app(worktree)
     _write_bundle_files(bundle_data, worktree / EXISTING_PREVIEW_DIR, EXISTING_BUNDLE_FILES)
     _write_bundle_files(bundle_data, worktree, EXISTING_ROOT_DATA_FILES)
+    staged_paths = [EXISTING_PREVIEW_DIR, *EXISTING_ROOT_DATA_FILES]
+    if refresh_legacy_root_runtime:
+        _write_bundle_files(bundle_data, worktree, EXISTING_ROOT_RUNTIME_FILES)
+        staged_paths.extend(EXISTING_ROOT_RUNTIME_FILES)
+        logs.append(
+            "Detected a legacy generated root public app and refreshed its active runtime."
+        )
     _checked(
-        ["git", "add", "--", EXISTING_PREVIEW_DIR, *EXISTING_ROOT_DATA_FILES],
+        ["git", "add", "--", *staged_paths],
         worktree,
         logs,
         runner,

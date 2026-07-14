@@ -139,8 +139,9 @@ def deploy_readme(
     else:
         publish_intro = "publish into the target repository used for this bundle"
         published_layout = (
-            f"The helper installs the public preview under `{EXISTING_REPO_PREVIEW_DIR}/` and leaves the "
-            "repository's root app and Shade-GIS builder source untouched. It also refreshes the generated "
+            f"The helper installs the public preview under `{EXISTING_REPO_PREVIEW_DIR}/` and protects a "
+            "repository-root Shade-GIS builder. If the root app is an older generated public runtime, the "
+            "helper upgrades that active runtime in place. It also refreshes the generated "
             "`shade_study_stops.csv`, `shade_study_raw_labels.csv`, and `shade_study_config.json` snapshots "
             "at the repository root."
         )

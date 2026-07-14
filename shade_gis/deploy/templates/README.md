@@ -73,7 +73,7 @@ Before committing, the script prints `git status`, `git diff --stat`, and a stag
 
 For a new repository, the helper initializes Git in the extracted bundle, stages only generated app files, commits those files, creates the GitHub repository, and pushes the branch. Public repository creation is blocked unless you explicitly add `-AllowPublicTarget`.
 
-For an existing private repository, the helper verifies repository visibility when it can, clones the target repository into a temporary `_shade_gis_publish_*` folder under PowerShell's temp path, checks out the requested branch, copies only generated app/runtime files into `preview_app/`, commits any changes, pushes back to GitHub, and cleans up the temporary folder. Your existing repository history and root app are preserved. Protected files such as `.git/`, `.github/`, `.streamlit/`, `README.md`, `LICENSE`, `.env*`, and `secrets.toml` are not copied in existing-repository mode.
+For an existing private repository, the helper verifies repository visibility when it can, clones the target repository into a temporary `_shade_gis_publish_*` folder under PowerShell's temp path, checks out the requested branch, copies generated app/runtime files into `preview_app/`, commits any changes, pushes back to GitHub, and cleans up the temporary folder. A legacy generated public app already hosted from root `app.py` is upgraded in place so its active Streamlit entrypoint cannot remain stale; a Shade-GIS builder root entrypoint is explicitly protected. Other protected files such as `.git/`, `.github/`, `.streamlit/`, `README.md`, `LICENSE`, `.env*`, and `secrets.toml` are not copied in existing-repository mode.
 
 ## Run Locally
 

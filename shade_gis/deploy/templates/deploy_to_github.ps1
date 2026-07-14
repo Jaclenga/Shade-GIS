@@ -158,9 +158,23 @@ function Show-ProtectedFileWarnings {
     }
 }
 
+function Test-LegacyRootPublishedApp {
+    param([string]$Destination)
+    $rootApp = Join-Path $Destination "app.py"
+    if (-not (Test-Path -LiteralPath $rootApp -PathType Leaf)) {
+        return $false
+    }
+    $source = Get-Content -LiteralPath $rootApp -Raw
+    if ($source -match '(?m)^\s*(from\s+builder_app\s+import|import\s+builder_app\b)' -or $source -match 'builder_app\.main') {
+        return $false
+    }
+    return $source.Contains("shade_study_config.json") -and $source.Contains("shade_study_stops.csv")
+}
+
 function Copy-SafeBundleFiles {
     param([string]$Destination)
     $previewDirectory = Join-Path $Destination "@@PREVIEW_DIRECTORY@@"
+    $refreshLegacyRootRuntime = Test-LegacyRootPublishedApp -Destination $Destination
     $items = @(
         "app.py",
         "public_voting.py",
@@ -210,6 +224,14 @@ function Copy-SafeBundleFiles {
     if (-not (Test-Path "shade_study_raw_labels.csv" -PathType Leaf) -and (Test-Path $rootRawLabels)) {
         Remove-Item -LiteralPath $rootRawLabels -Force
         Write-Host "Removed stale generated root data file: shade_study_raw_labels.csv"
+    }
+    if ($refreshLegacyRootRuntime) {
+        foreach ($item in @("app.py", "public_voting.py", "requirements.txt")) {
+            if (Test-Path $item -PathType Leaf) {
+                Copy-Item -LiteralPath $item -Destination (Join-Path $Destination $item) -Force
+                Write-Host "Updated active legacy root runtime: $item"
+            }
+        }
     }
 }
 
@@ -269,7 +291,10 @@ if ($Mode -eq "existing") {
         "@@PREVIEW_DIRECTORY@@",
         "shade_study_stops.csv",
         "shade_study_raw_labels.csv",
-        "shade_study_config.json"
+        "shade_study_config.json",
+        "app.py",
+        "public_voting.py",
+        "requirements.txt"
     )
     try {
         if ($RepositoryUrl.Trim() -or $RepositoryName -match "^https?://") {

@@ -19,6 +19,7 @@ from shade_gis.deployment import (
     detect_deployment_target,
     github_repository_slug,
     publish_website,
+    repository_root_uses_legacy_published_app,
     unpublish_website,
 )
 
@@ -118,6 +119,25 @@ def test_github_repository_slug_supports_detected_remote_formats():
     assert github_repository_slug("git@github.com:owner/study.git") == "owner/study"
     assert github_repository_slug("owner/study") == "owner/study"
     assert github_repository_slug("https://example.com/owner/study") == ""
+
+
+def test_legacy_root_runtime_detection_protects_builder_entrypoint(deployment_tmp):
+    legacy_root = deployment_tmp / "legacy"
+    legacy_root.mkdir()
+    (legacy_root / "app.py").write_text(
+        'CONFIG_PATH = APP_DIR / "shade_study_config.json"\n'
+        'DATA_PATH = APP_DIR / "shade_study_stops.csv"\n',
+        encoding="utf-8",
+    )
+    builder_root = deployment_tmp / "builder"
+    builder_root.mkdir()
+    (builder_root / "app.py").write_text(
+        "from builder_app import main\n\nmain()\n",
+        encoding="utf-8",
+    )
+
+    assert repository_root_uses_legacy_published_app(legacy_root) is True
+    assert repository_root_uses_legacy_published_app(builder_root) is False
 
 
 def test_publish_rejects_bundle_for_another_repository_before_git_runs():
@@ -223,6 +243,14 @@ def test_publish_and_unpublish_existing_repository_automatically(deployment_tmp,
             worktree = Path(args[-1])
             worktree.mkdir(parents=True)
             (worktree / "README.md").write_text("existing repository\n", encoding="utf-8")
+            (worktree / "app.py").write_text(
+                'CONFIG_PATH = APP_DIR / "shade_study_config.json"\n'
+                'DATA_PATH = APP_DIR / "shade_study_stops.csv"\n'
+                "render_metric_cards(visible_stops)\n",
+                encoding="utf-8",
+            )
+            (worktree / "public_voting.py").write_text("OLD_VOTING = True\n", encoding="utf-8")
+            (worktree / "requirements.txt").write_text("streamlit<1\n", encoding="utf-8")
             (worktree / "shade_study_stops.csv").write_text("stop_id\nold\n", encoding="utf-8")
             if observed["published"]:
                 preview = worktree / "preview_app"
@@ -242,6 +270,9 @@ def test_publish_and_unpublish_existing_repository_automatically(deployment_tmp,
             )
             observed["root_data"] = (Path(cwd) / "shade_study_stops.csv").read_text(encoding="utf-8")
             observed["root_config"] = (Path(cwd) / "shade_study_config.json").read_text(encoding="utf-8")
+            observed["root_app"] = (Path(cwd) / "app.py").read_text(encoding="utf-8")
+            observed["root_voting"] = (Path(cwd) / "public_voting.py").read_text(encoding="utf-8")
+            observed["root_requirements"] = (Path(cwd) / "requirements.txt").read_text(encoding="utf-8")
             observed["readme"] = (Path(cwd) / "README.md").read_text(encoding="utf-8")
             observed["manifest"] = (Path(cwd) / "preview_app" / "deployment_manifest.json").exists()
             return CommandResult(0)
@@ -280,10 +311,14 @@ def test_publish_and_unpublish_existing_repository_automatically(deployment_tmp,
     assert observed["data"] == "stop_id\n1001\n"
     assert observed["root_data"] == "stop_id\n1001\n"
     assert observed["root_config"] == "{}"
+    assert observed["root_app"] == "print('published')\n"
+    assert observed["root_voting"] == "VOTING = True\n"
+    assert observed["root_requirements"] == "streamlit\n"
     assert observed["readme"] == "existing repository\n"
     assert observed["manifest"] is True
     assert observed["commit_message"] == "Publish July field review"
     assert observed["statuses"] == 2
+    assert any("refreshed its active runtime" in log for log in result.logs)
 
     unpublished = unpublish_website(target, runner=fake_runner)
 
