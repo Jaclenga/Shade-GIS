@@ -23,6 +23,53 @@ from shade_gis.deployment import (
 )
 
 
+def test_deploy_page_restores_and_remembers_settings_per_project(monkeypatch):
+    from shade_gis.pages import deploy_page
+
+    session_state = {"active_project_id": "project-one"}
+    monkeypatch.setattr(
+        deploy_page.st,
+        "session_state",
+        session_state,
+    )
+    project = {
+        "visibility": "Private",
+        "deployment": {
+            "github_username": "saved-owner",
+            "destination_repository": "saved-site",
+            "branch": "release",
+            "commit_message": "Publish saved settings",
+            "mode": "existing",
+            "visibility": "private",
+            "public_url": "https://saved-site.streamlit.app",
+        },
+    }
+    detected = DeploymentTarget(branch="main")
+
+    deploy_page._initialize_target_state(detected, project)
+
+    assert session_state["deploy_github_username"] == "saved-owner"
+    assert session_state["deploy_destination_repository"] == "saved-site"
+    assert session_state["deploy_branch"] == "release"
+    target = DeploymentTarget(
+        repository="saved-owner/saved-site",
+        branch="release",
+        mode="existing",
+        visibility="private",
+        public_url="https://saved-site.streamlit.app",
+        commit_message="Publish saved settings",
+    )
+    deploy_page._remember_target_settings(project, target)
+    assert project["deployment"]["repository"] == "saved-owner/saved-site"
+
+    session_state["active_project_id"] = "project-two"
+    deploy_page._initialize_target_state(detected, {"visibility": "Public"})
+    assert session_state["deploy_github_username"] == ""
+    assert session_state["deploy_destination_repository"] == ""
+    assert session_state["deploy_branch"] == "main"
+    assert session_state["deploy_visibility"] == "public"
+
+
 @pytest.fixture
 def deployment_tmp():
     directory = Path(".pytest-shade-deployment") / uuid.uuid4().hex
@@ -176,6 +223,7 @@ def test_publish_and_unpublish_existing_repository_automatically(deployment_tmp,
             worktree = Path(args[-1])
             worktree.mkdir(parents=True)
             (worktree / "README.md").write_text("existing repository\n", encoding="utf-8")
+            (worktree / "shade_study_stops.csv").write_text("stop_id\nold\n", encoding="utf-8")
             if observed["published"]:
                 preview = worktree / "preview_app"
                 preview.mkdir()
@@ -189,6 +237,11 @@ def test_publish_and_unpublish_existing_repository_automatically(deployment_tmp,
             return CommandResult(0, stdout="shade-gis-test@example.com")
         if command[:2] == ("git", "add"):
             observed["app"] = (Path(cwd) / "preview_app" / "app.py").read_text(encoding="utf-8")
+            observed["data"] = (Path(cwd) / "preview_app" / "shade_study_stops.csv").read_text(
+                encoding="utf-8"
+            )
+            observed["root_data"] = (Path(cwd) / "shade_study_stops.csv").read_text(encoding="utf-8")
+            observed["root_config"] = (Path(cwd) / "shade_study_config.json").read_text(encoding="utf-8")
             observed["readme"] = (Path(cwd) / "README.md").read_text(encoding="utf-8")
             observed["manifest"] = (Path(cwd) / "preview_app" / "deployment_manifest.json").exists()
             return CommandResult(0)
@@ -224,6 +277,9 @@ def test_publish_and_unpublish_existing_repository_automatically(deployment_tmp,
     assert result.verification_skipped is False
     assert stages == ["Check project", "Prepare website", "Publish", "Verify website"]
     assert observed["app"] == "print('published')\n"
+    assert observed["data"] == "stop_id\n1001\n"
+    assert observed["root_data"] == "stop_id\n1001\n"
+    assert observed["root_config"] == "{}"
     assert observed["readme"] == "existing repository\n"
     assert observed["manifest"] is True
     assert observed["commit_message"] == "Publish July field review"

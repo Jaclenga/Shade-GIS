@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS project_settings (
   project_id TEXT PRIMARY KEY REFERENCES projects(id) ON DELETE CASCADE,
   methodology_json JSONB NOT NULL DEFAULT '{}'::jsonb,
   visualization_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+  deployment_json JSONB NOT NULL DEFAULT '{}'::jsonb,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

@@ -287,6 +287,14 @@ def init_database(path: Path | None = None) -> Path:
     db_path = Path(path) if path is not None else database_path()
     with connect(db_path) as conn:
         conn.executescript(SQLITE_SCHEMA)
+        project_settings_columns = {
+            str(row[1]) for row in conn.execute("PRAGMA table_info(project_settings)").fetchall()
+        }
+        if "deployment_json" not in project_settings_columns:
+            conn.execute(
+                "ALTER TABLE project_settings ADD COLUMN deployment_json TEXT NOT NULL DEFAULT '{}'"
+            )
+        conn.commit()
     return db_path
 
 
@@ -632,7 +640,11 @@ def load_project_bundle(project_id: str, path: Path | None = None) -> dict[str, 
             raise KeyError(f"Project {project_id} was not found")
 
         settings_row = conn.execute(
-            "SELECT methodology_json, visualization_json FROM project_settings WHERE project_id = ?",
+            """
+            SELECT methodology_json, visualization_json, deployment_json
+            FROM project_settings
+            WHERE project_id = ?
+            """,
             (project_id,),
         ).fetchone()
         taxonomy_rows = conn.execute(
@@ -664,6 +676,7 @@ def load_project_bundle(project_id: str, path: Path | None = None) -> dict[str, 
         ).fetchall()
 
     project = {field: project_row[field] for field in PROJECT_FIELDS}
+    project["deployment"] = json.loads(settings_row["deployment_json"] or "{}") if settings_row else {}
     methodology = json.loads(settings_row["methodology_json"]) if settings_row else {}
     visualization = json.loads(settings_row["visualization_json"]) if settings_row else {}
     taxonomy = [dict(row) for row in taxonomy_rows]
@@ -725,6 +738,7 @@ def _save_project_bundle_once(
     init_database(path)
     now = utc_timestamp()
     project_values = {field: clean_scalar(project.get(field, "")) for field in PROJECT_FIELDS}
+    deployment = project.get("deployment") if isinstance(project.get("deployment"), dict) else {}
     if not project_values.get("name"):
         project_values["name"] = "Untitled Shade Study"
     if not project_values.get("visibility"):
@@ -772,17 +786,21 @@ def _save_project_bundle_once(
         )
         conn.execute(
             """
-            INSERT INTO project_settings (project_id, methodology_json, visualization_json, updated_at)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO project_settings (
+                project_id, methodology_json, visualization_json, deployment_json, updated_at
+            )
+            VALUES (?, ?, ?, ?, ?)
             ON CONFLICT(project_id) DO UPDATE SET
                 methodology_json = excluded.methodology_json,
                 visualization_json = excluded.visualization_json,
+                deployment_json = excluded.deployment_json,
                 updated_at = excluded.updated_at
             """,
             (
                 project_id,
                 json.dumps(methodology, ensure_ascii=True),
                 json.dumps(visualization, ensure_ascii=True),
+                json.dumps(clean_json_value(deployment), ensure_ascii=True),
                 now,
             ),
         )
@@ -973,6 +991,7 @@ CREATE TABLE IF NOT EXISTS project_settings (
     project_id TEXT PRIMARY KEY REFERENCES projects(id) ON DELETE CASCADE,
     methodology_json TEXT NOT NULL DEFAULT '{}',
     visualization_json TEXT NOT NULL DEFAULT '{}',
+    deployment_json TEXT NOT NULL DEFAULT '{}',
     updated_at TEXT NOT NULL
 );
 

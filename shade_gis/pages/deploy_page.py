@@ -44,11 +44,12 @@ DEPLOYMENT_SETTINGS_KEY = "deploy_page_show_settings"
 DEPLOYMENT_UNPUBLISH_KEY = "deploy_page_confirm_unpublish"
 DEPLOYMENT_UNPUBLISHED_KEY = "deploy_page_unpublished"
 DEPLOYMENT_STAGE_KEY = "deploy_page_stage"
+DEPLOYMENT_SESSION_PROJECT_KEY = "deploy_page_settings_project_id"
 STAGES = ("Check project", "Prepare website", "Publish", "Verify website")
 BUNDLE_FILE_CATALOG = [
     ("app.py", "Public website"),
     ("public_voting.py", "Optional visitor voting"),
-    ("shade_study_stops.csv", "Published stop data"),
+    ("shade_study_stops.csv", "Active imported dataset used by the public website"),
     ("shade_study_raw_labels.csv", "Published label history, when available"),
     ("shade_study_config.json", "Project display settings"),
     ("deployment_manifest.json", "Validated project snapshot and file hashes"),
@@ -249,15 +250,55 @@ def render_repository_success_card(repository: str, changed: bool) -> None:
 
 
 def _initialize_target_state(detected: DeploymentTarget, project: dict) -> None:
-    st.session_state.setdefault("deploy_github_username", "")
-    st.session_state.setdefault("deploy_destination_repository", "")
-    st.session_state.setdefault("deploy_branch", detected.branch or "main")
-    st.session_state.setdefault("deploy_commit_message", DEFAULT_DEPLOY_COMMIT_MESSAGE)
-    st.session_state.setdefault("deploy_mode", "existing" if detected.repository else "create")
-    st.session_state.setdefault(
-        "deploy_visibility", "public" if project.get("visibility") == "Public" else "private"
+    project_id = str(st.session_state.get("active_project_id") or "")
+    if st.session_state.get(DEPLOYMENT_SESSION_PROJECT_KEY) == project_id:
+        return
+
+    saved = project.get("deployment") if isinstance(project.get("deployment"), dict) else {}
+    saved_repository = str(saved.get("repository", "") or "").strip().strip("/")
+    saved_username = str(saved.get("github_username", "") or "").strip().strip("/")
+    saved_destination = str(saved.get("destination_repository", "") or "").strip().strip("/")
+    if saved_repository and "/" in saved_repository:
+        repository_username, repository_name = saved_repository.split("/", 1)
+        saved_username = saved_username or repository_username
+        saved_destination = saved_destination or repository_name
+
+    st.session_state["deploy_github_username"] = saved_username
+    st.session_state["deploy_destination_repository"] = saved_destination
+    st.session_state["deploy_branch"] = str(saved.get("branch", "") or detected.branch or "main")
+    st.session_state["deploy_commit_message"] = normalize_deploy_commit_message(
+        saved.get("commit_message")
     )
-    st.session_state.setdefault("deploy_public_url", detected.public_url)
+    saved_mode = str(saved.get("mode") or "")
+    default_mode = "existing" if detected.repository else "create"
+    st.session_state["deploy_mode"] = saved_mode if saved_mode in {"existing", "create"} else default_mode
+    saved_visibility = str(saved.get("visibility") or "")
+    st.session_state["deploy_visibility"] = (
+        saved_visibility
+        if saved_visibility in {"private", "public"}
+        else "public" if project.get("visibility") == "Public" else "private"
+    )
+    st.session_state["deploy_public_url"] = str(
+        saved.get("public_url") or detected.public_url or ""
+    )
+    st.session_state[DEPLOYMENT_SESSION_PROJECT_KEY] = project_id
+
+
+def _remember_target_settings(project: dict, target: DeploymentTarget) -> None:
+    username = str(st.session_state.get("deploy_github_username", "") or "").strip().strip("/")
+    destination = str(
+        st.session_state.get("deploy_destination_repository", "") or ""
+    ).strip().strip("/")
+    project["deployment"] = {
+        "github_username": username,
+        "destination_repository": destination,
+        "repository": f"{username}/{destination}" if username and destination else "",
+        "branch": target.branch,
+        "commit_message": target.commit_message,
+        "mode": target.mode,
+        "visibility": target.visibility,
+        "public_url": target.public_url,
+    }
 
 
 def _current_target(detected: DeploymentTarget, project: dict) -> DeploymentTarget:
@@ -423,6 +464,7 @@ def _render_settings(
     expanded = bool(st.session_state.pop(DEPLOYMENT_SETTINGS_KEY, False))
     with st.expander("Settings", expanded=expanded):
         st.caption("GitHub username and destination repository are required before publishing.")
+        st.caption("These settings save automatically with this project.")
         st.selectbox(
             "Publishing destination",
             options=["existing", "create"],
@@ -511,6 +553,7 @@ def render_deploy_page() -> None:
     if unpublished_notice:
         st.session_state["deploy_public_url"] = ""
         target = replace(target, public_url="")
+    _remember_target_settings(project, target)
 
     render_deploy_styles()
     st.title("Publish website")
@@ -665,7 +708,6 @@ def render_deploy_page() -> None:
                 st.session_state[DEPLOYMENT_SETTINGS_KEY] = True
                 st.rerun()
     else:
-        render_stages()
         with st.container(key="deploy_publish"):
             publish_clicked = st.button("Publish app", type="primary", width="stretch")
         st.markdown('<div class="deploy-estimate">This usually takes 1–3 minutes.</div>', unsafe_allow_html=True)

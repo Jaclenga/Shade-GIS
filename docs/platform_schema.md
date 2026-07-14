@@ -9,6 +9,9 @@ The builder uses a local SQLite database by default. On Windows, the database is
 other systems it falls back to `platform_data/shade_study_builder.sqlite3`. Set `SHADE_GIS_DB_PATH`
 to point the app at a different SQLite database file. The database stores multiple projects and
 treats Streamlit session state as a live editing cache, not the durable source of record.
+Deployment destination settings entered on the Deploy page are stored per project in
+`project_settings.deployment_json`; they are restored when that project is reopened and are not
+included in the generated public study configuration.
 
 If the preferred SQLite file can be read but not written, the builder marks that path unusable for
 the current process and retries against a writable user or temp fallback database. The active path is
@@ -19,7 +22,7 @@ The canonical relational shape is:
 | Entity | Purpose |
 | --- | --- |
 | `projects` | One row per shade study, including publication metadata and source metadata. |
-| `project_settings` | JSON methodology and visualization settings for each project. |
+| `project_settings` | JSON methodology, visualization, and deployment settings for each project. |
 | `shade_taxonomy` | Editable derived map category names, definitions, colors, and sort order. |
 | `stops` | Per-project stop records, priority scores, review fields, and extra imported columns. |
 | `shade_votes` | Deployed-app coverage votes and separate shade-source selections, isolated by study, stop, and browser-session voter ID. |

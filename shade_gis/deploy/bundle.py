@@ -63,6 +63,8 @@ def build_deployment_bundle(spec: DeploymentBundleSpec) -> bytes:
 
     if spec.deploy_mode not in {"create", "existing"}:
         raise ValueError("deploy_mode must be 'create' or 'existing'")
+    if spec.stops.empty:
+        raise ValueError("Import project data before creating a deployment package.")
 
     commit_message = normalize_deploy_commit_message(spec.commit_message)
     stops = spec.stops.copy()
@@ -93,6 +95,12 @@ def build_deployment_bundle(spec: DeploymentBundleSpec) -> bytes:
         "deploy_mode": spec.deploy_mode,
         "commit_message": commit_message,
         "entrypoint": streamlit_entrypoint_path(spec.deploy_mode),
+        "dataset": {
+            "file": "shade_study_stops.csv",
+            "rows": int(len(stops)),
+            "columns": [str(column) for column in stops.columns],
+            "sha256": file_hashes["shade_study_stops.csv"],
+        },
         "files": file_hashes,
     }
     bundle_id = hashlib.sha256(

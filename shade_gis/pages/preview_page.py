@@ -66,8 +66,7 @@ def render_preview_page() -> None:
             st.caption(f"{len(visible_stops):,} of {len(stops):,} stops match the active map filters.")
             published_app.render_map_filter_controls(stops, "preview")
             if visualization.get("show_legend", True):
-                legend = pd.DataFrame(taxonomy).sort_values("sort_order")
-                st.dataframe(legend.loc[:, ["name", "description", "color"]], width="stretch", hide_index=True)
+                published_app.render_taxonomy_legend(taxonomy)
     elif tabs[1].open:
         with tabs[1]:
             selected_sections = published_app.selected_dashboard_sections(visible_stops, visualization)

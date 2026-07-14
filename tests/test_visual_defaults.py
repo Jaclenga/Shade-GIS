@@ -13,6 +13,7 @@ from shade_gis.builder_visuals import (
     build_deck_chart,
     build_custom_chart_data,
     get_custom_charts,
+    migrate_legacy_analytics_config,
     selected_dashboard_sections,
 )
 
@@ -91,6 +92,51 @@ def test_legacy_default_dashboard_selection_migrates_to_sources_and_coverage():
 
     assert selected_dashboard_sections(stops, visualization) == ["Shade sources", "Shade coverage"]
     assert published_app.selected_dashboard_sections(stops, visualization) == ["Shade sources", "Shade coverage"]
+
+
+def test_legacy_mixed_dashboard_and_duplicate_source_charts_migrate_once():
+    legacy = {
+        "metric_cards": [
+            "Shade distribution",
+            "Review status",
+            "Priority stops",
+            "Agreement metrics",
+            "Stops without shade",
+            "Stops requiring review",
+            "Shade sources",
+            "Shade coverage",
+        ],
+        "custom_charts": [
+            {
+                "title": "Shade Sources",
+                "x": "shade_sources",
+                "y": RECORD_COUNT_FIELD,
+                "aggregation": "Count",
+                "chart_type": "Bar",
+            },
+            {
+                "title": "Shade Sources",
+                "x": "shade_sources",
+                "y": RECORD_COUNT_FIELD,
+                "aggregation": "Count",
+                "chart_type": "Bar",
+            },
+        ],
+    }
+
+    migrated = migrate_legacy_analytics_config(legacy)
+
+    assert migrated["analytics_schema_version"] == 2
+    assert migrated["metric_cards"] == ["Shade sources", "Shade coverage"]
+    assert [chart["x"] for chart in migrated["custom_charts"]] == [
+        "shade_sources",
+        "shade_coverage",
+    ]
+    assert [chart["title"] for chart in migrated["custom_charts"]] == [
+        "Shade Sources",
+        "Shade Coverage",
+    ]
+    assert migrate_legacy_analytics_config(migrated) == migrated
 
 
 def test_source_count_chart_splits_semicolon_values():

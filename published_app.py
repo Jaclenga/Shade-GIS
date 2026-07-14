@@ -1,3 +1,4 @@
+import html
 import json
 import math
 import re
@@ -21,6 +22,7 @@ CONFIG_PATH = APP_DIR / "shade_study_config.json"
 DATA_PATH = APP_DIR / "shade_study_stops.csv"
 RAW_LABELS_PATH = APP_DIR / "shade_study_raw_labels.csv"
 RECORD_COUNT_FIELD = "Record count"
+ANALYTICS_SCHEMA_VERSION = 2
 MAP_PANEL_HEIGHT = 620
 STOP_DETAIL_PANEL_HEIGHT = MAP_PANEL_HEIGHT
 
@@ -122,12 +124,75 @@ LEGACY_DEFAULT_METRIC_CARDS = [
     "Shade vs ridership",
     "Priority stops",
 ]
+DEFAULT_CUSTOM_CHARTS = [
+    {
+        "title": "Shade Sources",
+        "x": "shade_sources",
+        "y": RECORD_COUNT_FIELD,
+        "aggregation": "Count",
+        "chart_type": "Bar",
+    },
+    {
+        "title": "Shade Coverage",
+        "x": "shade_coverage",
+        "y": RECORD_COUNT_FIELD,
+        "aggregation": "Count",
+        "chart_type": "Bar",
+    },
+]
+DEFAULT_COVERAGE_TAXONOMY = [
+    {
+        "name": "No Shade",
+        "description": "No shade visibly reaches the waiting area.",
+        "color": "#dc143c",
+        "sort_order": 1,
+    },
+    {
+        "name": "Limited Shade",
+        "description": "Shade visibly reaches part of the waiting area, but not most of it.",
+        "color": "#d69e2e",
+        "sort_order": 2,
+    },
+    {
+        "name": "Significant Shade",
+        "description": "Shade visibly covers most of the waiting area or seating area.",
+        "color": "#228b22",
+        "sort_order": 3,
+    },
+    {
+        "name": "Needs Review",
+        "description": "The stop needs imagery, review, or disagreement resolution.",
+        "color": "#808080",
+        "sort_order": 4,
+    },
+]
+SHADE_SOURCE_TAXONOMY = [
+    {
+        "Shade Source": "Natural",
+        "Operational Definition": "Trees, palms, hedges, or other vegetation visibly shade the waiting area.",
+    },
+    {
+        "Shade Source": "Constructed",
+        "Operational Definition": (
+            "A designated, purpose-built bus shelter, awning, canopy, overhang, or similar passenger "
+            "shelter visibly shades the waiting area."
+        ),
+    },
+    {
+        "Shade Source": "Manmade",
+        "Operational Definition": (
+            "A nearby building or other non-shelter built feature visibly shades the waiting area."
+        ),
+    },
+]
 SHADE_SOURCE_CHART_CODES = {"natural": "Natural", "constructed": "Constructed", "manmade": "Manmade"}
 SHADE_SOURCE_CHART_ALIASES = {
     "intentional built": "Constructed",
+    "intentional built shade": "Constructed",
     "intentional constructed": "Constructed",
     "constructed shade": "Constructed",
     "incidental built": "Manmade",
+    "incidental built shade": "Manmade",
     "manmade shade": "Manmade",
     "natural shade": "Natural",
 }
@@ -140,10 +205,97 @@ SHADE_COVERAGE_CHART_CODES = {
     "significant shade": "Significant Shade",
     "significant natural shade": "Significant Shade",
 }
+COVERAGE_TAXONOMY_ALIASES = {
+    **SHADE_COVERAGE_CHART_CODES,
+    "needs review": "Needs Review",
+    "unknown": "Needs Review",
+}
+
+
+def is_schema_default_chart(chart: Any) -> bool:
+    if not isinstance(chart, dict):
+        return False
+    title = str(chart.get("title", "") or "").strip().lower()
+    return (
+        chart.get("x") in {"shading", "shade_sources", "shade_coverage"}
+        and chart.get("y", RECORD_COUNT_FIELD) == RECORD_COUNT_FIELD
+        and chart.get("aggregation", "Count") == "Count"
+        and chart.get("chart_type", "Bar") == "Bar"
+        and title
+        in {
+            "",
+            "custom chart",
+            "custom chart 1",
+            "custom chart 2",
+            "shade distribution",
+            "shade sources",
+            "shade coverage",
+        }
+    )
+
+
+def normalize_published_visualization(visualization: dict[str, Any] | None) -> dict[str, Any]:
+    normalized = json.loads(json.dumps(visualization or {}, default=str))
+    try:
+        schema_version = int(normalized.get("analytics_schema_version", 0) or 0)
+    except (TypeError, ValueError):
+        schema_version = 0
+    if schema_version >= ANALYTICS_SCHEMA_VERSION:
+        return normalized
+
+    normalized["metric_cards"] = list(DEFAULT_METRIC_CARDS)
+    charts = normalized.get("custom_charts")
+    if not isinstance(charts, list) and isinstance(normalized.get("custom_chart"), dict):
+        charts = [normalized["custom_chart"]]
+    if not charts or all(is_schema_default_chart(chart) for chart in charts):
+        normalized["custom_charts"] = json.loads(json.dumps(DEFAULT_CUSTOM_CHARTS))
+    else:
+        for index, chart in enumerate(charts):
+            if not isinstance(chart, dict) or chart.get("x") != "shading":
+                continue
+            chart["x"] = "shade_coverage"
+            title = str(chart.get("title", "") or "").strip().lower()
+            if title in {"", "custom chart", f"custom chart {index + 1}", "shade distribution"}:
+                chart["title"] = "Shade Coverage"
+        normalized["custom_charts"] = charts
+    normalized.pop("custom_chart", None)
+    normalized["analytics_schema_version"] = ANALYTICS_SCHEMA_VERSION
+    return normalized
+
+
+def normalize_published_taxonomy(taxonomy: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
+    configured: dict[str, tuple[int, dict[str, Any]]] = {}
+    for item in taxonomy or []:
+        original_name = str(item.get("name", "") or "").strip()
+        normalized_name = COVERAGE_TAXONOMY_ALIASES.get(original_name.lower(), "")
+        if not normalized_name:
+            continue
+        priority = 0 if original_name == normalized_name else 1
+        existing = configured.get(normalized_name)
+        if existing is None or priority < existing[0]:
+            configured[normalized_name] = (priority, dict(item))
+
+    normalized_taxonomy = json.loads(json.dumps(DEFAULT_COVERAGE_TAXONOMY))
+    for default in normalized_taxonomy:
+        existing = configured.get(default["name"])
+        if not existing:
+            continue
+        configured_item = existing[1]
+        for key in ["description", "color"]:
+            if str(configured_item.get(key, "") or "").strip():
+                default[key] = configured_item[key]
+    return normalized_taxonomy
+
+
+def normalize_published_config(config: dict[str, Any]) -> dict[str, Any]:
+    normalized = json.loads(json.dumps(config or {}, default=str))
+    normalized["taxonomy"] = normalize_published_taxonomy(normalized.get("taxonomy"))
+    normalized["visualization"] = normalize_published_visualization(normalized.get("visualization"))
+    return normalized
 
 
 def load_study() -> tuple[dict[str, Any], pd.DataFrame, pd.DataFrame]:
-    config = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+    config = normalize_published_config(json.loads(CONFIG_PATH.read_text(encoding="utf-8")))
     stops = pd.read_csv(DATA_PATH)
     raw_labels = pd.read_csv(RAW_LABELS_PATH) if RAW_LABELS_PATH.exists() else pd.DataFrame()
     stops = normalize_published_stop_dimensions(stops)
@@ -1286,6 +1438,48 @@ def taxonomy_display_table(taxonomy: list[dict[str, Any]]) -> pd.DataFrame:
     return display.drop(columns=["sort_order"], errors="ignore").reset_index(drop=True)
 
 
+def coverage_schema_display_table(taxonomy: list[dict[str, Any]]) -> pd.DataFrame:
+    display = taxonomy_display_table(normalize_published_taxonomy(taxonomy))
+    if display.empty:
+        return pd.DataFrame(columns=["Shade Coverage", "Operational Definition"])
+    return display.rename(
+        columns={"name": "Shade Coverage", "description": "Operational Definition"}
+    ).drop(columns=["color"], errors="ignore")
+
+
+def source_schema_display_table() -> pd.DataFrame:
+    return pd.DataFrame(SHADE_SOURCE_TAXONOMY)
+
+
+def taxonomy_legend_markup(taxonomy: list[dict[str, Any]]) -> str:
+    items = []
+    for item in normalize_published_taxonomy(taxonomy):
+        name = html.escape(str(item.get("name", "") or ""))
+        description = html.escape(str(item.get("description", "") or ""), quote=True)
+        color = normalize_hex_color(str(item.get("color", "#808080") or "#808080"))
+        items.append(
+            "<span class='shade-legend-item' title='{}'>"
+            "<span class='shade-legend-swatch' style='background:{}'></span>{}</span>".format(
+                description,
+                color,
+                name,
+            )
+        )
+    return (
+        "<style>"
+        ".shade-legend{display:flex;flex-wrap:wrap;gap:.55rem 1rem;margin:.35rem 0 1rem;}"
+        ".shade-legend-item{display:inline-flex;align-items:center;gap:.4rem;font-size:.9rem;}"
+        ".shade-legend-swatch{width:.85rem;height:.85rem;border-radius:50%;"
+        "border:1px solid rgba(0,0,0,.28);display:inline-block;}"
+        "</style><div class='shade-legend'>" + "".join(items) + "</div>"
+    )
+
+
+def render_taxonomy_legend(taxonomy: list[dict[str, Any]]) -> None:
+    st.markdown("#### Shade Coverage Legend")
+    st.markdown(taxonomy_legend_markup(taxonomy), unsafe_allow_html=True)
+
+
 def render_methodology(config: dict[str, Any]) -> None:
     project = config.get("project", {})
     methodology = config.get("methodology", {})
@@ -1310,9 +1504,10 @@ def render_methodology(config: dict[str, Any]) -> None:
             st.markdown(f"## {title}")
             st.markdown(body)
     taxonomy = config.get("taxonomy", [])
-    if taxonomy:
-        st.markdown("## Shade Taxonomy")
-        st.dataframe(taxonomy_display_table(taxonomy), width="stretch", hide_index=True)
+    st.markdown("## Shade Coverage Taxonomy")
+    st.dataframe(coverage_schema_display_table(taxonomy), width="stretch", hide_index=True)
+    st.markdown("## Shade Source Taxonomy")
+    st.dataframe(source_schema_display_table(), width="stretch", hide_index=True)
 
 
 def dataframe_to_geojson(df: pd.DataFrame) -> str:
@@ -1780,9 +1975,7 @@ def main() -> None:
             st.caption(f"{len(visible_stops):,} of {len(stops):,} stops match the active map filters.")
             render_map_filter_controls(stops, "published")
             if visualization.get("show_legend", True) and taxonomy:
-                legend = pd.DataFrame(taxonomy)
-                columns = [column for column in ["name", "description", "color"] if column in legend.columns]
-                st.dataframe(legend.loc[:, columns], width="stretch", hide_index=True)
+                render_taxonomy_legend(taxonomy)
     elif tabs[1].open:
         with tabs[1]:
             render_issue_analytics_dashboard(visible_stops, visualization, raw_labels)

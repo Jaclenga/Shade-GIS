@@ -15,6 +15,7 @@ from shade_gis.builder_imports import REQUIRED_STOP_FIELDS, hex_to_rgb, normaliz
 DEFAULT_DISPLAY_COLUMNS = ["stop_id", "stop_name", "routes", "shading", "review_status", "priority_score"]
 RECORD_COUNT_FIELD = "Record count"
 MAX_CUSTOM_CHARTS = 10
+ANALYTICS_SCHEMA_VERSION = 2
 DEFAULT_METRIC_CARDS = [
     "Shade sources",
     "Shade coverage",
@@ -49,6 +50,7 @@ DEFAULT_CUSTOM_CHARTS = [
 ]
 
 DEFAULT_VISUALIZATION = {
+    "analytics_schema_version": ANALYTICS_SCHEMA_VERSION,
     "color_by": "Shade coverage",
     "marker_shape": "Circle",
     "marker_size": 7,
@@ -75,6 +77,58 @@ DEFAULT_VISUALIZATION = {
     "display_columns": DEFAULT_DISPLAY_COLUMNS,
     "custom_charts": DEFAULT_CUSTOM_CHARTS,
 }
+
+
+def is_schema_default_chart(chart: Any) -> bool:
+    if not isinstance(chart, dict):
+        return False
+    title = str(chart.get("title", "") or "").strip().lower()
+    return (
+        chart.get("x") in {"shading", "shade_sources", "shade_coverage"}
+        and chart.get("y", RECORD_COUNT_FIELD) == RECORD_COUNT_FIELD
+        and chart.get("aggregation", "Count") == "Count"
+        and chart.get("chart_type", "Bar") == "Bar"
+        and title
+        in {
+            "",
+            "custom chart",
+            "custom chart 1",
+            "custom chart 2",
+            "shade distribution",
+            "shade sources",
+            "shade coverage",
+        }
+    )
+
+
+def migrate_legacy_analytics_config(visualization: dict[str, Any] | None) -> dict[str, Any]:
+    """Move pre-split analytics defaults to the source/coverage schema once."""
+    migrated = json.loads(json.dumps(visualization or {}, default=str))
+    try:
+        schema_version = int(migrated.get("analytics_schema_version", 0) or 0)
+    except (TypeError, ValueError):
+        schema_version = 0
+    if schema_version >= ANALYTICS_SCHEMA_VERSION:
+        return migrated
+
+    migrated["metric_cards"] = json.loads(json.dumps(DEFAULT_METRIC_CARDS))
+    charts = migrated.get("custom_charts")
+    if not isinstance(charts, list) and isinstance(migrated.get("custom_chart"), dict):
+        charts = [migrated["custom_chart"]]
+    if not charts or all(is_schema_default_chart(chart) for chart in charts):
+        migrated["custom_charts"] = json.loads(json.dumps(DEFAULT_CUSTOM_CHARTS))
+    else:
+        for index, chart in enumerate(charts):
+            if not isinstance(chart, dict) or chart.get("x") != "shading":
+                continue
+            chart["x"] = "shade_coverage"
+            title = str(chart.get("title", "") or "").strip().lower()
+            if title in {"", "custom chart", f"custom chart {index + 1}", "shade distribution"}:
+                chart["title"] = "Shade Coverage"
+        migrated["custom_charts"] = charts
+    migrated.pop("custom_chart", None)
+    migrated["analytics_schema_version"] = ANALYTICS_SCHEMA_VERSION
+    return migrated
 
 MARKER_SHAPES = ["Circle", "Pin", "Square", "Diamond", "Triangle"]
 DESTINATION_FILTER_COLUMNS = ["nearby_destinations", "destinations", "destination"]
@@ -143,9 +197,11 @@ CHART_AGGREGATIONS = ["Count", "Mean", "Sum", "Median", "Min", "Max"]
 SHADE_SOURCE_CHART_CODES = {"natural": "Natural", "constructed": "Constructed", "manmade": "Manmade"}
 SHADE_SOURCE_CHART_ALIASES = {
     "intentional built": "Constructed",
+    "intentional built shade": "Constructed",
     "intentional constructed": "Constructed",
     "constructed shade": "Constructed",
     "incidental built": "Manmade",
+    "incidental built shade": "Manmade",
     "manmade shade": "Manmade",
     "natural shade": "Natural",
 }

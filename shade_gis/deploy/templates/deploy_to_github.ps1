@@ -190,6 +190,27 @@ function Copy-SafeBundleFiles {
         Remove-Item -LiteralPath $optionalRawLabels -Force
         Write-Host "Removed stale generated preview file: @@PREVIEW_DIRECTORY@@/shade_study_raw_labels.csv"
     }
+    $rootDataItems = @(
+        "shade_study_stops.csv",
+        "shade_study_raw_labels.csv",
+        "shade_study_config.json"
+    )
+    foreach ($item in $rootDataItems) {
+        if (Test-Path $item -PathType Leaf) {
+            $destinationPath = Join-Path $Destination $item
+            if (Test-Path $destinationPath) {
+                Write-Host "Updating generated root data file: $item"
+            } else {
+                Write-Host "Adding generated root data file: $item"
+            }
+            Copy-Item -LiteralPath $item -Destination $destinationPath -Force
+        }
+    }
+    $rootRawLabels = Join-Path $Destination "shade_study_raw_labels.csv"
+    if (-not (Test-Path "shade_study_raw_labels.csv" -PathType Leaf) -and (Test-Path $rootRawLabels)) {
+        Remove-Item -LiteralPath $rootRawLabels -Force
+        Write-Host "Removed stale generated root data file: shade_study_raw_labels.csv"
+    }
 }
 
 function Stage-PublishFiles {
@@ -245,7 +266,10 @@ if ($Mode -eq "existing") {
     $remoteUrl = Get-RemoteUrl
     $publishDir = Join-Path $env:TEMP ("_shade_gis_publish_" + [guid]::NewGuid().ToString("N"))
     $existingPublishFiles = @(
-        "@@PREVIEW_DIRECTORY@@"
+        "@@PREVIEW_DIRECTORY@@",
+        "shade_study_stops.csv",
+        "shade_study_raw_labels.csv",
+        "shade_study_config.json"
     )
     try {
         if ($RepositoryUrl.Trim() -or $RepositoryName -match "^https?://") {
@@ -320,4 +344,3 @@ if (-not $createdCommit) {
 }
 Invoke-Native "gh" @("repo", "create", $RepositoryName, "--$Visibility", "--source=.", "--remote=origin", "--push")
 Write-Host "Created and published repository $RepositoryName on branch $Branch."
-

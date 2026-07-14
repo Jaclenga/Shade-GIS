@@ -52,6 +52,7 @@
     "release_history": "- 0.1.0: Draft project configuration and starter dataset"
   },
   "visualization": {
+    "analytics_schema_version": 2,
     "color_by": "Shade coverage",
     "marker_shape": "Circle",
     "marker_size": 7,
@@ -66,12 +67,6 @@
     },
     "field_color_maps": {},
     "metric_cards": [
-      "Shade distribution",
-      "Review status",
-      "Priority stops",
-      "Agreement metrics",
-      "Stops without shade",
-      "Stops requiring review",
       "Shade sources",
       "Shade coverage"
     ],
@@ -120,8 +115,8 @@
         "chart_type": "Bar"
       },
       {
-        "title": "Shade Sources",
-        "x": "shade_sources",
+        "title": "Shade Coverage",
+        "x": "shade_coverage",
         "y": "Record count",
         "aggregation": "Count",
         "chart_type": "Bar"

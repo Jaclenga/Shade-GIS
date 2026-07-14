@@ -135,6 +135,7 @@ from shade_gis.builder_visuals import (
     has_any_column_data,
     has_column_data,
     marker_icon_svg,
+    migrate_legacy_analytics_config,
     priority_formula_for_about,
     priority_score_used_in_visualization,
     render_custom_chart,
@@ -370,6 +371,7 @@ def with_default_visualization_values(visualization: dict[str, Any]) -> dict[str
 def normalized_visualization_values(
     visualization: dict[str, Any], taxonomy: list[dict[str, Any]]
 ) -> dict[str, Any]:
+    visualization = migrate_legacy_analytics_config(visualization)
     visualization = with_default_visualization_values(
         json.loads(json.dumps(visualization or {}, default=str))
     )
@@ -434,7 +436,7 @@ def load_project_into_session(project_id: str) -> None:
     project = with_default_project_values(bundle["project"])
     taxonomy = normalize_coverage_taxonomy(bundle["taxonomy"] or DEFAULT_TAXONOMY)
     methodology = with_default_methodology_values(bundle["methodology"])
-    visualization = with_default_visualization_values(bundle["visualization"])
+    visualization = normalized_visualization_values(bundle["visualization"], taxonomy)
     stops = bundle["stops"]
     if stops.empty:
         stops = empty_stop_dataset()
@@ -449,6 +451,7 @@ def load_project_into_session(project_id: str) -> None:
     st.session_state["visualization"] = visualization
     st.session_state["stops"] = stops
     st.session_state["import_log"] = bundle["import_log"]
+    st.session_state.pop("deploy_page_settings_project_id", None)
     ensure_visualization_defaults()
 
 
@@ -543,13 +546,18 @@ def study_config_json() -> str:
 
 
 def study_config_payload() -> dict[str, Any]:
+    taxonomy = normalize_coverage_taxonomy(st.session_state["taxonomy"])
+    public_project = with_default_project_values(st.session_state["project"])
+    public_project.pop("deployment", None)
     return {
         "study_id": st.session_state.get("active_project_id")
         or slugify_repo_name(st.session_state["project"].get("name", "shade-study")),
-        "project": st.session_state["project"],
-        "taxonomy": st.session_state["taxonomy"],
-        "methodology": st.session_state["methodology"],
-        "visualization": st.session_state["visualization"],
+        "project": public_project,
+        "taxonomy": taxonomy,
+        "methodology": with_default_methodology_values(st.session_state["methodology"]),
+        "visualization": normalized_visualization_values(
+            st.session_state["visualization"], taxonomy
+        ),
         "import_log": st.session_state["import_log"],
     }
 
@@ -564,6 +572,7 @@ def _canonical_deployment_state(
     import_log: list[dict[str, Any]],
 ) -> str:
     normalized_project = with_default_project_values(project)
+    normalized_project.pop("deployment", None)
     normalized_taxonomy = normalize_coverage_taxonomy(taxonomy)
     normalized_methodology = with_default_methodology_values(methodology)
     normalized_visualization = normalized_visualization_values(visualization, normalized_taxonomy)

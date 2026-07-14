@@ -7,6 +7,7 @@ import zipfile
 from pathlib import Path
 
 import pandas as pd
+import pytest
 
 import builder_app
 import published_app
@@ -26,6 +27,10 @@ from shade_gis.deploy import (
 
 
 def test_export_csv_geojson_raw_labels_and_config(db_path, project, taxonomy, methodology, visualization, minimal_stops):
+    project["deployment"] = {
+        "github_username": "private-owner-setting",
+        "destination_repository": "private-repository-setting",
+    }
     project_id = create_project(project, taxonomy, methodology, visualization, minimal_stops, [], db_path)
     add_shade_label(
         project_id,
@@ -59,6 +64,7 @@ def test_export_csv_geojson_raw_labels_and_config(db_path, project, taxonomy, me
     assert len(geojson["features"]) == 2
     assert geojson["features"][0]["properties"]["stop_id"] == "1001"
     assert config["project"]["name"] == "Test Shade Study"
+    assert "deployment" not in config["project"]
     assert config["study_id"] == project_id
     assert config["taxonomy"][0]["name"] == taxonomy[0]["name"]
     assert config["import_log"][0]["rows"] == 2
@@ -88,6 +94,15 @@ def test_export_csv_geojson_raw_labels_and_config(db_path, project, taxonomy, me
         assert manifest["commit_message"] == commit_message
         assert manifest["entrypoint"] == "preview_app/app.py"
         assert manifest["files"]["app.py"] == hashlib.sha256(bundle.read("app.py")).hexdigest()
+        deployed_stops = pd.read_csv(bundle.open("shade_study_stops.csv"), dtype={"stop_id": str})
+        assert deployed_stops["stop_id"].tolist() == minimal_stops["stop_id"].tolist()
+        assert deployed_stops["context_label"].tolist() == minimal_stops["context_label"].tolist()
+        assert manifest["dataset"] == {
+            "file": "shade_study_stops.csv",
+            "rows": 2,
+            "columns": deployed_stops.columns.tolist(),
+            "sha256": hashlib.sha256(bundle.read("shade_study_stops.csv")).hexdigest(),
+        }
         assert f"test-shade-study-{manifest['bundle_id'][:12]}.zip" in bundle_readme
         assert "$CommitMessage = 'Publish July field review'" in bundle_readme
         assert '-CommitMessage $CommitMessage' in bundle_readme
@@ -101,6 +116,23 @@ def test_export_csv_geojson_raw_labels_and_config(db_path, project, taxonomy, me
             "Limited Shade",
             "Significant Shade",
         ]
+
+
+def test_deployment_bundle_requires_imported_project_data(
+    project,
+    visualization,
+):
+    builder_app.st.session_state.clear()
+    builder_app.st.session_state["active_project_id"] = "empty-project"
+    builder_app.st.session_state["project"] = project
+    builder_app.st.session_state["taxonomy"] = []
+    builder_app.st.session_state["methodology"] = {}
+    builder_app.st.session_state["visualization"] = visualization
+    builder_app.st.session_state["stops"] = pd.DataFrame()
+    builder_app.st.session_state["import_log"] = []
+
+    with pytest.raises(ValueError, match="Import project data"):
+        build_github_deploy_bundle("owner/empty-project")
 
 
 def test_deployment_blocks_a_stale_browser_session(
@@ -200,9 +232,14 @@ def test_deploy_script_supports_existing_private_repositories():
     assert 'Invoke-Native "git" @("clone", $remoteUrl, $publishDir)' in script
     assert "Clone command completed but publish directory was not created" in script
     assert 'Copy-SafeBundleFiles -Destination $publishDir' in script
+    assert '$rootDataItems = @(' in script
+    assert 'Write-Host "Updating generated root data file: $item"' in script
+    assert '$rootRawLabels = Join-Path $Destination "shade_study_raw_labels.csv"' in script
     assert '$previewDirectory = Join-Path $Destination "preview_app"' in script
     assert '$destinationPath = Join-Path $previewDirectory $item' in script
-    assert '$existingPublishFiles = @(\n        "preview_app"\n    )' in script
+    assert '$existingPublishFiles = @(\n        "preview_app",' in script
+    assert '        "shade_study_stops.csv",' in script
+    assert '        "shade_study_config.json"' in script
     assert '".streamlit"' in script
     assert 'README.md' in script
     assert '.env.*' in script
@@ -344,16 +381,18 @@ def test_deploy_page_requires_destination_settings_before_publishing():
     assert '"Destination repository"' in source
     assert 'key="deploy_destination_repository"' in source
     assert 'placeholder="shade-study-site"' in source
+    assert "These settings save automatically with this project." in source
     assert '"Commit message"' in source
     assert 'key="deploy_commit_message"' in source
-    assert 'st.session_state.setdefault("deploy_github_username", "")' in source
-    assert 'st.session_state.setdefault("deploy_destination_repository", "")' in source
-    assert 'st.session_state.setdefault("deploy_commit_message", DEFAULT_DEPLOY_COMMIT_MESSAGE)' in source
+    assert 'saved.get("github_username", "")' in source
+    assert 'saved.get("destination_repository", "")' in source
+    assert "_remember_target_settings(project, target)" in source
     assert 'repository = f"{username}/{destination}" if username and destination else ""' in source
     assert '"Repository address"' not in source
     assert "Visibility can only be selected when Shade-GIS creates a new repository." in source
     assert "change its visibility in the repository's GitHub settings." in source
     assert 'render_stages("Verify website", set(STAGES[:3]))' not in source
+    assert "\n        render_stages()\n" not in source
     assert 'action_columns[1].button("Skip for now", width="stretch")' in source
     assert 'result.verification_skipped = True' in source
     assert 'status_label = "Repository published" if result.changed else "Repository already up to date"' in source
@@ -417,7 +456,9 @@ def test_deploy_readme_documents_existing_private_repo_flow(project):
     assert "SHADE_GIS_VOTE_DATABASE_URL" in readme
     assert "local SQLite fallback" in readme
     assert "only the public preview" in readme
-    assert "root app and Shade-GIS builder files untouched" in readme
+    assert "root app and Shade-GIS builder source untouched" in readme
+    assert "refreshes the generated" in readme
+    assert "`shade_study_stops.csv`, `shade_study_raw_labels.csv`, and `shade_study_config.json`" in readme
     assert "main file path: `preview_app/app.py`" in readme
 
 

@@ -30,6 +30,12 @@ def test_deploy_source_comes_from_public_app_module():
     assert builder_app.published_app_source() == Path("published_app.py").read_text(encoding="utf-8")
 
 
+def test_tracked_preview_app_matches_published_source():
+    assert Path("preview_app/app.py").read_text(encoding="utf-8") == Path("published_app.py").read_text(
+        encoding="utf-8"
+    )
+
+
 def test_builder_and_published_runtime_disable_arrow_string_inference():
     import builder_app  # noqa: F401 - importing applies the runtime guard
 
@@ -118,7 +124,8 @@ def test_summary_metrics_only_render_in_analytics():
 def test_public_taxonomy_table_does_not_expose_sort_order():
     source = Path("published_app.py").read_text(encoding="utf-8")
 
-    assert 'st.dataframe(taxonomy_display_table(taxonomy)' in source
+    assert 'st.dataframe(coverage_schema_display_table(taxonomy)' in source
+    assert "st.dataframe(source_schema_display_table()" in source
     assert 'drop(columns=["sort_order"]' in source
 
 

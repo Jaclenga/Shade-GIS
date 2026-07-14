@@ -478,7 +478,8 @@ def test_builder_navigation_pages_render(playwright_api, streamlit_server: Strea
                     publish_button = page.get_by_role("button", name="Publish app", exact=True)
                     playwright_api.expect(publish_button).to_be_enabled(timeout=30_000)
                     for stage in ["Check project", "Prepare website", "Publish", "Verify website"]:
-                        playwright_api.expect(page.get_by_text(stage, exact=True)).to_be_visible(timeout=30_000)
+                        playwright_api.expect(page.get_by_text(stage, exact=True)).to_have_count(0)
+                    playwright_api.expect(page.get_by_text("Waiting", exact=True)).to_have_count(0)
                     playwright_api.expect(
                         page.get_by_text("This usually takes 1–3 minutes.", exact=True)
                     ).to_be_visible(timeout=30_000)

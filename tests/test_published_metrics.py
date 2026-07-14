@@ -128,6 +128,63 @@ def test_taxonomy_display_hides_sort_order_but_preserves_category_order() -> Non
     assert display["name"].tolist() == ["No Shade", "Limited Shade"]
 
 
+def test_published_config_normalizes_legacy_taxonomy_and_analytics() -> None:
+    config = {
+        "taxonomy": [
+            {"name": "No Shade", "description": "None", "color": "#dc143c", "sort_order": 1},
+            {"name": "Limited Natural Shade", "description": "Some", "color": "#d69e2e", "sort_order": 2},
+            {"name": "Significant Natural Shade", "description": "Most", "color": "#228b22", "sort_order": 3},
+            {"name": "Intentional Built Shade", "description": "Shelter", "color": "#4682b4", "sort_order": 4},
+            {"name": "Incidental Built Shade", "description": "Building", "color": "#805aaa", "sort_order": 5},
+            {"name": "Needs Review", "description": "Review", "color": "#808080", "sort_order": 6},
+        ],
+        "visualization": {
+            "metric_cards": ["Shade distribution", "Review status", "Shade sources", "Shade coverage"],
+            "custom_charts": [
+                {"title": "Shade Sources", "x": "shade_sources", "y": "Record count", "aggregation": "Count", "chart_type": "Bar"},
+                {"title": "Shade Sources", "x": "shade_sources", "y": "Record count", "aggregation": "Count", "chart_type": "Bar"},
+            ],
+        },
+    }
+
+    normalized = published_app.normalize_published_config(config)
+
+    assert [item["name"] for item in normalized["taxonomy"]] == [
+        "No Shade",
+        "Limited Shade",
+        "Significant Shade",
+        "Needs Review",
+    ]
+    assert normalized["visualization"]["metric_cards"] == ["Shade sources", "Shade coverage"]
+    assert [chart["x"] for chart in normalized["visualization"]["custom_charts"]] == [
+        "shade_sources",
+        "shade_coverage",
+    ]
+
+
+def test_public_schema_tables_separate_coverage_from_sources() -> None:
+    legacy = [
+        {"name": "Limited Natural Shade", "description": "Some", "color": "#d69e2e", "sort_order": 2},
+        {"name": "Intentional Built Shade", "description": "Shelter", "color": "#4682b4", "sort_order": 4},
+    ]
+
+    coverage = published_app.coverage_schema_display_table(legacy)
+    sources = published_app.source_schema_display_table()
+    legend = published_app.taxonomy_legend_markup(legacy)
+
+    assert coverage.columns.tolist() == ["Shade Coverage", "Operational Definition"]
+    assert coverage["Shade Coverage"].tolist() == [
+        "No Shade",
+        "Limited Shade",
+        "Significant Shade",
+        "Needs Review",
+    ]
+    assert sources["Shade Source"].tolist() == ["Natural", "Constructed", "Manmade"]
+    assert "Limited Natural Shade" not in legend
+    assert "Intentional Built Shade" not in legend
+    assert "Limited Shade" in legend
+
+
 def test_stop_detail_picker_avoids_session_state_default_warning(monkeypatch) -> None:
     selectbox_calls = []
 

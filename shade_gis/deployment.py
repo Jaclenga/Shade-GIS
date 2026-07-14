@@ -30,6 +30,11 @@ EXISTING_BUNDLE_FILES = (
     "deployment_manifest.json",
     "requirements.txt",
 )
+EXISTING_ROOT_DATA_FILES = (
+    "shade_study_stops.csv",
+    "shade_study_raw_labels.csv",
+    "shade_study_config.json",
+)
 CREATED_REPOSITORY_FILES = (
     *EXISTING_BUNDLE_FILES,
     "README.md",
@@ -442,7 +447,13 @@ def _publish_existing(
         180,
     )
     _write_bundle_files(bundle_data, worktree / EXISTING_PREVIEW_DIR, EXISTING_BUNDLE_FILES)
-    _checked(["git", "add", "--", EXISTING_PREVIEW_DIR], worktree, logs, runner)
+    _write_bundle_files(bundle_data, worktree, EXISTING_ROOT_DATA_FILES)
+    _checked(
+        ["git", "add", "--", EXISTING_PREVIEW_DIR, *EXISTING_ROOT_DATA_FILES],
+        worktree,
+        logs,
+        runner,
+    )
     _checked(["git", "status", "--short", "--branch"], worktree, logs, runner)
     diff = runner(["git", "diff", "--cached", "--quiet"], worktree, 30)
     if diff.returncode == 0:
