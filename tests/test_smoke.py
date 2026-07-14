@@ -13,6 +13,8 @@ def test_core_modules_compile_without_bytecode_writes():
         "published_app.py",
         "public_voting.py",
         "shade_gis/shade_dimensions.py",
+        "shade_gis/deploy/artifacts.py",
+        "shade_gis/deploy/bundle.py",
         "shade_gis/pages/preview_page.py",
         "shade_gis/pages/agreement_page.py",
         "shade_gis/pages/voting_page.py",
@@ -42,11 +44,26 @@ def test_builder_and_published_runtime_disable_arrow_string_inference():
 
 def test_runtime_and_generated_bundle_pin_pandas_below_three():
     requirements = Path("requirements/requirements.txt").read_text(encoding="utf-8")
-    builder_source = Path("builder_app.py").read_text(encoding="utf-8")
+    bundle_source = Path("shade_gis/deploy/bundle.py").read_text(encoding="utf-8")
 
     assert "pandas>=2.2,<3" in requirements
     assert "pyarrow>=24,<25" in requirements
-    assert '"streamlit>=1.57,<2\\npandas>=2.2,<3\\npyarrow>=24,<25\\n' in builder_source
+    assert '"streamlit>=1.57,<2\\n"' in bundle_source
+    assert '"pandas>=2.2,<3\\n"' in bundle_source
+    assert '"pyarrow>=24,<25\\n"' in bundle_source
+
+
+def test_builder_coordinates_deployment_without_embedding_generated_scripts():
+    builder_source = Path("builder_app.py").read_text(encoding="utf-8")
+    artifact_source = Path("shade_gis/deploy/artifacts.py").read_text(encoding="utf-8")
+    powershell_template = Path(
+        "shade_gis/deploy/templates/deploy_to_github.ps1"
+    ).read_text(encoding="utf-8")
+
+    assert "DeploymentBundleSpec(" in builder_source
+    assert "function Commit-And-Push" not in builder_source
+    assert '"deploy_to_github.ps1"' in artifact_source
+    assert "function Commit-And-Push" in powershell_template
 
 
 def test_app_py_is_builder_entrypoint():

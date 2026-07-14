@@ -14,13 +14,15 @@ from builder_app import (
     build_github_deploy_bundle,
     dataframe_to_geojson,
     deployment_session_freshness_issue,
+    study_config_json,
+)
+from platform_store import add_shade_label, create_project, list_shade_labels, save_project_bundle
+from shade_gis.deploy import (
     deploy_launcher_script,
     deploy_readme,
     deploy_script,
     streamlit_entrypoint_path,
-    study_config_json,
 )
-from platform_store import add_shade_label, create_project, list_shade_labels, save_project_bundle
 
 
 def test_export_csv_geojson_raw_labels_and_config(db_path, project, taxonomy, methodology, visualization, minimal_stops):

@@ -63,7 +63,8 @@ The main app entrypoint is intentionally small:
 streamlit run app.py
 ```
 
-The builder implementation lives in `builder_app.py`, with supporting modules under `shade_gis/`.
+`builder_app.py` coordinates Streamlit state, navigation, and page rendering. Domain logic lives under
+`shade_gis/`; deployment bundle assembly and generated scripts are grouped under `shade_gis/deploy/`.
 
 The Data page includes a centralized `Data Quality` dashboard before the taxonomy and workflow
 sections. It reports duplicate stop IDs, missing coordinates, missing required fields, invalid point
@@ -174,7 +175,12 @@ Shade-GIS/
 |-- app.py
 |-- builder_app.py
 |-- published_app.py
-|-- shade_gis/
+|-- shade_gis/                 # Importable Python package
+|   |-- deploy/
+|   |   |-- artifacts.py
+|   |   |-- bundle.py
+|   |   `-- templates/
+|   `-- pages/
 |-- docs/
 |-- sql/
 |-- scripts/
@@ -182,6 +188,14 @@ Shade-GIS/
 |-- requirements/
 `-- platform_data/
 ```
+
+The deployment package separates control code from generated files: `bundle.py` assembles validated
+ZIPs, `artifacts.py` fills deployment templates, and `templates/` contains the PowerShell and README
+files users actually receive. Compatibility exports remain available from `builder_app.py`.
+
+The repository uses the display name `Shade-GIS`, while Python code lives in `shade_gis/` because
+Python package names cannot contain hyphens. There should not be another `Shade-GIS/` directory
+inside the repository root.
 
 `platform_data/` is used only when the default database path falls back to the repository. On Windows, the preferred runtime database location is outside OneDrive under `%LOCALAPPDATA%`.
 

@@ -14,12 +14,10 @@ import streamlit.components.v1 as components
 from builder_app import (
     build_github_deploy_bundle,
     deployment_session_freshness_issue,
-    deploy_launcher_script,
-    github_new_repo_url,
     load_project_into_session,
     set_page,
-    slugify_repo_name,
 )
+from shade_gis.deploy import deploy_launcher_script, github_new_repo_url, slugify_repo_name
 from shade_gis.deployment import (
     DEFAULT_DEPLOY_COMMIT_MESSAGE,
     STREAMLIT_WORKSPACE_URL,

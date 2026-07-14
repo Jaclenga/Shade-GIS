@@ -8,3 +8,6 @@ platform_data/
 .pytest_tmp/
 .test_dbs/
 pytest-cache-files-*/
+
+# Prevent accidentally cloning this repository inside itself.
+/Shade-GIS/
