@@ -1,4 +1,5 @@
 import html
+import hashlib
 import io
 import ipaddress
 import json
@@ -359,8 +360,12 @@ def with_default_visualization_values(visualization: dict[str, Any]) -> dict[str
     return merged
 
 
-def ensure_visualization_defaults() -> None:
-    visualization = st.session_state["visualization"]
+def normalized_visualization_values(
+    visualization: dict[str, Any], taxonomy: list[dict[str, Any]]
+) -> dict[str, Any]:
+    visualization = with_default_visualization_values(
+        json.loads(json.dumps(visualization or {}, default=str))
+    )
     if "custom_charts" not in visualization and isinstance(visualization.get("custom_chart"), dict):
         visualization["custom_charts"] = [visualization["custom_chart"]]
     for key, value in DEFAULT_VISUALIZATION.items():
@@ -381,6 +386,14 @@ def ensure_visualization_defaults() -> None:
     clean_gis_overlays(visualization)
     visualization["voting"] = normalize_voting_config(
         visualization.get("voting"),
+        taxonomy,
+    )
+    return visualization
+
+
+def ensure_visualization_defaults() -> None:
+    st.session_state["visualization"] = normalized_visualization_values(
+        st.session_state["visualization"],
         st.session_state.get("taxonomy", []),
     )
 
@@ -534,6 +547,73 @@ def study_config_payload() -> dict[str, Any]:
     }
 
 
+def _canonical_deployment_state(
+    project_id: str,
+    project: dict[str, Any],
+    taxonomy: list[dict[str, Any]],
+    methodology: dict[str, Any],
+    visualization: dict[str, Any],
+    stops: pd.DataFrame,
+    import_log: list[dict[str, Any]],
+) -> str:
+    normalized_project = with_default_project_values(project)
+    normalized_taxonomy = normalize_coverage_taxonomy(taxonomy)
+    normalized_methodology = with_default_methodology_values(methodology)
+    normalized_visualization = normalized_visualization_values(visualization, normalized_taxonomy)
+    normalized_stops = stops.copy()
+    if not normalized_stops.empty:
+        normalized_stops = prepare_stop_dataset(normalized_stops, normalized_project, normalized_taxonomy)
+    if not normalized_stops.empty:
+        normalized_stops = normalized_stops.reindex(sorted(normalized_stops.columns), axis=1)
+        if "stop_id" in normalized_stops.columns:
+            normalized_stops = normalized_stops.sort_values("stop_id", kind="stable")
+    payload = {
+        "study_id": project_id,
+        "project": normalized_project,
+        "taxonomy": normalized_taxonomy,
+        "methodology": normalized_methodology,
+        "visualization": normalized_visualization,
+        "import_log": import_log,
+        "stops": normalized_stops.to_dict(orient="records"),
+    }
+    return json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str)
+
+
+def deployment_session_freshness_issue() -> str:
+    project_id = str(st.session_state.get("active_project_id") or "").strip()
+    if not project_id:
+        return "The active project is not saved yet. Save or reopen it before publishing."
+    try:
+        persisted = load_project_bundle(project_id)
+    except KeyError:
+        return "The saved project could not be found. Return to the project list and reopen it before publishing."
+
+    current_state = _canonical_deployment_state(
+        project_id,
+        st.session_state.get("project", {}),
+        st.session_state.get("taxonomy", []),
+        st.session_state.get("methodology", {}),
+        st.session_state.get("visualization", {}),
+        st.session_state.get("stops", empty_stop_dataset()),
+        st.session_state.get("import_log", []),
+    )
+    persisted_state = _canonical_deployment_state(
+        project_id,
+        persisted["project"],
+        persisted["taxonomy"],
+        persisted["methodology"],
+        persisted["visualization"],
+        persisted["stops"],
+        persisted["import_log"],
+    )
+    if current_state != persisted_state:
+        return (
+            "This browser tab is not using the latest saved project state. Another tab or session changed the "
+            "project. Reload the saved project before creating a deployment package."
+        )
+    return ""
+
+
 def active_raw_labels() -> pd.DataFrame:
     project_id = st.session_state.get("active_project_id")
     if not project_id:
@@ -619,6 +699,7 @@ def deploy_launcher_script(
     $ErrorActionPreference = "Stop"
 
     $BundleName = {powershell_literal(bundle_name)}
+    $BundlePath = ""  # Optional: paste the full ZIP path here when it is not in a standard folder.
     $RepositoryName = {powershell_literal(repo_name)}
     $Branch = {powershell_literal(branch)}
     $Visibility = {powershell_literal(visibility)}
@@ -634,24 +715,50 @@ def deploy_launcher_script(
     }}
 
     $DownloadsDirectory = Join-Path $env:USERPROFILE "Downloads"
-    $DocumentsDirectory = Join-Path $env:USERPROFILE "Documents"
+    $DocumentsDirectory = [Environment]::GetFolderPath("MyDocuments")
+    if ([string]::IsNullOrWhiteSpace($DocumentsDirectory)) {{
+        $DocumentsDirectory = Join-Path $env:USERPROFILE "Documents"
+    }}
     $BundleStem = [System.IO.Path]::GetFileNameWithoutExtension($BundleName)
     $BundleNamePattern = "^" + [Regex]::Escape($BundleStem) + "( \\([0-9]+\\))?\\.zip$"
-    $ZipCandidate = Get-ChildItem -LiteralPath $DownloadsDirectory -Filter "$BundleStem*.zip" -File |
-        Where-Object {{ $_.Name -match $BundleNamePattern }} |
-        Sort-Object LastWriteTime -Descending |
-        Select-Object -First 1
+
+    $SearchDirectories = @(
+        $DownloadsDirectory
+        if ($env:OneDrive) {{ Join-Path $env:OneDrive "Downloads" }}
+        $DocumentsDirectory
+        (Get-Location).Path
+    ) | Where-Object {{ $_ -and (Test-Path -LiteralPath $_ -PathType Container) }} | Select-Object -Unique
+
+    $ZipCandidate = $null
+    if (-not [string]::IsNullOrWhiteSpace($BundlePath)) {{
+        $ExpandedBundlePath = [Environment]::ExpandEnvironmentVariables($BundlePath)
+        if (-not (Test-Path -LiteralPath $ExpandedBundlePath -PathType Leaf)) {{
+            throw "The deployment bundle path does not exist: $ExpandedBundlePath"
+        }}
+        $ZipCandidate = Get-Item -LiteralPath $ExpandedBundlePath
+        if ($ZipCandidate.Extension -ne ".zip") {{
+            throw "The deployment bundle must be a ZIP file: $ExpandedBundlePath"
+        }}
+    }} else {{
+        $ZipCandidate = @($SearchDirectories | ForEach-Object {{
+            Get-ChildItem -LiteralPath $_ -Filter "$BundleStem*.zip" -File -ErrorAction SilentlyContinue
+        }}) |
+            Where-Object {{ $_.Name -match $BundleNamePattern }} |
+            Sort-Object LastWriteTime -Descending |
+            Select-Object -First 1
+    }}
 
     if (-not $ZipCandidate) {{
-        $ShadeBundles = @(Get-ChildItem -LiteralPath $DownloadsDirectory -Filter "*.zip" -File |
-            Where-Object {{ $_.Name -like "*shade*" }} |
-            Sort-Object LastWriteTime -Descending)
+        $ShadeBundles = @($SearchDirectories | ForEach-Object {{
+            Get-ChildItem -LiteralPath $_ -Filter "*shade*.zip" -File -ErrorAction SilentlyContinue
+        }} | Sort-Object LastWriteTime -Descending)
         $Available = if ($ShadeBundles.Count) {{
-            ($ShadeBundles.Name -join ", ")
+            ($ShadeBundles.FullName -join ", ")
         }} else {{
             "none"
         }}
-        throw "Could not find '$BundleName' or a numbered browser copy in $DownloadsDirectory. Available shade ZIP files: $Available. Download a fresh bundle or update `$BundleName."
+        $Searched = $SearchDirectories -join ", "
+        throw "Could not find '$BundleName' or a numbered browser copy. Click 'Download website package' first. Searched: $Searched. Available shade ZIP files: $Available. To use another folder, set `$BundlePath at the top of this block."
     }}
 
     $ZipPath = $ZipCandidate.FullName
@@ -685,10 +792,16 @@ def deploy_launcher_script(
 }}"""
 
 
-def deploy_readme(repo_name: str, project: dict[str, Any], deploy_mode: str = "existing") -> str:
+def deploy_readme(
+    repo_name: str,
+    project: dict[str, Any],
+    deploy_mode: str = "existing",
+    bundle_name: str = "",
+) -> str:
     app_name = project.get("name", "Shade Study")
     folder_name = slugify_repo_name(repo_name.rstrip("/").split("/")[-1].replace(".git", ""))
-    launcher_script = deploy_launcher_script(f"{folder_name}.zip", repo_name, deploy_mode=deploy_mode)
+    resolved_bundle_name = bundle_name or f"{folder_name}.zip"
+    launcher_script = deploy_launcher_script(resolved_bundle_name, repo_name, deploy_mode=deploy_mode)
     main_file_path = streamlit_entrypoint_path(deploy_mode)
     if deploy_mode == "create":
         publish_intro = "create the target repository used for this bundle"
@@ -737,8 +850,8 @@ uses the local SQLite fallback, whose files are ephemeral and may be lost when t
 
 ## After Downloading The Zip
 
-1. Click the download button. By default, your browser should save the bundle to your Downloads folder as `{folder_name}.zip`.
-   If that filename already exists, browser copies such as `{folder_name} (1).zip` are supported automatically; the launcher selects the newest exact-or-numbered copy.
+1. Click the download button. By default, your browser should save the content-addressed bundle as `{resolved_bundle_name}`.
+   Browser-numbered copies of that exact bundle are supported automatically. Older project states have different bundle IDs and cannot be selected accidentally.
 2. Open PowerShell and run this one copy-paste block to {publish_intro}:
 
 ```powershell
@@ -842,6 +955,44 @@ function Invoke-NativeOutput {{
     return $output
 }}
 
+function Assert-DeploymentBundle {{
+    $manifestPath = Join-Path (Get-Location) "deployment_manifest.json"
+    if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {{
+        throw "deployment_manifest.json is missing. Download a fresh deployment package from Shade-GIS."
+    }}
+    try {{
+        $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+    }} catch {{
+        throw "deployment_manifest.json is invalid: $($_.Exception.Message)"
+    }}
+    if ([int]$manifest.schema_version -ne 1) {{
+        throw "Unsupported deployment manifest version '$($manifest.schema_version)'. Download a fresh package."
+    }}
+    $expectedRepository = ($RepositoryName.Trim() -replace "\\.git$", "")
+    if ([string]$manifest.repository -ne $expectedRepository) {{
+        throw "This bundle targets '$($manifest.repository)', not '$expectedRepository'. Download a package for the selected repository."
+    }}
+    if ([string]$manifest.deploy_mode -ne $Mode) {{
+        throw "This bundle was created for '$($manifest.deploy_mode)' mode, not '$Mode'. Download a matching package."
+    }}
+    foreach ($fileProperty in $manifest.files.PSObject.Properties) {{
+        $relativePath = [string]$fileProperty.Name
+        if ([IO.Path]::IsPathRooted($relativePath) -or $relativePath -match '(^|[\\/])\\.\\.([\\/]|$)') {{
+            throw "Unsafe file path in deployment manifest: $relativePath"
+        }}
+        if (-not (Test-Path -LiteralPath $relativePath -PathType Leaf)) {{
+            throw "The deployment package is incomplete; '$relativePath' is missing."
+        }}
+        $actualHash = (Get-FileHash -LiteralPath $relativePath -Algorithm SHA256).Hash.ToLowerInvariant()
+        $expectedHash = ([string]$fileProperty.Value).ToLowerInvariant()
+        if ($actualHash -ne $expectedHash) {{
+            throw "The deployment package is stale or damaged; '$relativePath' does not match its manifest hash."
+        }}
+    }}
+    Write-Host "Validated deployment bundle $($manifest.bundle_id) for $($manifest.repository)."
+    Write-Host "Project snapshot: $($manifest.project_name) [$($manifest.study_id)]"
+}}
+
 function Get-RemoteUrl {{
     if ($RepositoryUrl.Trim()) {{
         return $RepositoryUrl.Trim()
@@ -924,6 +1075,7 @@ function Copy-SafeBundleFiles {{
         "shade_study_stops.csv",
         "shade_study_raw_labels.csv",
         "shade_study_config.json",
+        "deployment_manifest.json",
         "requirements.txt"
     )
     Show-ProtectedFileWarnings
@@ -989,8 +1141,12 @@ function Commit-And-Push {{
     if (-not $SkipPush) {{
         Invoke-Native "git" @("push", "origin", $TargetBranch)
     }}
+    Write-Host "Repository status after commit/push:"
+    Invoke-Native "git" @("status", "--short", "--branch")
     return $true
 }}
+
+Assert-DeploymentBundle
 
 if ($Mode -eq "existing") {{
     Assert-PrivateExistingRepository
@@ -1059,6 +1215,7 @@ $newRepoFiles = @(
     "shade_study_stops.csv",
     "shade_study_raw_labels.csv",
     "shade_study_config.json",
+    "deployment_manifest.json",
     "requirements.txt",
     "README.md",
     "deploy_to_github.ps1",
@@ -1075,30 +1232,62 @@ Write-Host "Created and published repository $RepositoryName on branch $Branch."
 
 
 def build_github_deploy_bundle(repo_name: str, deploy_mode: str = "existing") -> bytes:
+    if deploy_mode not in {"create", "existing"}:
+        raise ValueError("deploy_mode must be 'create' or 'existing'")
     stops = st.session_state["stops"].copy()
     stops["priority_score"] = calculate_priority_scores(stops, st.session_state["visualization"]["priority_weights"])
     config_json = study_config_json()
     raw_labels = active_raw_labels()
 
+    files: dict[str, bytes] = {
+        "app.py": published_app_source().encode("utf-8"),
+        "public_voting.py": public_voting_source().encode("utf-8"),
+        "shade_study_stops.csv": stops.to_csv(index=False).encode("utf-8"),
+        "shade_study_config.json": config_json.encode("utf-8"),
+        "requirements.txt": (
+            "streamlit>=1.57,<2\npandas>=2.2,<3\npyarrow>=24,<25\npydeck>=0.8,<1\n"
+            "psycopg[binary]>=3.2,<4\n"
+        ).encode("utf-8"),
+        ".streamlit/config.toml": (
+            "[server]\nheadless = true\n\n[browser]\ngatherUsageStats = false\n"
+        ).encode("utf-8"),
+        ".gitignore": (
+            "__pycache__/\n*.pyc\n*.sqlite3\n.streamlit/secrets.toml\n_shade_gis_publish_*/\n"
+        ).encode("utf-8"),
+        "deploy_to_github.ps1": deploy_script(repo_name).encode("utf-8"),
+    }
+    if not raw_labels.empty:
+        files["shade_study_raw_labels.csv"] = raw_labels.to_csv(index=False).encode("utf-8")
+
+    file_hashes = {name: hashlib.sha256(content).hexdigest() for name, content in sorted(files.items())}
+    manifest_core = {
+        "schema_version": 1,
+        "study_id": str(st.session_state.get("active_project_id") or ""),
+        "project_name": str(st.session_state["project"].get("name", "Shade Study")),
+        "repository": repo_name.strip().removesuffix(".git"),
+        "deploy_mode": deploy_mode,
+        "entrypoint": streamlit_entrypoint_path(deploy_mode),
+        "files": file_hashes,
+    }
+    bundle_id = hashlib.sha256(
+        json.dumps(manifest_core, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+    manifest = {**manifest_core, "bundle_id": bundle_id}
+    files["deployment_manifest.json"] = json.dumps(manifest, indent=2, sort_keys=True).encode("utf-8")
+
+    folder_name = slugify_repo_name(repo_name.rstrip("/").split("/")[-1].replace(".git", ""))
+    bundle_name = f"{folder_name}-{bundle_id[:12]}.zip"
+    files["README.md"] = deploy_readme(
+        repo_name,
+        st.session_state["project"],
+        deploy_mode,
+        bundle_name=bundle_name,
+    ).encode("utf-8")
+
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as bundle:
-        bundle.writestr("app.py", published_app_source())
-        bundle.writestr("public_voting.py", public_voting_source())
-        bundle.writestr("shade_study_stops.csv", stops.to_csv(index=False))
-        bundle.writestr("shade_study_config.json", config_json)
-        if not raw_labels.empty:
-            bundle.writestr("shade_study_raw_labels.csv", raw_labels.to_csv(index=False))
-        bundle.writestr(
-            "requirements.txt",
-            "streamlit>=1.57,<2\npandas>=2.2,<3\npyarrow>=24,<25\npydeck>=0.8,<1\npsycopg[binary]>=3.2,<4\n",
-        )
-        bundle.writestr(".streamlit/config.toml", "[server]\nheadless = true\n\n[browser]\ngatherUsageStats = false\n")
-        bundle.writestr(
-            ".gitignore",
-            "__pycache__/\n*.pyc\n*.sqlite3\n.streamlit/secrets.toml\n_shade_gis_publish_*/\n",
-        )
-        bundle.writestr("README.md", deploy_readme(repo_name, st.session_state["project"], deploy_mode))
-        bundle.writestr("deploy_to_github.ps1", deploy_script(repo_name))
+        for name, content in files.items():
+            bundle.writestr(name, content)
     return buffer.getvalue()
 
 

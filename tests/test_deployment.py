@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import io
+import hashlib
+import json
 import shutil
 import tempfile
 import uuid
@@ -31,13 +33,30 @@ def deployment_tmp():
 
 
 def _bundle_bytes() -> bytes:
+    files = {
+        "app.py": b"print('published')\n",
+        "public_voting.py": b"VOTING = True\n",
+        "shade_study_stops.csv": b"stop_id\n1001\n",
+        "shade_study_config.json": b"{}",
+        "requirements.txt": b"streamlit\n",
+    }
+    manifest_core = {
+        "schema_version": 1,
+        "study_id": "test-study",
+        "project_name": "Test study",
+        "repository": "owner/study",
+        "deploy_mode": "existing",
+        "entrypoint": "preview_app/app.py",
+        "files": {name: hashlib.sha256(content).hexdigest() for name, content in files.items()},
+    }
+    manifest_core["bundle_id"] = hashlib.sha256(
+        json.dumps(manifest_core, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
     output = io.BytesIO()
     with zipfile.ZipFile(output, "w") as bundle:
-        bundle.writestr("app.py", "print('published')\n")
-        bundle.writestr("public_voting.py", "VOTING = True\n")
-        bundle.writestr("shade_study_stops.csv", "stop_id\n1001\n")
-        bundle.writestr("shade_study_config.json", "{}")
-        bundle.writestr("requirements.txt", "streamlit\n")
+        for name, content in files.items():
+            bundle.writestr(name, content)
+        bundle.writestr("deployment_manifest.json", json.dumps(manifest_core))
     return output.getvalue()
 
 
@@ -46,6 +65,33 @@ def test_github_repository_slug_supports_detected_remote_formats():
     assert github_repository_slug("git@github.com:owner/study.git") == "owner/study"
     assert github_repository_slug("owner/study") == "owner/study"
     assert github_repository_slug("https://example.com/owner/study") == ""
+
+
+def test_publish_rejects_bundle_for_another_repository_before_git_runs():
+    result = publish_website(
+        _bundle_bytes(),
+        DeploymentTarget(repository="owner/other", repository_url="https://github.com/owner/other"),
+    )
+
+    assert result.success is False
+    assert "targets owner/study, not owner/other" in result.message
+
+
+def test_publish_rejects_tampered_bundle_before_git_runs():
+    original = _bundle_bytes()
+    output = io.BytesIO()
+    with zipfile.ZipFile(io.BytesIO(original)) as source, zipfile.ZipFile(output, "w") as changed:
+        for name in source.namelist():
+            content = source.read(name)
+            changed.writestr(name, b"tampered\n" if name == "app.py" else content)
+
+    result = publish_website(
+        output.getvalue(),
+        DeploymentTarget(repository="owner/study", repository_url="https://github.com/owner/study"),
+    )
+
+    assert result.success is False
+    assert "app.py does not match its manifest hash" in result.message
 
 
 def test_detect_deployment_target_uses_origin_and_remote_default_branch(deployment_tmp):
@@ -87,7 +133,7 @@ def test_publish_and_unpublish_existing_repository_automatically(deployment_tmp,
         mode="existing",
     )
     stages: list[str] = []
-    observed: dict[str, object] = {"published": False, "pushes": 0}
+    observed: dict[str, object] = {"published": False, "pushes": 0, "statuses": 0}
     temporary_counter = iter(range(10))
 
     class WorkspaceTemporaryDirectory:
@@ -123,6 +169,7 @@ def test_publish_and_unpublish_existing_repository_automatically(deployment_tmp,
         if command[:2] == ("git", "add"):
             observed["app"] = (Path(cwd) / "preview_app" / "app.py").read_text(encoding="utf-8")
             observed["readme"] = (Path(cwd) / "README.md").read_text(encoding="utf-8")
+            observed["manifest"] = (Path(cwd) / "preview_app" / "deployment_manifest.json").exists()
             return CommandResult(0)
         if command[:2] == ("git", "rm"):
             observed["removed"] = list(args[5:])
@@ -131,6 +178,9 @@ def test_publish_and_unpublish_existing_repository_automatically(deployment_tmp,
             observed["published"] = not bool(observed["published"])
             observed["pushes"] = int(observed["pushes"]) + 1
             return CommandResult(0)
+        if command == ("git", "status", "--short", "--branch"):
+            observed["statuses"] = int(observed["statuses"]) + 1
+            return CommandResult(0, stdout="## main...origin/main")
         if command == ("git", "rev-parse", "HEAD"):
             return CommandResult(0, stdout="abc123")
         return CommandResult(0)
@@ -147,9 +197,12 @@ def test_publish_and_unpublish_existing_repository_automatically(deployment_tmp,
     assert result.success is True
     assert result.changed is True
     assert result.needs_host_setup is True
+    assert result.verification_skipped is False
     assert stages == ["Check project", "Prepare website", "Publish", "Verify website"]
     assert observed["app"] == "print('published')\n"
     assert observed["readme"] == "existing repository\n"
+    assert observed["manifest"] is True
+    assert observed["statuses"] == 2
 
     unpublished = unpublish_website(target, runner=fake_runner)
 

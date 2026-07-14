@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -26,6 +27,7 @@ EXISTING_BUNDLE_FILES = (
     "shade_study_stops.csv",
     "shade_study_raw_labels.csv",
     "shade_study_config.json",
+    "deployment_manifest.json",
     "requirements.txt",
 )
 CREATED_REPOSITORY_FILES = (
@@ -81,6 +83,7 @@ class PublishResult:
     public_url: str = ""
     verified: bool = False
     needs_host_setup: bool = False
+    verification_skipped: bool = False
     message: str = ""
     logs: list[str] = field(default_factory=list)
 
@@ -258,9 +261,9 @@ def deployment_readiness(
     if not target.repository:
         return ReadinessResult(
             False,
-            "Connect a publishing destination",
-            "Shade-GIS could not detect where this website should be published.",
-            "Open advanced settings",
+            "Complete settings before publishing",
+            "Enter your GitHub username and destination repository before publishing.",
+            "Open settings",
             "advanced",
         )
     if target.mode == "existing" and not target.repository_url:
@@ -268,7 +271,7 @@ def deployment_readiness(
             False,
             "Reconnect the publishing destination",
             "The saved destination no longer has a usable address.",
-            "Open advanced settings",
+            "Open settings",
             "advanced",
         )
     if shutil.which("git") is None:
@@ -330,6 +333,59 @@ def _safe_zip_read(bundle: zipfile.ZipFile, name: str) -> bytes | None:
     return bundle.read(info)
 
 
+def deployment_bundle_manifest(bundle_data: bytes) -> dict:
+    try:
+        with zipfile.ZipFile(BytesIO(bundle_data)) as bundle:
+            content = _safe_zip_read(bundle, "deployment_manifest.json")
+    except zipfile.BadZipFile as exc:
+        raise RuntimeError("The deployment package is not a valid ZIP file.") from exc
+    if content is None:
+        raise RuntimeError(
+            "The deployment package has no validation manifest. Download a fresh package from Shade-GIS."
+        )
+    try:
+        manifest = json.loads(content.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise RuntimeError("The deployment package validation manifest is invalid.") from exc
+    if not isinstance(manifest, dict) or manifest.get("schema_version") != 1:
+        raise RuntimeError("The deployment package uses an unsupported validation manifest.")
+    return manifest
+
+
+def validate_deployment_bundle(bundle_data: bytes, target: DeploymentTarget) -> dict:
+    manifest = deployment_bundle_manifest(bundle_data)
+    expected_repository = github_repository_slug(target.repository) or target.repository.strip().removesuffix(".git")
+    if manifest.get("repository") != expected_repository:
+        raise RuntimeError(
+            f"This package targets {manifest.get('repository') or 'an unknown repository'}, not {expected_repository}. "
+            "Create a fresh package for the selected repository."
+        )
+    if manifest.get("deploy_mode") != target.mode:
+        raise RuntimeError(
+            f"This package was created for {manifest.get('deploy_mode') or 'an unknown'} deployment mode, "
+            f"not {target.mode}. Create a fresh package."
+        )
+    file_hashes = manifest.get("files")
+    if not isinstance(file_hashes, dict) or not file_hashes:
+        raise RuntimeError("The deployment package manifest contains no file hashes.")
+    try:
+        with zipfile.ZipFile(BytesIO(bundle_data)) as bundle:
+            for name, expected_hash in file_hashes.items():
+                if not isinstance(name, str) or not isinstance(expected_hash, str):
+                    raise RuntimeError("The deployment package manifest contains an invalid file entry.")
+                content = _safe_zip_read(bundle, name)
+                if content is None:
+                    raise RuntimeError(f"The deployment package is incomplete; {name} is missing.")
+                actual_hash = hashlib.sha256(content).hexdigest()
+                if actual_hash != expected_hash.lower():
+                    raise RuntimeError(
+                        f"The deployment package is stale or damaged; {name} does not match its manifest hash."
+                    )
+    except zipfile.BadZipFile as exc:
+        raise RuntimeError("The deployment package is not a valid ZIP file.") from exc
+    return manifest
+
+
 def _write_bundle_files(bundle_data: bytes, destination: Path, names: Sequence[str]) -> None:
     destination.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(BytesIO(bundle_data)) as bundle:
@@ -375,6 +431,7 @@ def _publish_existing(
     )
     _write_bundle_files(bundle_data, worktree / EXISTING_PREVIEW_DIR, EXISTING_BUNDLE_FILES)
     _checked(["git", "add", "--", EXISTING_PREVIEW_DIR], worktree, logs, runner)
+    _checked(["git", "status", "--short", "--branch"], worktree, logs, runner)
     diff = runner(["git", "diff", "--cached", "--quiet"], worktree, 30)
     if diff.returncode == 0:
         commit = _checked(["git", "rev-parse", "HEAD"], worktree, logs, runner).stdout.strip()
@@ -389,6 +446,7 @@ def _publish_existing(
         runner,
     )
     _checked(["git", "push", "origin", f"HEAD:{target.branch}"], worktree, logs, runner, 180)
+    _checked(["git", "status", "--short", "--branch"], worktree, logs, runner)
     commit = _checked(["git", "rev-parse", "HEAD"], worktree, logs, runner).stdout.strip()
     return True, commit
 
@@ -407,6 +465,7 @@ def _publish_created(
     _checked(["git", "branch", "-M", target.branch], worktree, logs, runner)
     _ensure_commit_identity(worktree, logs, runner)
     _checked(["git", "add", "--", *CREATED_REPOSITORY_FILES], worktree, logs, runner)
+    _checked(["git", "status", "--short", "--branch"], worktree, logs, runner)
     _checked(["git", "commit", "-m", "Publish Shade-GIS website"], worktree, logs, runner)
     _checked(
         [
@@ -424,6 +483,7 @@ def _publish_created(
         runner,
         180,
     )
+    _checked(["git", "status", "--short", "--branch"], worktree, logs, runner)
     commit = _checked(["git", "rev-parse", "HEAD"], worktree, logs, runner).stdout.strip()
     return True, commit
 
@@ -461,6 +521,10 @@ def publish_website(
         notify("Check project", "Checking project data and publishing access")
         if not bundle_data:
             raise RuntimeError("The website package is empty. Return to the project and try again.")
+        manifest = validate_deployment_bundle(bundle_data, target)
+        logs.append(
+            f"Validated deployment bundle {manifest.get('bundle_id', '')} for {manifest.get('repository', '')}."
+        )
         with zipfile.ZipFile(BytesIO(bundle_data)) as bundle:
             if "app.py" not in bundle.namelist():
                 raise RuntimeError("The website package is missing its application file.")

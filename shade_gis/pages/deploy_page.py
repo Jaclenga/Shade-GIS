@@ -13,8 +13,10 @@ import streamlit.components.v1 as components
 
 from builder_app import (
     build_github_deploy_bundle,
+    deployment_session_freshness_issue,
     deploy_launcher_script,
     github_new_repo_url,
+    load_project_into_session,
     set_page,
     slugify_repo_name,
 )
@@ -22,6 +24,7 @@ from shade_gis.deployment import (
     STREAMLIT_WORKSPACE_URL,
     DeploymentTarget,
     PublishResult,
+    deployment_bundle_manifest,
     deployment_readiness,
     detect_deployment_target,
     github_repository_url,
@@ -37,7 +40,7 @@ from shade_gis.deployment import (
 
 DEPLOYMENT_RESULT_KEY = "deploy_page_result"
 DEPLOYMENT_TARGET_KEY = "deploy_page_result_target"
-DEPLOYMENT_ADVANCED_KEY = "deploy_page_show_advanced"
+DEPLOYMENT_SETTINGS_KEY = "deploy_page_show_settings"
 DEPLOYMENT_UNPUBLISH_KEY = "deploy_page_confirm_unpublish"
 DEPLOYMENT_UNPUBLISHED_KEY = "deploy_page_unpublished"
 DEPLOYMENT_STAGE_KEY = "deploy_page_stage"
@@ -48,6 +51,7 @@ BUNDLE_FILE_CATALOG = [
     ("shade_study_stops.csv", "Published stop data"),
     ("shade_study_raw_labels.csv", "Published label history, when available"),
     ("shade_study_config.json", "Project display settings"),
+    ("deployment_manifest.json", "Validated project snapshot and file hashes"),
     ("requirements.txt", "Website runtime"),
     ("README.md", "Manual deployment documentation"),
     ("deploy_to_github.ps1", "Manual publishing fallback"),
@@ -171,6 +175,8 @@ def stage_markup(active_stage: str = "", completed: set[str] | None = None) -> s
             css_class = "active"
             icon = '<span class="deploy-loading" aria-label="In progress"></span>'
             state = "In progress"
+        elif label == "Verify website" and set(STAGES[:3]).issubset(completed):
+            css_class, icon, state = "pending", "○", "Optional"
         else:
             css_class, icon, state = "pending", str(index), "Waiting"
         rows.append(
@@ -222,10 +228,29 @@ def render_success_card(public_url: str) -> None:
     )
 
 
+def render_repository_success_card(repository: str, changed: bool) -> None:
+    title = "Your app files are on GitHub" if changed else "Repository already up to date"
+    copy = (
+        "Website hosting and verification were skipped. You can add a hosted website later."
+        if changed
+        else "The generated app already matches GitHub, so no commit or push was needed."
+    )
+    st.markdown(
+        f"""
+        <div class="deploy-success">
+          <div class="deploy-card-kicker">Repository published</div>
+          <div class="deploy-card-title">{html.escape(title)}</div>
+          <div class="deploy-card-copy">{html.escape(copy)}</div>
+          <span class="deploy-success-url">{html.escape(repository)}</span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def _initialize_target_state(detected: DeploymentTarget, project: dict) -> None:
-    default_repo_name = slugify_repo_name(project.get("name", "shade-study-app"))
-    st.session_state.setdefault("deploy_repository", detected.repository or default_repo_name)
-    st.session_state.setdefault("deploy_repository_url", detected.repository_url)
+    st.session_state.setdefault("deploy_github_username", "")
+    st.session_state.setdefault("deploy_destination_repository", "")
     st.session_state.setdefault("deploy_branch", detected.branch or "main")
     st.session_state.setdefault("deploy_mode", "existing" if detected.repository else "create")
     st.session_state.setdefault(
@@ -237,12 +262,12 @@ def _initialize_target_state(detected: DeploymentTarget, project: dict) -> None:
 def _current_target(detected: DeploymentTarget, project: dict) -> DeploymentTarget:
     mode_label = st.session_state.get("deploy_mode", "existing")
     mode = "create" if mode_label == "create" else "existing"
-    repository = str(st.session_state.get("deploy_repository", "")).strip()
-    repository_url = str(st.session_state.get("deploy_repository_url", "")).strip()
+    username = str(st.session_state.get("deploy_github_username", "")).strip().strip("/")
+    destination = str(st.session_state.get("deploy_destination_repository", "")).strip().strip("/")
+    repository = f"{username}/{destination}" if username and destination else ""
+    repository_url = github_repository_url(repository)
     if mode == "existing" and repository == detected.repository and detected.repository_url:
         repository_url = detected.repository_url
-    if mode == "existing" and not repository_url:
-        repository_url = github_repository_url(repository)
     public_url = normalize_public_url(st.session_state.get("deploy_public_url"))
     target = DeploymentTarget(
         repository=repository,
@@ -298,14 +323,16 @@ def _run_publish(bundle_data: bytes, target: DeploymentTarget) -> PublishResult:
     if result.verified:
         render_stages("", set(STAGES), stage_box)
     elif result.needs_host_setup:
-        render_stages("Verify website", set(STAGES[:3]), stage_box)
+        render_stages("", set(STAGES[:3]), stage_box)
     _store_result(target, result)
     st.session_state[DEPLOYMENT_STAGE_KEY] = ""
     return result
 
 
 def _render_technical_details(target: DeploymentTarget, result: PublishResult | None, bundle_data: bytes) -> None:
-    with st.expander("View technical details", expanded=False):
+    failed = bool(result and not result.success)
+    label = "Error details" if failed else "View technical details"
+    with st.expander(label, expanded=failed):
         details = {
             "repository": target.repository,
             "repository_url": target.repository_url,
@@ -329,26 +356,85 @@ def _render_technical_details(target: DeploymentTarget, result: PublishResult | 
             st.code("\n\n".join(result.logs), language="text")
 
 
-def _render_advanced_settings(
+def _render_publish_error(result: PublishResult) -> None:
+    st.error(result.message or "Deployment failed before the repository could be updated.")
+    if result.logs:
+        st.markdown("##### Deployment error details")
+        st.code("\n\n".join(result.logs), language="text")
+
+
+def _render_optional_website_setup(target: DeploymentTarget, result: PublishResult) -> None:
+    st.markdown(
+        """
+        <div class="deploy-almost">
+          <div class="deploy-card-title">Optional website hosting</div>
+          <div class="deploy-card-copy">Your repository is published. Connect it to a website host and verify the link, or skip this step for now.</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.link_button("Set up hosted website", STREAMLIT_WORKSPACE_URL, type="primary", width="stretch")
+    website_url = st.text_input(
+        "Website link",
+        value=st.session_state.get("deploy_public_url", ""),
+        placeholder="https://your-study.streamlit.app",
+    )
+    action_columns = st.columns(2, gap="small")
+    verify_clicked = action_columns[0].button("Verify website", width="stretch")
+    skip_clicked = action_columns[1].button("Skip for now", width="stretch")
+
+    if skip_clicked:
+        result.needs_host_setup = False
+        result.verification_skipped = True
+        result.message = "The repository is published. Website verification was skipped."
+        _store_result(target, result)
+        st.rerun()
+
+    if verify_clicked:
+        normalized_url = normalize_public_url(website_url)
+        with st.spinner("Checking the website…"):
+            verified, message = verify_website(normalized_url)
+        if verified:
+            st.session_state["deploy_public_url"] = normalized_url
+            verified_target = replace(target, public_url=normalized_url)
+            result.public_url = normalized_url
+            result.verified = True
+            result.needs_host_setup = False
+            result.verification_skipped = False
+            result.message = "The website is published and responding."
+            result.logs.append(message)
+            _store_result(verified_target, result)
+            st.rerun()
+        else:
+            st.error("The website is not reachable yet. Check the link, or skip verification for now.")
+
+
+def _render_settings(
     project: dict,
     target: DeploymentTarget,
     bundle_data: bytes,
     bundle_name: str,
 ) -> None:
-    expanded = bool(st.session_state.pop(DEPLOYMENT_ADVANCED_KEY, False))
-    with st.expander("Advanced settings", expanded=expanded):
-        st.caption("These settings are optional. Shade-GIS fills them in automatically when it can.")
+    expanded = bool(st.session_state.pop(DEPLOYMENT_SETTINGS_KEY, False))
+    with st.expander("Settings", expanded=expanded):
+        st.caption("GitHub username and destination repository are required before publishing.")
         st.selectbox(
             "Publishing destination",
             options=["existing", "create"],
             format_func=lambda value: "Use an existing repository" if value == "existing" else "Create a repository",
             key="deploy_mode",
         )
-        st.text_input("Repository", key="deploy_repository", help="GitHub OWNER/REPOSITORY")
         st.text_input(
-            "Repository address",
-            key="deploy_repository_url",
-            help="Usually detected from this project's origin remote.",
+            "GitHub username",
+            key="deploy_github_username",
+            placeholder="Jaclenga",
+            help="Required. Enter the GitHub account or organization that owns the repository.",
+        )
+        st.text_input(
+            "Destination repository",
+            key="deploy_destination_repository",
+            placeholder="Shade-GIS",
+            help="Required. Enter the repository name only.",
         )
         st.text_input("Default branch", key="deploy_branch")
         st.selectbox(
@@ -356,6 +442,10 @@ def _render_advanced_settings(
             options=["private", "public"],
             key="deploy_visibility",
             disabled=st.session_state.get("deploy_mode") != "create",
+            help=(
+                "Visibility can only be selected when Shade-GIS creates a new repository. "
+                "For an existing repository, change its visibility in the repository's GitHub settings."
+            ),
         )
         st.text_input(
             "Hosted website address",
@@ -421,19 +511,36 @@ def render_deploy_page() -> None:
 
     bundle_data = b""
     bundle_error = ""
+    freshness_issue = ""
     if not stops.empty and target.repository:
-        try:
-            bundle_data = build_github_deploy_bundle(target.repository, target.mode)
-        except Exception as exc:  # Builder validation errors are converted into one actionable readiness issue.
-            bundle_error = str(exc).splitlines()[0] or "The project could not be prepared for publishing."
+        freshness_issue = deployment_session_freshness_issue()
+        if freshness_issue:
+            bundle_error = freshness_issue
+        else:
+            try:
+                bundle_data = build_github_deploy_bundle(target.repository, target.mode)
+            except Exception as exc:  # Builder validation errors are converted into one actionable readiness issue.
+                bundle_error = str(exc).splitlines()[0] or "The project could not be prepared for publishing."
     readiness = deployment_readiness(stops.empty, target, bundle_error)
+    if freshness_issue:
+        readiness = replace(
+            readiness,
+            title="Reload the latest project before publishing",
+            message=freshness_issue,
+            action_label="Reload saved project",
+            action="reload",
+        )
     existing_package = repository_has_published_app(target)
     if readiness.ready and existing_package:
         readiness = replace(
             readiness,
             message="Shade-GIS found the existing website and is ready to publish an update.",
         )
-    bundle_name = f"{slugify_repo_name(target.repository.split('/')[-1] or project.get('name', 'shade-study'))}.zip"
+    bundle_stem = slugify_repo_name(target.repository.split("/")[-1] or project.get("name", "shade-study"))
+    bundle_name = f"{bundle_stem}.zip"
+    if bundle_data:
+        manifest = deployment_bundle_manifest(bundle_data)
+        bundle_name = f"{bundle_stem}-{manifest['bundle_id'][:12]}.zip"
     result = _stored_result(target)
     if result is None and readiness.ready and target.public_url:
         verified, verification_message = cached_website_check(target.public_url)
@@ -474,7 +581,7 @@ def render_deploy_page() -> None:
                     st.rerun()
                 else:
                     status.update(label="The update needs attention", state="error", expanded=True)
-                    st.error(updated_result.message)
+                    _render_publish_error(updated_result)
 
         if unpublish:
             st.session_state[DEPLOYMENT_UNPUBLISH_KEY] = True
@@ -501,16 +608,46 @@ def render_deploy_page() -> None:
                 else:
                     st.error(unpublish_result.message)
         _render_technical_details(target, result, bundle_data)
-        _render_advanced_settings(project, target, bundle_data, bundle_name)
+        _render_settings(project, target, bundle_data, bundle_name)
+        return
+
+    if result and result.verification_skipped:
+        render_repository_success_card(target.repository, result.changed)
+        action_columns = st.columns(2, gap="small")
+        action_columns[0].link_button(
+            "Open GitHub repository",
+            github_repository_url(target.repository),
+            width="stretch",
+        )
+        if action_columns[1].button("Add a hosted website", width="stretch"):
+            result.verification_skipped = False
+            result.needs_host_setup = True
+            _store_result(target, result)
+            st.rerun()
+        _render_technical_details(target, result, bundle_data)
+        _render_settings(project, target, bundle_data, bundle_name)
+        return
+
+    if result and result.needs_host_setup:
+        render_stages("", set(STAGES[:3]))
+        _render_optional_website_setup(target, result)
+        _render_technical_details(target, result, bundle_data)
+        _render_settings(project, target, bundle_data, bundle_name)
         return
 
     render_readiness_card(readiness.title, readiness.message, readiness.ready)
     if not readiness.ready:
         if readiness.action == "data":
             st.button(readiness.action_label, type="primary", width="stretch", on_click=set_page, args=("Data",))
+        elif readiness.action == "reload":
+            if st.button(readiness.action_label, type="primary", width="stretch"):
+                load_project_into_session(st.session_state["active_project_id"])
+                st.session_state.pop(DEPLOYMENT_RESULT_KEY, None)
+                st.session_state.pop(DEPLOYMENT_TARGET_KEY, None)
+                st.rerun()
         else:
             if st.button(readiness.action_label, type="primary", width="stretch"):
-                st.session_state[DEPLOYMENT_ADVANCED_KEY] = True
+                st.session_state[DEPLOYMENT_SETTINGS_KEY] = True
                 st.rerun()
     else:
         render_stages()
@@ -525,46 +662,16 @@ def render_deploy_page() -> None:
                     status.update(label="Website published", state="complete", expanded=False)
                     st.rerun()
                 elif result.needs_host_setup:
-                    status.update(label="One quick setup remains", state="running", expanded=True)
+                    status_label = "Repository published" if result.changed else "Repository already up to date"
+                    status.update(label=status_label, state="complete", expanded=False)
                 else:
                     status.update(label="Publishing stopped", state="error", expanded=True)
-                    st.error(result.message)
+                    _render_publish_error(result)
 
     result = _stored_result(target)
     if result and result.needs_host_setup:
-        render_stages("Verify website", set(STAGES[:3]))
-        st.markdown(
-            """
-            <div class="deploy-almost">
-              <div class="deploy-card-title">One-time website setup</div>
-              <div class="deploy-card-copy">Your website files are published. Connect them to the website host once, then paste the website link below.</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        st.link_button("Finish website setup", STREAMLIT_WORKSPACE_URL, type="primary", width="stretch")
-        website_url = st.text_input(
-            "Website link",
-            value=st.session_state.get("deploy_public_url", ""),
-            placeholder="https://your-study.streamlit.app",
-        )
-        if st.button("Verify website", width="stretch"):
-            normalized_url = normalize_public_url(website_url)
-            with st.spinner("Checking the website…"):
-                verified, message = verify_website(normalized_url)
-            if verified:
-                st.session_state["deploy_public_url"] = normalized_url
-                target = replace(target, public_url=normalized_url)
-                result.public_url = normalized_url
-                result.verified = True
-                result.needs_host_setup = False
-                result.message = "The website is published and responding."
-                result.logs.append(message)
-                _store_result(target, result)
-                st.rerun()
-            else:
-                st.error("The website is not reachable yet. Wait a moment, then verify it again.")
+        _render_optional_website_setup(target, result)
 
     if result:
         _render_technical_details(target, result, bundle_data)
-    _render_advanced_settings(project, target, bundle_data, bundle_name)
+    _render_settings(project, target, bundle_data, bundle_name)

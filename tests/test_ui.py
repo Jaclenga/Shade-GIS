@@ -442,6 +442,33 @@ def test_builder_navigation_pages_render(playwright_api, streamlit_server: Strea
                     playwright_api.expect(
                         page.get_by_role("heading", name="Publish website", exact=True)
                     ).to_be_visible(timeout=30_000)
+                    playwright_api.expect(
+                        page.get_by_text("Complete settings before publishing", exact=True)
+                    ).to_be_visible(timeout=30_000)
+                    playwright_api.expect(
+                        page.get_by_role("button", name="Publish app", exact=True)
+                    ).to_have_count(0)
+                    playwright_api.expect(
+                        page.get_by_text(
+                            "Enter your GitHub username and destination repository before publishing.",
+                            exact=True,
+                        )
+                    ).to_be_visible(timeout=30_000)
+
+                    settings = page.get_by_text("Settings", exact=True)
+                    settings.click()
+                    username_input = page.get_by_label("GitHub username", exact=True)
+                    repository_input = page.get_by_label("Destination repository", exact=True)
+                    playwright_api.expect(username_input).to_have_value("")
+                    playwright_api.expect(repository_input).to_have_value("")
+                    playwright_api.expect(page.get_by_label("Default branch", exact=True)).to_have_value("main")
+                    username_input.fill("Jaclenga")
+                    username_input.press("Tab")
+                    wait_for_streamlit_idle(playwright_api, page, streamlit_server)
+                    repository_input = page.get_by_label("Destination repository", exact=True)
+                    repository_input.fill("Shade-GIS")
+                    repository_input.press("Tab")
+                    wait_for_streamlit_idle(playwright_api, page, streamlit_server)
                     playwright_api.expect(page.get_by_text("Ready to publish", exact=True)).to_be_visible(
                         timeout=30_000
                     )
@@ -452,13 +479,7 @@ def test_builder_navigation_pages_render(playwright_api, streamlit_server: Strea
                     playwright_api.expect(
                         page.get_by_text("This usually takes 1–3 minutes.", exact=True)
                     ).to_be_visible(timeout=30_000)
-                    playwright_api.expect(page.get_by_label("Repository", exact=True)).to_be_hidden()
-
-                    advanced = page.get_by_text("Advanced settings", exact=True)
-                    advanced.click()
-                    repository_input = page.get_by_label("Repository", exact=True)
-                    playwright_api.expect(repository_input).to_have_value("Jaclenga/Shade-GIS", timeout=30_000)
-                    playwright_api.expect(page.get_by_label("Default branch", exact=True)).to_have_value("main")
+                    page.get_by_text("Settings", exact=True).click()
                     playwright_api.expect(
                         page.get_by_role("button", name="Download website package", exact=True)
                     ).to_be_visible(timeout=30_000)
