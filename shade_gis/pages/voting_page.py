@@ -1,7 +1,9 @@
 from builder_app import *
 from public_voting import (
     PUBLIC_COVERAGE_OPTIONS,
+    PUBLIC_SOURCE_DISPLAY_LABELS,
     PUBLIC_SOURCE_OPTIONS,
+    coverage_taxonomy_help,
     normalize_voting_config,
     source_taxonomy_help,
 )
@@ -97,7 +99,10 @@ def render_voting_controls(
     return voting
 
 
-def render_voting_preview(voting: dict[str, Any]) -> None:
+def render_voting_preview(
+    voting: dict[str, Any],
+    taxonomy: list[dict[str, Any]] | None = None,
+) -> None:
     st.subheader("Deployed Interface Preview")
     if not voting.get("enabled", False):
         st.info("Voting is currently hidden in the deployed app. Enable it to publish this interface.")
@@ -107,23 +112,31 @@ def render_voting_preview(voting: dict[str, Any]) -> None:
             st.markdown(str(voting["description"]))
         options = voting.get("options", [])
         if options:
+            st.markdown(
+                f"**{voting['question']}**",
+                help=coverage_taxonomy_help(options, taxonomy),
+            )
             st.radio(
                 str(voting["question"]),
                 options,
                 disabled=True,
                 key="voting_interface_preview_choice",
+                label_visibility="collapsed",
             )
-            st.markdown("##### Shade source(s)", help=source_taxonomy_help())
-            st.caption(str(voting["source_question"]))
-            source_columns = st.columns(len(PUBLIC_SOURCE_OPTIONS))
-            for index, source in enumerate(PUBLIC_SOURCE_OPTIONS):
-                with source_columns[index]:
-                    st.checkbox(
-                        source,
-                        disabled=True,
-                        key=f"voting_interface_preview_source_{source.lower()}",
-                    )
-            st.button(str(voting["submit_label"]), disabled=True, key="voting_interface_preview_submit")
+            st.divider()
+            st.markdown(f"**{voting['source_question']}**", help=source_taxonomy_help())
+            for source in PUBLIC_SOURCE_OPTIONS:
+                st.checkbox(
+                    PUBLIC_SOURCE_DISPLAY_LABELS[source],
+                    disabled=True,
+                    key=f"voting_interface_preview_source_{source.lower()}",
+                )
+            st.button(
+                str(voting["submit_label"]),
+                disabled=True,
+                key="voting_interface_preview_submit",
+                width="stretch",
+            )
         else:
             st.warning("Choose at least one coverage option to complete the interface.")
         if voting.get("show_results", True):
@@ -146,7 +159,7 @@ def render_voting_page() -> None:
         st.subheader("Voting Settings")
         voting = render_voting_controls(visualization, taxonomy)
     with preview:
-        render_voting_preview(voting)
+        render_voting_preview(voting, taxonomy)
 
     st.divider()
     st.subheader("Deployment Storage")

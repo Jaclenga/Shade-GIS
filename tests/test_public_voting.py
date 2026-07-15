@@ -6,15 +6,36 @@ import pandas as pd
 
 import published_app
 from public_voting import (
+    DEFAULT_VOTING_CONFIG,
+    PUBLIC_COVERAGE_DEFINITIONS,
+    PUBLIC_SOURCE_DISPLAY_LABELS,
     PUBLIC_SOURCE_DEFINITIONS,
     community_result,
+    coverage_taxonomy_help,
     get_existing_vote,
     get_existing_vote_details,
     get_vote_counts,
     normalize_voting_config,
+    normalize_vote_sources,
     save_vote,
     source_taxonomy_help,
 )
+
+
+def test_default_source_question_uses_plain_language_checkbox_copy():
+    assert DEFAULT_VOTING_CONFIG["source_question"] == (
+        "What creates the shade at this stop? Select all that apply."
+    )
+    assert PUBLIC_SOURCE_DISPLAY_LABELS == {
+        "Natural": "Trees / vegetation",
+        "Purpose-built": "Bus shelter / shade structure",
+        "Incidental": "Nearby buildings or other structures",
+    }
+    assert normalize_vote_sources(list(PUBLIC_SOURCE_DISPLAY_LABELS.values())) == [
+        "Natural",
+        "Purpose-built",
+        "Incidental",
+    ]
 
 
 def test_shared_stop_panel_renders_voting_for_the_selected_stop(monkeypatch):
@@ -125,6 +146,22 @@ def test_source_heading_tooltip_explains_all_source_categories():
     all_sources_help = source_taxonomy_help()
     for source, definition in PUBLIC_SOURCE_DEFINITIONS.items():
         assert f"**{source}:** {definition}" in all_sources_help
+
+
+def test_coverage_question_tooltip_explains_configured_taxonomy_choices():
+    taxonomy = [
+        {"name": "No Shade", "description": "Configured no-shade definition."},
+        {"name": "Limited Shade", "description": "Configured limited-shade definition."},
+        {"name": "Significant Shade", "description": "Configured significant-shade definition."},
+        {"name": "Needs Review", "description": "Not a public coverage choice."},
+    ]
+
+    guide = coverage_taxonomy_help(list(PUBLIC_COVERAGE_DEFINITIONS), taxonomy)
+
+    for choice in PUBLIC_COVERAGE_DEFINITIONS:
+        slug = choice.lower().replace(" ", "-")
+        assert f"**{choice}:** Configured {slug} definition." in guide
+    assert "Needs Review" not in guide
 
 
 def test_sqlite_vote_store_upserts_one_vote_per_browser_session(db_path):

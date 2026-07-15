@@ -469,7 +469,11 @@ def build_stop_reference_deck(
     selected_visualization["marker_opacity"] = 1.0
     selected_visualization["marker_size"] = min(48, max(marker_size + 4, int(marker_size * 1.8)))
     selected_deck = build_deck_chart(selected_stop, taxonomy, selected_visualization)
-    selected_layers = [layer for layer in selected_deck.layers if getattr(layer, "id", "") == "stops_layer"]
+    selected_layers = [
+        layer
+        for layer in selected_deck.layers
+        if getattr(layer, "id", "").startswith("stops_layer_")
+    ]
     if selected_layers:
         selected_layer = selected_layers[-1]
         selected_layer.id = "selected_reference_stop_layer"

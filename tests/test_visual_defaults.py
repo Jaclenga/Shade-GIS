@@ -343,7 +343,7 @@ def test_marker_slider_sizes_serialize_as_literal_pixels_and_scale_linearly():
         assert icon_layer["data"][0]["marker_size"] == 24
 
 
-def test_non_circle_markers_use_browser_loadable_raster_icons():
+def test_non_circle_markers_use_a_browser_loadable_raster_icon_atlas():
     stops = pd.DataFrame(
         [
             {
@@ -364,7 +364,7 @@ def test_non_circle_markers_use_browser_loadable_raster_icons():
         visualization["marker_shape"] = shape
         for chart_builder in (build_deck_chart, published_app.build_deck_chart):
             layer = json.loads(chart_builder(stops, taxonomy, visualization).to_json())["layers"][-1]
-            icon_url = layer["data"][0]["icon_data"]["url"]
+            icon_url = layer["iconAtlas"]
 
             assert icon_url.startswith("data:image/png;base64,")
             png = base64.b64decode(icon_url.partition(",")[2])
@@ -372,6 +372,40 @@ def test_non_circle_markers_use_browser_loadable_raster_icons():
             with Image.open(io.BytesIO(png)) as image:
                 assert image.size == (64, 64)
                 assert image.mode == "RGBA"
+            icon_name = layer["data"][0]["icon_name"]
+            assert layer["getIcon"] == "@@=icon_name"
+            assert layer["iconMapping"][icon_name]["anchorY"] == (60 if shape == "Pin" else 32)
+
+
+def test_each_marker_shape_gets_a_distinct_deck_layer_id():
+    stops = pd.DataFrame(
+        [
+            {
+                "stop_id": "1001",
+                "stop_name": "Main St",
+                "stop_lat": 27.9506,
+                "stop_lon": -82.4572,
+                "shading": "No Shade",
+                "review_status": "Unlabeled",
+                "priority_score": 0,
+            }
+        ]
+    )
+    taxonomy = [{"name": "No Shade", "color": "#dc143c", "sort_order": 1}]
+
+    layer_ids = []
+    for shape in ["Circle", "Pin", "Square", "Diamond", "Triangle"]:
+        visualization = copy.deepcopy(DEFAULT_VISUALIZATION)
+        visualization["marker_shape"] = shape
+        layer_ids.append(build_deck_chart(stops, taxonomy, visualization).layers[-1].id)
+
+    assert layer_ids == [
+        "stops_layer_circle",
+        "stops_layer_pin",
+        "stops_layer_square",
+        "stops_layer_diamond",
+        "stops_layer_triangle",
+    ]
 
 
 def test_default_map_marker_size_is_seven_for_builder_and_published_maps():

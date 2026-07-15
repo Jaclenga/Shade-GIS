@@ -551,7 +551,7 @@ def test_stop_reference_deck_uses_visuals_styling_for_selected_marker(minimal_st
     deck = labels_page.build_stop_reference_deck(minimal_stops, "1001", taxonomy, visualization)
 
     assert deck is not None
-    assert [layer.id for layer in deck.layers] == ["stops_layer", "selected_reference_stop_layer"]
+    assert [layer.id for layer in deck.layers] == ["stops_layer_circle", "selected_reference_stop_layer"]
     assert len(deck.layers[0].data) == 2
     assert len(deck.layers[-1].data) == 1
     assert deck.layers[-1].data[0]["stop_id"] == "1001"
@@ -597,7 +597,7 @@ def test_stop_reference_map_uses_preview_style_stable_selection_key(monkeypatch,
 
 
 def test_reference_map_selection_returns_clicked_stop(minimal_stops):
-    selection_event = {"selection": {"objects": {"stops_layer": [{"stop_id": "1002"}]}}}
+    selection_event = {"selection": {"objects": {"stops_layer_pin": [{"stop_id": "1002"}]}}}
 
     assert labels_page.stop_id_from_reference_map_selection(selection_event, minimal_stops) == "1002"
 

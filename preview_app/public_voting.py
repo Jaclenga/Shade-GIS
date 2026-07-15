@@ -14,7 +14,17 @@ import streamlit as st
 
 
 PUBLIC_COVERAGE_OPTIONS = ["No Shade", "Limited Shade", "Significant Shade"]
+PUBLIC_COVERAGE_DEFINITIONS = {
+    "No Shade": "No shade visibly reaches the waiting area.",
+    "Limited Shade": "Shade visibly reaches part of the waiting area, but does not cover most of it.",
+    "Significant Shade": "Shade visibly covers most of the waiting area or seating area.",
+}
 PUBLIC_SOURCE_OPTIONS = ["Natural", "Purpose-built", "Incidental"]
+PUBLIC_SOURCE_DISPLAY_LABELS = {
+    "Natural": "Trees / vegetation",
+    "Purpose-built": "Bus shelter / shade structure",
+    "Incidental": "Nearby buildings or other structures",
+}
 PUBLIC_SOURCE_DEFINITIONS = {
     "Natural": "Trees, palms, hedges, or other vegetation visibly shade the waiting area.",
     "Purpose-built": (
@@ -38,6 +48,7 @@ _PUBLIC_SOURCE_ALIASES = {
     "tree": "Natural",
     "trees": "Natural",
     "vegetation": "Natural",
+    "trees / vegetation": "Natural",
     "purpose-built": "Purpose-built",
     "purpose built": "Purpose-built",
     "purpose-built shade": "Purpose-built",
@@ -47,6 +58,7 @@ _PUBLIC_SOURCE_ALIASES = {
     "intentional built shade": "Purpose-built",
     "shelter": "Purpose-built",
     "canopy": "Purpose-built",
+    "bus shelter / shade structure": "Purpose-built",
     "incidental": "Incidental",
     "incidental shade": "Incidental",
     "manmade": "Incidental",
@@ -54,6 +66,7 @@ _PUBLIC_SOURCE_ALIASES = {
     "incidental built": "Incidental",
     "incidental built shade": "Incidental",
     "building": "Incidental",
+    "nearby buildings or other structures": "Incidental",
 }
 
 
@@ -104,6 +117,24 @@ def taxonomy_help_text(options: list[str], definitions: dict[str, str]) -> str:
 
 def source_taxonomy_help() -> str:
     return taxonomy_help_text(PUBLIC_SOURCE_OPTIONS, PUBLIC_SOURCE_DEFINITIONS)
+
+
+def coverage_taxonomy_help(
+    options: list[str],
+    taxonomy: list[dict[str, Any]] | None = None,
+) -> str:
+    definitions = copy.deepcopy(PUBLIC_COVERAGE_DEFINITIONS)
+    for category in taxonomy or []:
+        if not isinstance(category, dict):
+            continue
+        raw_name = category.get("shade_coverage") or category.get("name")
+        canonical = _PUBLIC_COVERAGE_ALIASES.get(str(raw_name or "").strip().lower(), "")
+        description = str(
+            category.get("operational_definition") or category.get("description") or ""
+        ).strip()
+        if canonical and description:
+            definitions[canonical] = description
+    return taxonomy_help_text(options, definitions)
 
 
 def normalize_voting_config(
@@ -433,11 +464,16 @@ def render_voting_panel(
         existing_coverage = str(existing_vote["coverage_status"]) if existing_vote else ""
         existing_sources = existing_vote["shade_sources"] if existing_vote else []
         default_index = options.index(existing_coverage) if existing_coverage in options else 0
+        st.markdown(
+            f"**{config['question']}**",
+            help=coverage_taxonomy_help(options, taxonomy),
+        )
         selected_status = st.radio(
             str(config["question"]),
             options,
             index=default_index,
             key=f"public_vote_choice_{key_token}",
+            label_visibility="collapsed",
         )
         changes_disabled = bool(existing_vote and not config["allow_vote_changes"])
         source_keys = {
@@ -446,25 +482,27 @@ def render_voting_panel(
         if selected_status == "No Shade":
             for source_key in source_keys.values():
                 st.session_state[source_key] = False
-        st.markdown("##### Shade source(s)", help=source_taxonomy_help())
+        st.divider()
+        st.markdown(f"**{config['source_question']}**", help=source_taxonomy_help())
         selected_sources = []
-        source_columns = st.columns(len(PUBLIC_SOURCE_OPTIONS))
-        for index, source in enumerate(PUBLIC_SOURCE_OPTIONS):
-            with source_columns[index]:
-                if st.checkbox(
-                    source,
-                    value=source in existing_sources and selected_status != "No Shade",
-                    key=source_keys[source],
-                    disabled=selected_status == "No Shade" or changes_disabled,
-                ):
-                    selected_sources.append(source)
         if selected_status == "No Shade":
-            selected_sources = []
+            st.caption("No shade source is needed when **No Shade** is selected.")
+        else:
+            for source in PUBLIC_SOURCE_OPTIONS:
+                checkbox_args: dict[str, Any] = {
+                    "key": source_keys[source],
+                    "disabled": changes_disabled,
+                }
+                if source_keys[source] not in st.session_state:
+                    checkbox_args["value"] = source in existing_sources
+                if st.checkbox(PUBLIC_SOURCE_DISPLAY_LABELS[source], **checkbox_args):
+                    selected_sources.append(source)
         if st.button(
             str(config["submit_label"]),
             key=f"public_vote_submit_{key_token}",
             type="primary",
             disabled=changes_disabled,
+            width="stretch",
         ):
             saved = save_vote(
                 study_id,

@@ -518,7 +518,28 @@ def test_builder_navigation_pages_render(playwright_api, streamlit_server: Strea
                         "button", name=nav_label, exact=True
                     )
                 wait_for_streamlit_idle(playwright_api, page, streamlit_server)
-                if nav_label == "Voting":
+                if nav_label == "Visuals":
+                    marker_shape_control = page.get_by_test_id("stSelectbox").filter(
+                        has_text="Marker shape"
+                    )
+                    marker_shape = marker_shape_control.get_by_role("combobox")
+                    marker_shape.click()
+                    page.get_by_role("option", name="Pin", exact=True).click()
+                    wait_for_streamlit_idle(playwright_api, page, streamlit_server)
+                    playwright_api.expect(
+                        marker_shape_control.get_by_role("combobox")
+                    ).to_have_attribute("aria-label", "Selected Pin. Marker shape")
+
+                    map_chart = page.get_by_test_id("stDeckGlJsonChart").first
+                    playwright_api.expect(map_chart).to_be_visible(timeout=30_000)
+                    page.wait_for_timeout(1_500)
+                    icon_layer_errors = [
+                        message
+                        for kind, message in chart_events
+                        if kind in {"error", "pageerror"} and "IconLayer" in message
+                    ]
+                    assert icon_layer_errors == []
+                elif nav_label == "Voting":
                     voting_toggle_container = page.get_by_test_id("stCheckbox").filter(
                         has_text="Let deployed-app visitors vote on stop coverage"
                     )

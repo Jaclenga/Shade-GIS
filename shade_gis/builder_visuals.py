@@ -763,19 +763,57 @@ def add_marker_icons(map_df: pd.DataFrame, visualization: dict[str, Any]) -> pd.
     shape = visualization.get("marker_shape", "Circle")
     if shape not in MARKER_SHAPES:
         shape = "Circle"
-    opacity = max(0.1, min(1.0, float(visualization.get("marker_opacity", 0.82))))
-    stroke_color = hex_to_rgb(visualization.get("marker_stroke_color", "#141414"))
-    stroke_width = int(visualization.get("marker_stroke_width", 1))
-    shaped["icon_data"] = shaped["fill_color"].apply(
-        lambda color: {
-            "url": marker_icon_data_uri(shape, color, stroke_color, opacity, stroke_width),
-            "width": 64,
-            "height": 64,
-            "anchorY": 64 if shape == "Pin" else 32,
-        }
+    shaped["icon_name"] = shaped["fill_color"].apply(
+        lambda color: "marker_" + "_".join(str(int(channel)) for channel in color[:3])
     )
     shaped["marker_size"] = int(visualization.get("marker_size", DEFAULT_VISUALIZATION["marker_size"]))
     return shaped
+
+
+def marker_icon_atlas(
+    map_df: pd.DataFrame,
+    visualization: dict[str, Any],
+) -> tuple[str, dict[str, dict[str, Any]]]:
+    shape = visualization.get("marker_shape", "Circle")
+    if shape not in MARKER_SHAPES:
+        shape = "Circle"
+    opacity = max(0.1, min(1.0, float(visualization.get("marker_opacity", 0.82))))
+    stroke_color = hex_to_rgb(visualization.get("marker_stroke_color", "#141414"))
+    stroke_width = int(visualization.get("marker_stroke_width", 1))
+    colors = sorted(
+        {
+            tuple(int(channel) for channel in color[:3])
+            for color in map_df.get("fill_color", pd.Series(dtype=object))
+        }
+    )
+    atlas = Image.new("RGBA", (64 * max(1, len(colors)), 64), (0, 0, 0, 0))
+    mapping: dict[str, dict[str, Any]] = {}
+    for index, color in enumerate(colors):
+        icon = Image.open(
+            io.BytesIO(
+                _marker_icon_png(
+                    shape,
+                    color,
+                    tuple(stroke_color[:3]),
+                    round(opacity, 2),
+                    stroke_width,
+                )
+            )
+        ).convert("RGBA")
+        x_offset = index * 64
+        atlas.paste(icon, (x_offset, 0))
+        icon_name = "marker_" + "_".join(str(channel) for channel in color)
+        mapping[icon_name] = {
+            "x": x_offset,
+            "y": 0,
+            "width": 64,
+            "height": 64,
+            "anchorY": 60 if shape == "Pin" else 32,
+            "mask": False,
+        }
+    buffer = io.BytesIO()
+    atlas.save(buffer, format="PNG", optimize=True)
+    return "data:image/png;base64," + base64.b64encode(buffer.getvalue()).decode("ascii"), mapping
 
 
 def calculate_view_state(df: pd.DataFrame) -> pdk.ViewState:
@@ -795,13 +833,17 @@ def calculate_view_state(df: pd.DataFrame) -> pdk.ViewState:
 
 def build_deck_chart(df: pd.DataFrame, taxonomy: list[dict[str, Any]], visualization: dict[str, Any]) -> pdk.Deck:
     map_df = color_dataset(df, taxonomy, visualization)
-    if visualization.get("marker_shape", "Circle") == "Circle":
+    marker_shape = visualization.get("marker_shape", "Circle")
+    if marker_shape not in MARKER_SHAPES:
+        marker_shape = "Circle"
+    marker_layer_id = f"stops_layer_{marker_shape.lower().replace('-', '_')}"
+    if marker_shape == "Circle":
         marker_size = max(4, min(48, int(visualization.get("marker_size", 7))))
         map_df["marker_size"] = marker_size
         layer = pdk.Layer(
             "ScatterplotLayer",
             data=map_df,
-            id="stops_layer",
+            id=marker_layer_id,
             get_position="[stop_lon, stop_lat]",
             get_fill_color="fill_color",
             get_radius="marker_size",
@@ -817,11 +859,14 @@ def build_deck_chart(df: pd.DataFrame, taxonomy: list[dict[str, Any]], visualiza
         )
     else:
         map_df = add_marker_icons(map_df, visualization)
+        icon_atlas, icon_mapping = marker_icon_atlas(map_df, visualization)
         layer = pdk.Layer(
             "IconLayer",
             data=map_df,
-            id="stops_layer",
-            get_icon="icon_data",
+            id=marker_layer_id,
+            get_icon="icon_name",
+            icon_atlas=pdk.types.String(icon_atlas),
+            icon_mapping=icon_mapping,
             get_position="[stop_lon, stop_lat]",
             get_size="marker_size",
             size_units=pdk.types.String("pixels"),
