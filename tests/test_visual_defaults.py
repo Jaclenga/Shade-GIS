@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import base64
 import copy
+import io
 import json
 
 import pandas as pd
+from PIL import Image
 
 import published_app
 from shade_gis.pages import visuals_page
@@ -338,6 +341,37 @@ def test_marker_slider_sizes_serialize_as_literal_pixels_and_scale_linearly():
         icon_layer = json.loads(chart_builder(stops, [], visualization).to_json())["layers"][-1]
         assert icon_layer["sizeUnits"] == "pixels"
         assert icon_layer["data"][0]["marker_size"] == 24
+
+
+def test_non_circle_markers_use_browser_loadable_raster_icons():
+    stops = pd.DataFrame(
+        [
+            {
+                "stop_id": "1001",
+                "stop_name": "Main St",
+                "stop_lat": 27.9506,
+                "stop_lon": -82.4572,
+                "shading": "No Shade",
+                "review_status": "Unlabeled",
+                "priority_score": 0,
+            }
+        ]
+    )
+    taxonomy = [{"name": "No Shade", "color": "#dc143c", "sort_order": 1}]
+
+    for shape in ["Pin", "Square", "Diamond", "Triangle"]:
+        visualization = copy.deepcopy(DEFAULT_VISUALIZATION)
+        visualization["marker_shape"] = shape
+        for chart_builder in (build_deck_chart, published_app.build_deck_chart):
+            layer = json.loads(chart_builder(stops, taxonomy, visualization).to_json())["layers"][-1]
+            icon_url = layer["data"][0]["icon_data"]["url"]
+
+            assert icon_url.startswith("data:image/png;base64,")
+            png = base64.b64decode(icon_url.partition(",")[2])
+            assert png.startswith(b"\x89PNG\r\n\x1a\n")
+            with Image.open(io.BytesIO(png)) as image:
+                assert image.size == (64, 64)
+                assert image.mode == "RGBA"
 
 
 def test_default_map_marker_size_is_seven_for_builder_and_published_maps():

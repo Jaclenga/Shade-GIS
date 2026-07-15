@@ -138,7 +138,7 @@ from shade_gis.builder_visuals import (
     has_all_column_data,
     has_any_column_data,
     has_column_data,
-    marker_icon_svg,
+    marker_icon_data_uri,
     migrate_legacy_analytics_config,
     priority_formula_for_about,
     priority_score_used_in_visualization,

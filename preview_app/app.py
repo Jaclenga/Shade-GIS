@@ -1,14 +1,17 @@
+import base64
 import html
+import io
 import json
 import math
 import re
-import urllib.parse
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
 import pandas as pd
 import pydeck as pdk
 import streamlit as st
+from PIL import Image, ImageDraw
 
 # The published app is standalone, so carry the same object-string guard used
 # by the builder before any dataframe is constructed or displayed.
@@ -552,32 +555,84 @@ def color_dataset(df: pd.DataFrame, taxonomy: list[dict[str, Any]], visualizatio
     return colored
 
 
-def marker_icon_svg(
+@lru_cache(maxsize=256)
+def _marker_icon_png(
+    shape: str,
+    fill_color: tuple[int, int, int],
+    stroke_color: tuple[int, int, int],
+    opacity: float,
+    stroke_width: int,
+) -> bytes:
+    scale = 4
+    canvas_size = 64 * scale
+    image = Image.new("RGBA", (canvas_size, canvas_size), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(image)
+    fill = (*fill_color, round(max(0.0, min(1.0, opacity)) * 255))
+    stroke = (*stroke_color, 255)
+    width = max(0, int(stroke_width)) * scale
+    outline = stroke if width else None
+
+    def point(value: tuple[int, int]) -> tuple[int, int]:
+        return value[0] * scale, value[1] * scale
+
+    if shape == "Pin":
+        points = [
+            (32, 4), (42, 7), (50, 15), (53, 25), (51, 35), (45, 45),
+            (32, 60), (19, 45), (13, 35), (11, 25), (14, 15), (22, 7),
+        ]
+        draw.polygon([point(value) for value in points], fill=fill, outline=outline, width=width)
+        draw.ellipse((24 * scale, 17 * scale, 40 * scale, 33 * scale), fill=(255, 255, 255, 204))
+    elif shape == "Square":
+        draw.rounded_rectangle(
+            (12 * scale, 12 * scale, 52 * scale, 52 * scale),
+            radius=4 * scale,
+            fill=fill,
+            outline=outline,
+            width=width,
+        )
+    elif shape == "Diamond":
+        draw.polygon(
+            [point(value) for value in [(32, 6), (58, 32), (32, 58), (6, 32)]],
+            fill=fill,
+            outline=outline,
+            width=width,
+        )
+    elif shape == "Triangle":
+        draw.polygon(
+            [point(value) for value in [(32, 7), (58, 55), (6, 55)]],
+            fill=fill,
+            outline=outline,
+            width=width,
+        )
+    else:
+        draw.ellipse(
+            (8 * scale, 8 * scale, 56 * scale, 56 * scale),
+            fill=fill,
+            outline=outline,
+            width=width,
+        )
+
+    image = image.resize((64, 64), Image.Resampling.LANCZOS)
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG", optimize=True)
+    return buffer.getvalue()
+
+
+def marker_icon_data_uri(
     shape: str,
     fill_color: list[int],
     stroke_color: list[int],
     opacity: float,
     stroke_width: int,
 ) -> str:
-    fill = f"rgb({fill_color[0]},{fill_color[1]},{fill_color[2]})"
-    stroke = f"rgb({stroke_color[0]},{stroke_color[1]},{stroke_color[2]})"
-    stroke_width = max(0, int(stroke_width))
-    base_attrs = f'fill="{fill}" fill-opacity="{opacity:.2f}" stroke="{stroke}" stroke-width="{stroke_width}"'
-    if shape == "Pin":
-        body = (
-            f'<path {base_attrs} d="M32 4C20.4 4 11 13.4 11 25c0 15.2 21 35 21 35s21-19.8 21-35C53 13.4 43.6 4 32 4z"/>'
-            f'<circle cx="32" cy="25" r="8" fill="#ffffff" fill-opacity="0.8" stroke="none"/>'
-        )
-    elif shape == "Square":
-        body = f'<rect {base_attrs} x="12" y="12" width="40" height="40" rx="4"/>'
-    elif shape == "Diamond":
-        body = f'<polygon {base_attrs} points="32,6 58,32 32,58 6,32"/>'
-    elif shape == "Triangle":
-        body = f'<polygon {base_attrs} points="32,7 58,55 6,55"/>'
-    else:
-        body = f'<circle {base_attrs} cx="32" cy="32" r="24"/>'
-    svg = f'<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">{body}</svg>'
-    return f"data:image/svg+xml;charset=utf-8,{urllib.parse.quote(svg)}"
+    png = _marker_icon_png(
+        shape,
+        tuple(int(channel) for channel in fill_color[:3]),
+        tuple(int(channel) for channel in stroke_color[:3]),
+        round(float(opacity), 2),
+        int(stroke_width),
+    )
+    return "data:image/png;base64," + base64.b64encode(png).decode("ascii")
 
 
 def add_marker_icons(map_df: pd.DataFrame, visualization: dict[str, Any]) -> pd.DataFrame:
@@ -590,7 +645,7 @@ def add_marker_icons(map_df: pd.DataFrame, visualization: dict[str, Any]) -> pd.
     stroke_width = int(visualization.get("marker_stroke_width", 1))
     shaped["icon_data"] = shaped["fill_color"].apply(
         lambda color: {
-            "url": marker_icon_svg(shape, color, stroke_color, opacity, stroke_width),
+            "url": marker_icon_data_uri(shape, color, stroke_color, opacity, stroke_width),
             "width": 64,
             "height": 64,
             "anchorY": 64 if shape == "Pin" else 32,
