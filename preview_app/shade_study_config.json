@@ -22,13 +22,13 @@
     },
     {
       "name": "Limited Shade",
-      "description": "Vegetation shades part of the waiting area, but not most of it.",
+      "description": "Shade visibly covers part of the waiting area, but not most of it.",
       "color": "#d69e2e",
       "sort_order": 2
     },
     {
       "name": "Significant Shade",
-      "description": "Vegetation visibly covers most of the waiting area or seating area.",
+      "description": "Shade visibly covers most of the waiting area or seating area.",
       "color": "#228b22",
       "sort_order": 3
     },
@@ -83,7 +83,7 @@
     "voting": {
       "enabled": true,
       "title": "Help document this stop",
-      "description": "Use your current observation of the passenger waiting area. Choose the shade coverage that best matches this stop.",
+      "description": "Choose the shade coverage that best matches this stop. Answer based on where a passenger would normally wait for the bus.",
       "question": "What is the current shade coverage at this stop?",
       "options": [
         "No Shade",

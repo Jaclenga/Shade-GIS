@@ -152,7 +152,7 @@ DEFAULT_COVERAGE_TAXONOMY = [
     },
     {
         "name": "Limited Shade",
-        "description": "Shade visibly reaches part of the waiting area, but not most of it.",
+        "description": "Shade visibly covers part of the waiting area, but not most of it.",
         "color": "#d69e2e",
         "sort_order": 2,
     },

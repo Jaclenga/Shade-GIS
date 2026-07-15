@@ -20,6 +20,7 @@ from builder_app import (
     agreement_overview_metrics,
     disagreement_queue_table,
     majority_label_table,
+    normalize_coverage_taxonomy,
     review_queue_label,
     review_queue_table,
 )
@@ -636,6 +637,29 @@ def test_source_and_coverage_taxonomies_match_schema_terms():
     assert SHADE_COVERAGE_OPTIONS == ["No Shade", "Limited Shade", "Significant Shade"]
     assert [item["shade_source"] for item in SHADE_SOURCE_TAXONOMY] == SHADE_SOURCE_OPTIONS
     assert [item["shade_coverage"] for item in SHADE_COVERAGE_TAXONOMY] == SHADE_COVERAGE_OPTIONS
+
+
+def test_coverage_taxonomy_replaces_legacy_vegetation_only_definitions():
+    taxonomy = normalize_coverage_taxonomy(
+        [
+            {
+                "name": "Limited Shade",
+                "description": "Vegetation shades part of the waiting area, but not most of it.",
+            },
+            {
+                "name": "Significant Shade",
+                "description": "Vegetation visibly covers most of the waiting area or seating area.",
+            },
+        ]
+    )
+    definitions = {item["name"]: item["description"] for item in taxonomy}
+
+    assert definitions["Limited Shade"] == (
+        "Shade visibly covers part of the waiting area, but not most of it."
+    )
+    assert definitions["Significant Shade"] == (
+        "Shade visibly covers most of the waiting area or seating area."
+    )
 
 
 def test_shade_type_options_keep_sources_and_coverage_distinct(taxonomy):

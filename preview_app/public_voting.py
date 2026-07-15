@@ -70,13 +70,15 @@ _PUBLIC_SOURCE_ALIASES = {
 }
 
 
+DEFAULT_VOTING_DESCRIPTION = (
+    "Choose the shade coverage that best matches this stop. "
+    "Answer based on where a passenger would normally wait for the bus."
+)
+
 DEFAULT_VOTING_CONFIG = {
     "enabled": False,
     "title": "Help document this stop",
-    "description": (
-        "Use your current observation of the passenger waiting area. "
-        "Choose the shade coverage that best matches this stop."
-    ),
+    "description": DEFAULT_VOTING_DESCRIPTION,
     "question": "What is the current shade coverage at this stop?",
     "options": PUBLIC_COVERAGE_OPTIONS,
     "source_question": "What creates the shade at this stop? Select all that apply.",
@@ -144,6 +146,18 @@ def normalize_voting_config(
     normalized = copy.deepcopy(DEFAULT_VOTING_CONFIG)
     if isinstance(voting, dict):
         normalized.update(voting)
+    if str(normalized.get("description") or "").strip() in {
+        (
+            "Use your current observation of the passenger waiting area. "
+            "Choose the shade coverage that best matches this stop."
+        ),
+        (
+            "Use your current observation of the passenger waiting area. "
+            "Choose the shade coverage that best matches this stop. "
+            "Answer based on where a passenger would normally wait for the bus right now."
+        ),
+    }:
+        normalized["description"] = DEFAULT_VOTING_CONFIG["description"]
 
     configured_options = []
     for option in normalized.get("options", []):

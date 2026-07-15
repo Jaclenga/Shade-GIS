@@ -15,7 +15,7 @@ SHADE_COVERAGE_TAXONOMY = [
     },
     {
         "shade_coverage": "Limited Shade",
-        "operational_definition": "Shade visibly reaches part of the waiting area, but does not cover most of it.",
+        "operational_definition": "Shade visibly covers part of the waiting area, but not most of it.",
     },
     {
         "shade_coverage": "Significant Shade",
@@ -50,7 +50,7 @@ DEFAULT_COVERAGE_TAXONOMY = [
     },
     {
         "name": "Limited Shade",
-        "description": "Shade visibly reaches part of the waiting area, but not most of it.",
+        "description": "Shade visibly covers part of the waiting area, but not most of it.",
         "color": "#d69e2e",
         "sort_order": 2,
     },
@@ -105,6 +105,17 @@ _SOURCE_ALIASES = {
     "building": "Incidental",
 }
 
+_LEGACY_COVERAGE_DESCRIPTIONS = {
+    "Limited Shade": {
+        "Vegetation shades part of the waiting area, but not most of it.",
+        "Shade visibly reaches part of the waiting area, but not most of it.",
+        "Shade visibly reaches part of the waiting area, but does not cover most of it.",
+    },
+    "Significant Shade": {
+        "Vegetation visibly covers most of the waiting area or seating area.",
+    },
+}
+
 
 def normalize_shade_coverage(value: Any, fallback: str = "Needs Review") -> str:
     text = str(value or "").strip()
@@ -156,7 +167,11 @@ def normalize_coverage_taxonomy(taxonomy: list[dict[str, Any]] | None) -> list[d
             continue
         configured_item = existing[1]
         for key in ["description", "color"]:
-            if str(configured_item.get(key, "")).strip():
+            configured_value = str(configured_item.get(key, "")).strip()
+            if configured_value and not (
+                key == "description"
+                and configured_value in _LEGACY_COVERAGE_DESCRIPTIONS.get(default["name"], set())
+            ):
                 default[key] = configured_item[key]
     return normalized_taxonomy
 

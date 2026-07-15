@@ -7,6 +7,7 @@ import pandas as pd
 import published_app
 from public_voting import (
     DEFAULT_VOTING_CONFIG,
+    DEFAULT_VOTING_DESCRIPTION,
     PUBLIC_COVERAGE_DEFINITIONS,
     PUBLIC_SOURCE_DISPLAY_LABELS,
     PUBLIC_SOURCE_DEFINITIONS,
@@ -36,6 +37,34 @@ def test_default_source_question_uses_plain_language_checkbox_copy():
         "Purpose-built",
         "Incidental",
     ]
+
+
+def test_default_voting_instructions_add_waiting_area_guidance_without_overwriting_custom_copy():
+    assert DEFAULT_VOTING_CONFIG["description"] == DEFAULT_VOTING_DESCRIPTION
+    assert DEFAULT_VOTING_DESCRIPTION == (
+        "Choose the shade coverage that best matches this stop. "
+        "Answer based on where a passenger would normally wait for the bus."
+    )
+    assert normalize_voting_config(
+        {
+            "description": (
+                "Use your current observation of the passenger waiting area. "
+                "Choose the shade coverage that best matches this stop."
+            )
+        }
+    )["description"] == DEFAULT_VOTING_CONFIG["description"]
+    assert normalize_voting_config(
+        {
+            "description": (
+                "Use your current observation of the passenger waiting area. "
+                "Choose the shade coverage that best matches this stop. "
+                "Answer based on where a passenger would normally wait for the bus right now."
+            )
+        }
+    )["description"] == DEFAULT_VOTING_CONFIG["description"]
+    assert normalize_voting_config(
+        {"description": "Use the locally approved observation protocol."}
+    )["description"] == "Use the locally approved observation protocol."
 
 
 def test_shared_stop_panel_renders_voting_for_the_selected_stop(monkeypatch):

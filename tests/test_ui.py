@@ -526,9 +526,16 @@ def test_builder_navigation_pages_render(playwright_api, streamlit_server: Strea
                     marker_shape.click()
                     page.get_by_role("option", name="Pin", exact=True).click()
                     wait_for_streamlit_idle(playwright_api, page, streamlit_server)
-                    playwright_api.expect(
-                        marker_shape_control.get_by_role("combobox")
-                    ).to_have_attribute("aria-label", "Selected Pin. Marker shape")
+                    marker_shape = marker_shape_control.get_by_role("combobox")
+                    selected_value = marker_shape.input_value().strip()
+                    selected_label = marker_shape.get_attribute("aria-label") or ""
+                    # Streamlit's selectbox markup changed within the supported
+                    # 1.x range: React Aria exposes the selection as the input
+                    # value, while BaseWeb included it in the accessible label.
+                    assert (
+                        selected_value == "Pin"
+                        or selected_label == "Selected Pin. Marker shape"
+                    )
 
                     map_chart = page.get_by_test_id("stDeckGlJsonChart").first
                     playwright_api.expect(map_chart).to_be_visible(timeout=30_000)
