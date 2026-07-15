@@ -20,6 +20,7 @@ _ACTIVE_DATABASE_PATH: Path | None = None
 _UNUSABLE_DATABASE_PATHS: set[Path] = set()
 _DATABASE_FALLBACK_REASON = ""
 _READABLE_SOURCE_DATABASE_PATH: Path | None = None
+PROJECT_STORE_INITIALIZED_KEY = "project_store_initialized"
 
 
 def default_database_path() -> Path:
@@ -347,6 +348,98 @@ def list_projects(path: Path | None = None) -> list[dict[str, Any]]:
             """
         ).fetchall()
     return [dict(row) for row in rows]
+
+
+def project_store_initialized(path: Path | None = None) -> bool:
+    init_database(path)
+    with connect(path) as conn:
+        row = conn.execute(
+            "SELECT value FROM app_metadata WHERE key = ?",
+            (PROJECT_STORE_INITIALIZED_KEY,),
+        ).fetchone()
+    return bool(row and row["value"] == "1")
+
+
+def mark_project_store_initialized(path: Path | None = None) -> None:
+    init_database(path)
+    with connect(path) as conn:
+        conn.execute(
+            """
+            INSERT INTO app_metadata (key, value, updated_at)
+            VALUES (?, '1', ?)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+            """,
+            (PROJECT_STORE_INITIALIZED_KEY, utc_timestamp()),
+        )
+        conn.commit()
+
+
+def update_project_details(
+    project_id: str,
+    *,
+    name: str,
+    agency: str = "",
+    region: str = "",
+    description: str = "",
+    visibility: str = "Private",
+    path: Path | None = None,
+) -> None:
+    clean_name = str(clean_scalar(name) or "").strip()
+    clean_visibility = str(clean_scalar(visibility) or "Private").strip().title()
+    if not clean_name:
+        raise ValueError("Project name is required")
+    if clean_visibility not in {"Private", "Public"}:
+        raise ValueError("Project visibility must be Private or Public")
+
+    db_path = Path(path) if path is not None else database_path()
+    for attempt in range(2):
+        try:
+            init_database(db_path)
+            with connect(db_path) as conn:
+                cursor = conn.execute(
+                    """
+                    UPDATE projects
+                    SET name = ?, agency = ?, region = ?, description = ?, visibility = ?, updated_at = ?
+                    WHERE id = ?
+                    """,
+                    (
+                        clean_name,
+                        clean_scalar(agency),
+                        clean_scalar(region),
+                        clean_scalar(description),
+                        clean_visibility,
+                        utc_timestamp(),
+                        project_id,
+                    ),
+                )
+                if cursor.rowcount == 0:
+                    raise KeyError(f"Project {project_id} was not found")
+                conn.commit()
+            return
+        except sqlite3.OperationalError as error:
+            if path is None and attempt == 0 and is_readonly_database_error(error):
+                mark_database_path_unusable(db_path, error)
+                db_path = database_path()
+                continue
+            raise
+
+
+def delete_project(project_id: str, path: Path | None = None) -> bool:
+    db_path = Path(path) if path is not None else database_path()
+    for attempt in range(2):
+        try:
+            init_database(db_path)
+            with connect(db_path) as conn:
+                cursor = conn.execute("DELETE FROM projects WHERE id = ?", (project_id,))
+                conn.commit()
+                return cursor.rowcount > 0
+        except sqlite3.OperationalError as error:
+            if path is None and attempt == 0 and is_readonly_database_error(error):
+                mark_database_path_unusable(db_path, error)
+                db_path = database_path()
+                continue
+            raise
+    return False
 
 
 def list_shade_labels(
@@ -999,6 +1092,12 @@ def clean_number(value: Any) -> float | None:
 
 
 SQLITE_SCHEMA = """
+CREATE TABLE IF NOT EXISTS app_metadata (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS projects (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,

@@ -312,6 +312,113 @@ def test_builder_header_home_and_grouped_menus(playwright_api, streamlit_server:
             browser.close()
 
 
+def test_project_settings_can_edit_and_delete_a_project(
+    playwright_api, streamlit_server: StreamlitServer
+):
+    with playwright_api.sync_playwright() as playwright:
+        browser = playwright.chromium.launch()
+        page = browser.new_page(viewport={"width": 1440, "height": 1000})
+        try:
+            page.goto(streamlit_server.url, wait_until="domcontentloaded")
+            page.get_by_role("heading", name="Your Projects", exact=True).wait_for(timeout=30_000)
+
+            page.get_by_role("button", name="＋ New Project", exact=True).click(timeout=30_000)
+            page.get_by_label("Project name", exact=True).fill("Disposable project")
+            page.get_by_role("button", name="Create project", exact=True).click(timeout=30_000)
+            page.get_by_role("heading", name="Project Data", exact=True).wait_for(timeout=30_000)
+
+            page.get_by_role("button", name="Shade-GIS", exact=True).click(timeout=30_000)
+            page.get_by_role("dialog").get_by_role(
+                "button", name="Main Menu", exact=True
+            ).click(timeout=30_000)
+            page.get_by_role("heading", name="Your Projects", exact=True).wait_for(timeout=30_000)
+
+            project_card = page.locator('div[class*="st-key-project_card_"]').filter(
+                has_text="Disposable project"
+            )
+            project_card.get_by_role("button", name="⋯", exact=True).click(timeout=30_000)
+
+            settings_dialog = page.get_by_role("dialog")
+            settings_dialog.wait_for(timeout=30_000)
+            playwright_api.expect(settings_dialog).to_contain_text("Project settings")
+            settings_dialog.get_by_label("Project name", exact=True).fill("Disposable renamed")
+            settings_dialog.get_by_label("Agency or organization", exact=True).fill("Test Agency")
+            settings_dialog.get_by_label("Location", exact=True).fill("Test Region")
+            settings_dialog.get_by_role("button", name="Save changes", exact=True).click(
+                timeout=30_000
+            )
+            wait_for_streamlit_idle(playwright_api, page, streamlit_server)
+
+            renamed_card = page.locator('div[class*="st-key-project_card_"]').filter(
+                has_text="Disposable renamed"
+            )
+            playwright_api.expect(renamed_card).to_be_visible(timeout=30_000)
+            playwright_api.expect(renamed_card).to_contain_text("Test Agency")
+            playwright_api.expect(renamed_card).to_contain_text("Test Region")
+
+            renamed_card.get_by_role("button", name="⋯", exact=True).click(timeout=30_000)
+            settings_dialog = page.get_by_role("dialog")
+            settings_dialog.get_by_role("button", name="Delete project", exact=True).click(
+                timeout=30_000
+            )
+
+            delete_dialog = page.get_by_role("dialog")
+            delete_dialog.wait_for(timeout=30_000)
+            playwright_api.expect(delete_dialog).to_contain_text("Delete project?")
+            delete_button = delete_dialog.get_by_role(
+                "button", name="Delete permanently", exact=True
+            )
+            playwright_api.expect(delete_button).to_be_disabled()
+            confirmation_input = delete_dialog.get_by_label(
+                'Type "Disposable renamed" to confirm', exact=True
+            )
+            confirmation_input.fill("Disposable renamed")
+            confirmation_input.press("Tab")
+            wait_for_streamlit_idle(playwright_api, page, streamlit_server)
+            delete_dialog = page.get_by_role("dialog")
+            delete_button = delete_dialog.get_by_role(
+                "button", name="Delete permanently", exact=True
+            )
+            playwright_api.expect(delete_button).to_be_enabled(timeout=30_000)
+            delete_button.click(timeout=30_000)
+
+            page.get_by_role("heading", name="Your Projects", exact=True).wait_for(timeout=30_000)
+            playwright_api.expect(
+                page.get_by_role("heading", name="Disposable renamed", exact=True)
+            ).to_have_count(0)
+            playwright_api.expect(page.get_by_text("1 project", exact=True)).to_be_visible()
+
+            remaining_card = page.locator('div[class*="st-key-project_card_"]').first
+            remaining_card.get_by_role("button", name="⋯", exact=True).click(timeout=30_000)
+            settings_dialog = page.get_by_role("dialog")
+            settings_dialog.get_by_role("button", name="Delete project", exact=True).click(
+                timeout=30_000
+            )
+            delete_dialog = page.get_by_role("dialog")
+            last_confirmation = delete_dialog.get_by_label(
+                'Type "Tampa Bus Stop Shade Study" to confirm', exact=True
+            )
+            last_confirmation.fill("Tampa Bus Stop Shade Study")
+            last_confirmation.press("Tab")
+            wait_for_streamlit_idle(playwright_api, page, streamlit_server)
+            page.get_by_role("dialog").get_by_role(
+                "button", name="Delete permanently", exact=True
+            ).click(timeout=30_000)
+
+            page.get_by_role("heading", name="Your Projects", exact=True).wait_for(timeout=30_000)
+            playwright_api.expect(page.get_by_text("0 projects", exact=True)).to_be_visible()
+            playwright_api.expect(
+                page.get_by_text(
+                    "No saved projects yet. Create your first project to get started.", exact=True
+                )
+            ).to_be_visible()
+            playwright_api.expect(
+                page.locator('div[class*="st-key-project_card_"]')
+            ).to_have_count(0)
+        finally:
+            browser.close()
+
+
 def test_builder_navigation_pages_render(playwright_api, streamlit_server: StreamlitServer):
     expected_pages = {
         "Labels": "Labeling",

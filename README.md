@@ -57,6 +57,8 @@ Shade-GIS consists of the following layers:
 
 The builder starts with the bundled Tampa/HART starter dataset, or with a new imported dataset. Project teams can configure metadata, import logs, source licensing, shade source and coverage taxonomies, review workflow, map styling, dashboard sections, custom charts, public voting, public table columns, map hover fields, GIS overlays, and methodology content.
 
+On the project list, use the `⋯` button on a project card to edit its name, agency, location, description, or visibility. Project deletion is in the same settings dialog and requires typing the exact project name; deleting the last project leaves an empty project list so a new study can be created without restoring the starter project.
+
 The main app entrypoint is intentionally small:
 
 ```bash

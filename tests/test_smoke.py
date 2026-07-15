@@ -160,13 +160,20 @@ def test_builder_has_project_home_and_clickable_brand_navigation():
     assert 'st.title("Shade-GIS Projects")' not in source
     assert 'st.button("Shade-GIS", key="nav_home", on_click=request_main_menu)' in source
     assert '@st.dialog("Open project?", on_dismiss=clear_pending_project_open)' in source
+    assert '@st.dialog("Project settings", on_dismiss=clear_pending_project_settings)' in source
+    assert '@st.dialog("Delete project?", on_dismiss=clear_pending_project_delete)' in source
     assert '@st.dialog("Return to main menu?", on_dismiss=clear_pending_main_menu)' in source
     assert 'with st.container(key="home_page")' in source
     assert 'f"Open project: {name}"' in source
+    assert 'key=f"project_settings_{project_id}"' in source
+    assert "it does not move the map, filter data, or set a boundary" in source
+    assert "publishing the website is still a separate step" in source
+    assert '"Delete permanently"' in source
+    assert 'disabled=confirmation != project_name' in source
     assert "max-width: 1080px" in source
     assert 'class="home-summary"' not in source
     assert 'div[class*="st-key-project_card_"]:hover' in source
-    assert 'div[class*="st-key-project_card_"] [data-testid="stButton"] {' in source
+    assert 'div[class*="st-key-project_card_"] div[class*="st-key-home_open_"] {' in source
     assert ".st-key-nav_home button:hover" in source
     assert ".st-key-nav_home button:active" in source
     assert ".st-key-nav_home button:focus-visible" in source

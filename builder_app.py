@@ -23,13 +23,17 @@ from platform_store import (
     add_shade_label,
     create_project,
     database_status,
+    delete_project,
     init_database,
     list_images,
     list_review_history,
     list_shade_labels,
     list_projects,
     load_project_bundle,
+    mark_project_store_initialized,
+    project_store_initialized,
     save_project_bundle,
+    update_project_details,
 )
 from shade_gis.builder_imports import (
     REQUIRED_STOP_FIELDS,
@@ -500,9 +504,17 @@ def create_blank_project(name: str) -> str:
 def ensure_state() -> None:
     init_database()
     projects = list_projects()
-    if not projects:
+    if projects:
+        mark_project_store_initialized()
+    elif not project_store_initialized():
         create_seed_project()
+        mark_project_store_initialized()
         projects = list_projects()
+
+    if not projects:
+        clear_loaded_project_session()
+        st.session_state["page"] = "Home"
+        return
 
     active_project_id = st.session_state.get("active_project_id") or projects[0]["id"]
     known_ids = {project["id"] for project in projects}
@@ -686,6 +698,43 @@ def clear_pending_project_open() -> None:
     st.session_state.pop("pending_project_open", None)
 
 
+def clear_pending_project_settings() -> None:
+    st.session_state.pop("pending_project_settings", None)
+
+
+def clear_pending_project_delete() -> None:
+    st.session_state.pop("pending_project_delete", None)
+
+
+def request_project_settings(project_id: str) -> None:
+    clear_pending_project_open()
+    clear_pending_project_delete()
+    st.session_state["pending_project_settings"] = project_id
+
+
+def request_project_delete(project_id: str, project_name: str) -> None:
+    clear_pending_project_settings()
+    st.session_state["pending_project_delete"] = {
+        "id": project_id,
+        "name": project_name,
+    }
+
+
+def clear_loaded_project_session() -> None:
+    for key in (
+        "active_project_id",
+        "loaded_project_id",
+        "project",
+        "taxonomy",
+        "methodology",
+        "visualization",
+        "stops",
+        "import_log",
+        "deploy_page_settings_project_id",
+    ):
+        st.session_state.pop(key, None)
+
+
 def clear_pending_main_menu() -> None:
     st.session_state.pop("pending_main_menu", None)
 
@@ -714,6 +763,144 @@ def render_open_project_confirmation() -> None:
         if st.button("Open Project", type="primary", width="stretch"):
             clear_pending_project_open()
             open_project(project_id)
+            st.rerun()
+
+
+@st.dialog("Project settings", on_dismiss=clear_pending_project_settings)
+def render_project_settings() -> None:
+    project_id = str(st.session_state.get("pending_project_settings") or "")
+    try:
+        bundle = load_project_bundle(project_id)
+    except KeyError:
+        clear_pending_project_settings()
+        st.error("This project no longer exists.")
+        return
+
+    project = bundle["project"]
+    project_name = str(project.get("name") or "Untitled Shade Study")
+    st.markdown("<span class='project-settings-dialog-marker'></span>", unsafe_allow_html=True)
+    st.caption("Update the details shown on your project card and published study.")
+    with st.form(f"project_settings_form_{project_id}"):
+        name = st.text_input(
+            "Project name",
+            value=project_name,
+            help="The main title shown on the project card, in previews, and in the published study.",
+        )
+        agency = st.text_input(
+            "Agency or organization",
+            value=str(project.get("agency") or ""),
+            help=(
+                "The transit agency, research team, or organization responsible for the study. "
+                "It appears with the location in project and public-study captions."
+            ),
+        )
+        region = st.text_input(
+            "Location",
+            value=str(project.get("region") or ""),
+            help=(
+                "A descriptive geographic label, such as 'Tampa, Florida.' It appears in project "
+                "and public-study labels; it does not move the map, filter data, or set a boundary."
+            ),
+        )
+        description = st.text_area(
+            "Description",
+            value=str(project.get("description") or ""),
+            help=(
+                "A short explanation of the study's purpose. It is saved with the project and included "
+                "in exported project metadata."
+            ),
+        )
+        visibility_options = ["Private", "Public"]
+        current_visibility = str(project.get("visibility") or "Private").title()
+        visibility = st.selectbox(
+            "Visibility",
+            visibility_options,
+            index=visibility_options.index(current_visibility)
+            if current_visibility in visibility_options
+            else 0,
+            help=(
+                "Controls the Private or Public badge on the project. Public marks the study as intended "
+                "for a public audience, but publishing the website is still a separate step."
+            ),
+        )
+        submitted = st.form_submit_button("Save changes", type="primary", width="stretch")
+
+    if submitted:
+        if not name.strip():
+            st.error("Project name is required.")
+        else:
+            update_project_details(
+                project_id,
+                name=name,
+                agency=agency,
+                region=region,
+                description=description,
+                visibility=visibility,
+            )
+            if st.session_state.get("active_project_id") == project_id:
+                session_project = st.session_state.get("project")
+                if isinstance(session_project, dict):
+                    session_project.update(
+                        {
+                            "name": name.strip(),
+                            "agency": agency,
+                            "region": region,
+                            "description": description,
+                            "visibility": visibility,
+                        }
+                    )
+            clear_pending_project_settings()
+            st.session_state["project_settings_notice"] = f"Saved settings for {name.strip()}."
+            st.rerun()
+
+    st.divider()
+    st.subheader("Danger zone")
+    st.caption(
+        "Deleting a project permanently removes its stops, images, labels, reviews, and releases from this device."
+    )
+    if st.button(
+        "Delete project",
+        key=f"request_delete_project_{project_id}",
+        width="stretch",
+    ):
+        request_project_delete(project_id, project_name)
+        st.rerun()
+
+
+@st.dialog("Delete project?", on_dismiss=clear_pending_project_delete)
+def render_project_delete_confirmation() -> None:
+    pending = st.session_state.get("pending_project_delete") or {}
+    project_id = str(pending.get("id") or "")
+    project_name = str(pending.get("name") or "this project")
+    st.markdown("<span class='project-delete-dialog-marker'></span>", unsafe_allow_html=True)
+    st.warning(f"This permanently deletes {project_name} and all of its project data.")
+    confirmation = st.text_input(
+        f'Type "{project_name}" to confirm',
+        key=f"delete_project_confirmation_{project_id}",
+    )
+    cancel_column, delete_column = st.columns(2)
+    with cancel_column:
+        if st.button("Cancel", key="cancel_project_delete", width="stretch"):
+            clear_pending_project_delete()
+            st.session_state["pending_project_settings"] = project_id
+            st.rerun()
+    with delete_column:
+        if st.button(
+            "Delete permanently",
+            key="confirm_project_delete",
+            type="primary",
+            disabled=confirmation != project_name,
+            width="stretch",
+        ):
+            deleted = delete_project(project_id)
+            if not deleted:
+                st.error("This project no longer exists.")
+                return
+            if st.session_state.get("active_project_id") == project_id:
+                clear_loaded_project_session()
+            clear_pending_project_delete()
+            clear_pending_project_settings()
+            st.session_state["project_settings_notice"] = f"Deleted {project_name}."
             st.rerun()
 
 
@@ -750,6 +937,9 @@ def format_project_updated(value: Any) -> str:
 
 def render_home_page() -> None:
     projects = list_projects()
+    notice = st.session_state.pop("project_settings_notice", None)
+    if notice:
+        st.toast(str(notice), icon="✅")
     st.markdown(
         """
         <style>
@@ -815,6 +1005,20 @@ def render_home_page() -> None:
             background: #14532d;
             border-color: #14532d;
         }
+        div[data-testid="stDialog"]:has(.project-settings-dialog-marker) button[kind="primary"] {
+            background: #166534;
+            border-color: #166534;
+            color: white;
+        }
+        div[data-testid="stDialog"]:has(.project-delete-dialog-marker) button[kind="primary"] {
+            background: #b91c1c;
+            border-color: #b91c1c;
+            color: white;
+        }
+        div[data-testid="stDialog"]:has(.project-delete-dialog-marker) button[kind="primary"]:hover {
+            background: #991b1b;
+            border-color: #991b1b;
+        }
         div[class*="st-key-project_card_"] {
             background: white;
             border: 1px solid #dce4df;
@@ -841,14 +1045,14 @@ def render_home_page() -> None:
             border-color: #16a34a;
             box-shadow: 0 0 0 0.22rem rgba(34, 197, 94, 0.24);
         }
-        div[class*="st-key-project_card_"] [data-testid="stButton"] {
+        div[class*="st-key-project_card_"] div[class*="st-key-home_open_"] {
             bottom: 0;
             left: 0;
             position: absolute;
             right: 0;
             z-index: 5;
         }
-        div[class*="st-key-project_card_"] [data-testid="stButton"] button {
+        div[class*="st-key-project_card_"] div[class*="st-key-home_open_"] button {
             bottom: 0;
             cursor: pointer;
             height: 24.5rem;
@@ -856,6 +1060,27 @@ def render_home_page() -> None:
             opacity: 0;
             position: absolute;
             width: 100%;
+        }
+        div[class*="st-key-project_card_"] div[class*="st-key-project_settings_"] {
+            position: absolute;
+            right: 0.9rem;
+            top: 0.9rem;
+            z-index: 10;
+        }
+        div[class*="st-key-project_card_"] div[class*="st-key-project_settings_"] button {
+            background: white;
+            border: 1px solid #d7ddd9;
+            border-radius: 0.55rem;
+            color: #26342c;
+            font-size: 1.25rem;
+            height: 2.2rem;
+            min-width: 2.4rem;
+            padding: 0 0.45rem;
+        }
+        div[class*="st-key-project_card_"] div[class*="st-key-project_settings_"] button:hover {
+            background: #f0fdf4;
+            border-color: #86efac;
+            color: #166534;
         }
         .project-card-content {
             display: flex;
@@ -876,6 +1101,7 @@ def render_home_page() -> None:
             letter-spacing: -0.012em;
             line-height: 1.35;
             margin: 0;
+            padding-right: 3rem;
         }
         .project-card-location {
             color: #4f5e56;
@@ -1042,13 +1268,24 @@ def render_home_page() -> None:
                         unsafe_allow_html=True,
                     )
                     st.button(
+                        "⋯",
+                        key=f"project_settings_{project_id}",
+                        help=f"Settings for {project_name}",
+                        on_click=request_project_settings,
+                        args=(project_id,),
+                    )
+                    st.button(
                         f"Open project: {name}",
                         key=f"home_open_{project_id}",
                         width="stretch",
                         on_click=request_open_project,
                         args=(project_id, project_name),
                     )
-        if st.session_state.get("pending_project_open"):
+        if st.session_state.get("pending_project_delete"):
+            render_project_delete_confirmation()
+        elif st.session_state.get("pending_project_settings"):
+            render_project_settings()
+        elif st.session_state.get("pending_project_open"):
             render_open_project_confirmation()
 
 
