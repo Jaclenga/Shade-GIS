@@ -12,6 +12,7 @@ from platform_store import (
     list_shade_labels,
 )
 from builder_app import (
+    DATA_TERM_TAXONOMY,
     SHADE_COVERAGE_OPTIONS,
     SHADE_COVERAGE_TAXONOMY,
     SHADE_SOURCE_OPTIONS,
@@ -364,6 +365,7 @@ def test_label_code_definition_tables_include_core_schema_terms(taxonomy):
     tables = labels_page.label_code_definition_tables(taxonomy)
 
     assert set(tables) == {
+        "Data terms",
         "Stored fields",
         "Coverage codes",
         "Source codes",
@@ -377,6 +379,18 @@ def test_label_code_definition_tables_include_core_schema_terms(taxonomy):
         "review_status",
         "confidence",
     ]
+    assert tables["Data terms"].to_dict("records") == [
+        {
+            "Code": "Waiting Area",
+            "Definition": (
+                "The designated location where passengers would reasonably stand or sit while waiting to board "
+                "the bus, including any bus stop pad, sidewalk immediately adjacent to the bus stop sign, or "
+                "seating within a bus shelter. Grass, landscaping, roadway, bicycle lanes, and areas not "
+                "reasonably intended for waiting are excluded."
+            ),
+        }
+    ]
+    assert DATA_TERM_TAXONOMY[0]["term"] == "Waiting Area"
     assert tables["Coverage codes"]["Code"].tolist() == ["No Shade", "Limited Shade", "Significant Shade"]
     assert tables["Source codes"]["Code"].tolist() == ["Natural", "Purpose-built", "Incidental"]
     assert tables["Map label codes"]["Code"].tolist() == [
@@ -549,6 +563,7 @@ def test_stop_reference_map_datasets_include_all_points_and_selected_point(minim
 
 
 def test_stop_reference_deck_uses_visuals_styling_for_selected_marker(minimal_stops, taxonomy, visualization):
+    visualization["marker_size"] = 24
     deck = labels_page.build_stop_reference_deck(minimal_stops, "1001", taxonomy, visualization)
 
     assert deck is not None
@@ -556,6 +571,7 @@ def test_stop_reference_deck_uses_visuals_styling_for_selected_marker(minimal_st
     assert len(deck.layers[0].data) == 2
     assert len(deck.layers[-1].data) == 1
     assert deck.layers[-1].data[0]["stop_id"] == "1001"
+    assert deck.layers[0].data[0]["marker_size"] == 24
     assert deck.layers[-1].data[0]["marker_size"] > deck.layers[0].data[0]["marker_size"]
     assert deck.layers[-1].data[0]["fill_color"] == deck.layers[0].data[0]["fill_color"]
     assert deck.layers[-1].data[0]["fill_color"] != [255, 75, 75]

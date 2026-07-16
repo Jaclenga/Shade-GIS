@@ -24,8 +24,11 @@ def render_about_page(
         the mere presence of nearby vegetation or structures. Code what visibly shades the waiting area, not what
         might shade it at another time.
 
-        Waiting area: The space where a passenger would reasonably stand or sit while waiting for transit, including
-        benches when present.
+        ## Data Taxonomy
+
+        | Term | Operational Definition |
+        | --- | --- |
+        | Waiting Area | The designated location where passengers would reasonably stand or sit while waiting to board the bus, including any bus stop pad, sidewalk immediately adjacent to the bus stop sign, or seating within a bus shelter. Grass, landscaping, roadway, bicycle lanes, and areas not reasonably intended for waiting are excluded. |
 
         ## Data Sources
 

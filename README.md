@@ -123,7 +123,7 @@ The `Preview` page renders the public-facing study experience for the active pro
 - `public_voting.py`: public voting interface and SQLite/PostgreSQL vote storage.
 - `shade_study_stops.csv`: exported stop dataset with current priority scores.
 - `shade_study_raw_labels.csv`: raw labels when labels have been collected.
-- `shade_study_config.json`: project metadata, taxonomy, methodology, visualization settings, and import log.
+- `shade_study_config.json`: project metadata, data and shade taxonomies, methodology, visualization settings, and import log.
 - `requirements.txt`, `.streamlit/config.toml`, generated `README.md`, and `deploy_to_github.ps1`.
 
 The dedicated `Voting` page includes the Public Voting editor. An admin can enable or hide voting, choose the
@@ -247,6 +247,12 @@ The reviewed example records focus on three shade fields:
 | `shading` | The derived coverage category used for coloring, filtering, summaries, and public display. |
 
 Manual coding used the visible waiting area as the unit of analysis. Reviewers should code what appears to shade the place where a rider would reasonably stand or sit while waiting, rather than nearby objects that do not visibly shade that space.
+
+Data taxonomy:
+
+| Term | Operational definition |
+| --- | --- |
+| `Waiting Area` | The designated location where passengers would reasonably stand or sit while waiting to board the bus, including any bus stop pad, sidewalk immediately adjacent to the bus stop sign, or seating within a bus shelter. Grass, landscaping, roadway, bicycle lanes, and areas not reasonably intended for waiting are excluded. |
 
 The example labels distinguish source and coverage as separate dimensions. Use `shade_sources` for
 what creates the shade and `shade_coverage` for how much of the waiting area is shaded. The derived

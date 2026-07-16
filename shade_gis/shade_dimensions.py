@@ -8,6 +8,18 @@ from typing import Any
 SHADE_COVERAGE_OPTIONS = ["No Shade", "Limited Shade", "Significant Shade"]
 SHADE_SOURCE_OPTIONS = ["Natural", "Purpose-built", "Incidental"]
 
+DATA_TERM_TAXONOMY = [
+    {
+        "term": "Waiting Area",
+        "operational_definition": (
+            "The designated location where passengers would reasonably stand or sit while waiting to board the "
+            "bus, including any bus stop pad, sidewalk immediately adjacent to the bus stop sign, or seating "
+            "within a bus shelter. Grass, landscaping, roadway, bicycle lanes, and areas not reasonably intended "
+            "for waiting are excluded."
+        ),
+    },
+]
+
 SHADE_COVERAGE_TAXONOMY = [
     {
         "shade_coverage": "No Shade",

@@ -649,6 +649,12 @@ def render_data_page() -> None:
     images = list_images(project_id) if project_id else pd.DataFrame()
     render_data_quality_dashboard(st.session_state["stops"], images)
 
+    st.subheader("Data Taxonomy")
+    render_dataframe_table(
+        pd.DataFrame(DATA_TERM_TAXONOMY),
+        {"term": "Term", "operational_definition": "Operational Definition"},
+    )
+
     st.subheader("Shade Source Taxonomy")
     render_dataframe_table(
         pd.DataFrame(SHADE_SOURCE_TAXONOMY),

@@ -169,6 +169,17 @@ DEFAULT_COVERAGE_TAXONOMY = [
         "sort_order": 4,
     },
 ]
+DATA_TERM_TAXONOMY = [
+    {
+        "term": "Waiting Area",
+        "operational_definition": (
+            "The designated location where passengers would reasonably stand or sit while waiting to board the "
+            "bus, including any bus stop pad, sidewalk immediately adjacent to the bus stop sign, or seating "
+            "within a bus shelter. Grass, landscaping, roadway, bicycle lanes, and areas not reasonably intended "
+            "for waiting are excluded."
+        ),
+    },
+]
 SHADE_SOURCE_TAXONOMY = [
     {
         "Shade Source": "Natural",
@@ -1573,6 +1584,13 @@ def source_schema_display_table() -> pd.DataFrame:
     return pd.DataFrame(SHADE_SOURCE_TAXONOMY)
 
 
+def data_term_schema_display_table(taxonomy: list[dict[str, Any]] | None = None) -> pd.DataFrame:
+    display = pd.DataFrame(taxonomy or DATA_TERM_TAXONOMY)
+    return display.rename(
+        columns={"term": "Term", "operational_definition": "Operational Definition"}
+    ).loc[:, ["Term", "Operational Definition"]]
+
+
 def taxonomy_legend_markup(taxonomy: list[dict[str, Any]]) -> str:
     items = []
     for item in normalize_published_taxonomy(taxonomy):
@@ -1626,6 +1644,12 @@ def render_methodology(config: dict[str, Any]) -> None:
             st.markdown(f"## {title}")
             st.markdown(body)
     taxonomy = config.get("taxonomy", [])
+    st.markdown("## Data Taxonomy")
+    st.dataframe(
+        data_term_schema_display_table(config.get("data_taxonomy")),
+        width="stretch",
+        hide_index=True,
+    )
     st.markdown("## Shade Coverage Taxonomy")
     st.dataframe(coverage_schema_display_table(taxonomy), width="stretch", hide_index=True)
     st.markdown("## Shade Source Taxonomy")

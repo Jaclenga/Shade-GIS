@@ -8,6 +8,8 @@ pre-release phase while the reusable platform stabilizes.
 ## [Unreleased]
 
 ### Added
+- Canonical `Waiting Area` data-taxonomy term and operational definition across builder labeling,
+  published methodology, documentation, and starter preview surfaces.
 - Centralized Data Quality dashboard with record-level filters for duplicate stop IDs, missing
   coordinates, missing required fields, invalid geometries, orphaned images, and publication readiness.
 - Compact Export Files catalog with descriptions, record counts, generated sizes, data dates,

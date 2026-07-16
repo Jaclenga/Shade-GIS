@@ -33,6 +33,15 @@ def confidence_level_from_score(score: Any) -> str:
 
 def label_code_definition_tables(taxonomy: list[dict[str, Any]]) -> dict[str, pd.DataFrame]:
     active_taxonomy = taxonomy or DEFAULT_TAXONOMY
+    terms = pd.DataFrame(
+        [
+            {
+                "Code": item.get("term", ""),
+                "Definition": item.get("operational_definition", ""),
+            }
+            for item in DATA_TERM_TAXONOMY
+        ]
+    )
     coverage = pd.DataFrame(
         [
             {
@@ -97,6 +106,7 @@ def label_code_definition_tables(taxonomy: list[dict[str, Any]]) -> dict[str, pd
         ]
     )
     return {
+        "Data terms": terms,
         "Stored fields": storage_fields,
         "Coverage codes": coverage,
         "Source codes": sources,
@@ -460,11 +470,10 @@ def build_stop_reference_deck(
 
     configured_opacity = max(0.1, min(1.0, float(visualization.get("marker_opacity", 0.82))))
     map_visualization = dict(visualization)
-    map_visualization["marker_size"] = min(8, max(5, int(map_visualization.get("marker_size", 7))))
     map_visualization["marker_opacity"] = max(0.1, configured_opacity * 0.35)
     deck = build_deck_chart(mappable_stops, taxonomy, map_visualization)
 
-    marker_size = int(map_visualization.get("marker_size", 7))
+    marker_size = max(4, min(48, int(map_visualization.get("marker_size", 7))))
     selected_visualization = dict(map_visualization)
     selected_visualization["marker_opacity"] = 1.0
     selected_visualization["marker_size"] = min(48, max(marker_size + 4, int(marker_size * 1.8)))

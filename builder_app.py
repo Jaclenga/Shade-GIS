@@ -164,6 +164,7 @@ from shade_gis.deployment import (
     DEFAULT_DEPLOY_COMMIT_MESSAGE,
 )
 from shade_gis.shade_dimensions import (
+    DATA_TERM_TAXONOMY as CORE_DATA_TERM_TAXONOMY,
     DEFAULT_COVERAGE_TAXONOMY,
     SHADE_COVERAGE_OPTIONS as CORE_SHADE_COVERAGE_OPTIONS,
     SHADE_COVERAGE_TAXONOMY as CORE_SHADE_COVERAGE_TAXONOMY,
@@ -206,6 +207,7 @@ DEFAULT_PROJECT = {
 }
 
 DEFAULT_TAXONOMY = [dict(item) for item in DEFAULT_COVERAGE_TAXONOMY]
+DATA_TERM_TAXONOMY = [dict(item) for item in CORE_DATA_TERM_TAXONOMY]
 SHADE_SOURCE_TAXONOMY = [dict(item) for item in CORE_SHADE_SOURCE_TAXONOMY]
 SHADE_COVERAGE_TAXONOMY = [dict(item) for item in CORE_SHADE_COVERAGE_TAXONOMY]
 
@@ -229,9 +231,11 @@ DEFAULT_METHODOLOGY = {
     ),
     "shade_method": (
         "Classifications should describe visible shade reaching the passenger waiting area, not merely nearby "
-        "trees or structures. The waiting area is the place where a passenger would reasonably stand or sit "
-        "while waiting for transit, including benches when present. Code what visibly shades the waiting area, "
-        "not what might shade it at another time.\n\n"
+        "trees or structures. The waiting area is the designated location where passengers would reasonably "
+        "stand or sit while waiting to board the bus, including any bus stop pad, sidewalk immediately adjacent "
+        "to the bus stop sign, or seating within a bus shelter. Grass, landscaping, roadway, bicycle lanes, and "
+        "areas not reasonably intended for waiting are excluded. Code what visibly shades the waiting area, not "
+        "what might shade it at another time.\n\n"
         "Manual review records separate fields for `shade_coverage` and `shade_sources`. The derived "
         "`shading` field mirrors the coverage code for coloring, filtering, summaries, and public display.\n\n"
         "Shade coverage definitions: `No Shade` means no shade visibly reaches the waiting area; `Limited Shade` "
@@ -566,6 +570,7 @@ def study_config_payload() -> dict[str, Any]:
         or slugify_repo_name(st.session_state["project"].get("name", "shade-study")),
         "project": public_project,
         "taxonomy": taxonomy,
+        "data_taxonomy": [dict(item) for item in DATA_TERM_TAXONOMY],
         "methodology": with_default_methodology_values(st.session_state["methodology"]),
         "visualization": normalized_visualization_values(
             st.session_state["visualization"], taxonomy

@@ -170,8 +170,17 @@ def test_public_schema_tables_separate_coverage_from_sources() -> None:
 
     coverage = published_app.coverage_schema_display_table(legacy)
     sources = published_app.source_schema_display_table()
+    terms = published_app.data_term_schema_display_table(
+        [{"term": "Waiting Area", "operational_definition": "Project-specific definition."}]
+    )
     legend = published_app.taxonomy_legend_markup(legacy)
 
+    assert terms.columns.tolist() == ["Term", "Operational Definition"]
+    assert terms["Term"].tolist() == ["Waiting Area"]
+    assert terms.iloc[0]["Operational Definition"] == "Project-specific definition."
+    assert published_app.data_term_schema_display_table().iloc[0]["Operational Definition"].endswith(
+        "for waiting are excluded."
+    )
     assert coverage.columns.tolist() == ["Shade Coverage", "Operational Definition"]
     assert coverage["Shade Coverage"].tolist() == [
         "No Shade",

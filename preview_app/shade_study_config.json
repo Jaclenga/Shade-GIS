@@ -39,11 +39,17 @@
       "sort_order": 4
     }
   ],
+  "data_taxonomy": [
+    {
+      "term": "Waiting Area",
+      "operational_definition": "The designated location where passengers would reasonably stand or sit while waiting to board the bus, including any bus stop pad, sidewalk immediately adjacent to the bus stop sign, or seating within a bus shelter. Grass, landscaping, roadway, bicycle lanes, and areas not reasonably intended for waiting are excluded."
+    }
+  ],
   "methodology": {
     "title": "Bus Stop Shade Study",
     "summary": "Preparing a reproducible, city-wide shade inventory from GTFS bus stop data.",
     "purpose": "This project helps researchers, transit agencies, and municipalities collect, review, visualize, and publish standardized bus stop shade datasets.",
-    "shade_method": "Classifications should describe visible shade reaching the passenger waiting area, not merely nearby trees or structures. Store raw labels and consensus labels so future reviewers can reproduce decisions.",
+    "shade_method": "Waiting Area: The designated location where passengers would reasonably stand or sit while waiting to board the bus, including any bus stop pad, sidewalk immediately adjacent to the bus stop sign, or seating within a bus shelter. Grass, landscaping, roadway, bicycle lanes, and areas not reasonably intended for waiting are excluded. Classifications should describe visible shade reaching the passenger waiting area, not merely nearby trees or structures. Store raw labels and consensus labels so future reviewers can reproduce decisions.",
     "data_sources": "- GTFS stops and routes\n- Expert or crowdsourced shade labels\n- Optional environmental, demographic, and transportation overlays",
     "contributors": "Project team, reviewers, and community contributors",
     "citation": "Dataset release:\n    Author or Organization. (Year). Title of dataset or study release (Version number) [Data set]. Publisher. URL",

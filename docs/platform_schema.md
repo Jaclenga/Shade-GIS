@@ -128,6 +128,12 @@ the full dataset is never mounted as one browser table.
 
 ## Shade Taxonomies
 
+The core data taxonomy defines the unit used when assessing shade:
+
+| Term | Operational Definition |
+| --- | --- |
+| `Waiting Area` | The designated location where passengers would reasonably stand or sit while waiting to board the bus, including any bus stop pad, sidewalk immediately adjacent to the bus stop sign, or seating within a bus shelter. Grass, landscaping, roadway, bicycle lanes, and areas not reasonably intended for waiting are excluded. |
+
 The core source taxonomy is:
 
 | Shade Source | Operational Definition |
@@ -239,7 +245,8 @@ The `Preview` page exports:
 - Stops CSV.
 - Stops GeoJSON.
 - Raw labels CSV, when raw labels have been submitted.
-- Study configuration JSON containing project metadata, taxonomy, methodology copy, visualization settings, and import log.
+- Study configuration JSON containing project metadata, the `data_taxonomy` term definitions, shade taxonomy,
+  methodology copy, visualization settings, and import log.
 
 The Exports tab presents these files in one compact catalog. Each row explains the file's purpose,
 record count, generated size, relevant import or label date, and download action. Raw Labels CSV
@@ -261,7 +268,8 @@ and the deployment service packages as its standalone `app.py`. The package incl
 - `public_voting.py` with the configured crowd interface and vote-store implementation.
 - `shade_study_stops.csv` with the active stop dataset and current priority scores.
 - `shade_study_raw_labels.csv` with raw label submissions, when labels have been collected.
-- `shade_study_config.json` with project metadata, taxonomy, methodology copy, visualization settings, and import log.
+- `shade_study_config.json` with project metadata, data and shade taxonomies, methodology copy,
+  visualization settings, and import log.
 - `requirements.txt`, `.streamlit/config.toml`, generated `README.md`, `.gitignore`, and optional `deploy_to_github.ps1` helper.
 
 Repository, branch, hosting, Git, PowerShell, workflow, package contents, and diagnostic output are

@@ -110,6 +110,7 @@ def test_export_csv_geojson_raw_labels_and_config(db_path, project, taxonomy, me
             "deploy_to_github.ps1"
         ).decode("utf-8")
         deployed_config = json.loads(bundle.read("shade_study_config.json"))
+        assert deployed_config["data_taxonomy"] == builder_app.DATA_TERM_TAXONOMY
         assert deployed_config["visualization"]["voting"]["enabled"] is False
         assert deployed_config["visualization"]["voting"]["options"] == [
             "No Shade",
