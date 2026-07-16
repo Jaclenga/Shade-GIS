@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pandas as pd
+import pytest
 
 
 def test_core_modules_compile_without_bytecode_writes():
@@ -111,6 +112,18 @@ def test_ui_seed_limit_is_test_only(monkeypatch, taxonomy, project):
     assert builder_app.create_seed_project() == "ui-seed"
     assert len(captured["stops"]) == 25
     assert captured["rows"] == 25
+
+
+def test_project_label_progress_preserves_small_nonzero_values():
+    import builder_app
+
+    percent, label = builder_app.project_label_progress(7, 2_315)
+
+    assert percent == pytest.approx(7 / 2_315 * 100)
+    assert label == "0.3%"
+    assert builder_app.project_label_progress(1, 2_000)[1] == "<0.1%"
+    assert builder_app.project_label_progress(0, 2_315) == (0.0, "0%")
+    assert builder_app.project_label_progress(2_315, 2_315) == (100.0, "100%")
 
 
 def test_summary_metrics_only_render_in_analytics():

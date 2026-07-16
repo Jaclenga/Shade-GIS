@@ -338,6 +338,21 @@ def list_projects(path: Path | None = None) -> list[dict[str, Any]]:
                    COALESCE(SUM(CASE WHEN s.review_status IN (
                        'Reviewed', 'Crowd Reviewed', 'Expert Reviewed', 'Accepted', 'Archived'
                    ) THEN 1 ELSE 0 END), 0) AS reviewed_count,
+                   COALESCE(SUM(CASE WHEN
+                       LOWER(TRIM(COALESCE(s.shade_coverage, ''))) IN (
+                           'no shade', 'limited', 'limited shade', 'limited natural shade',
+                           'significant', 'significant shade', 'significant natural shade'
+                       )
+                       OR LOWER(TRIM(COALESCE(s.shading, ''))) IN (
+                           'no shade', 'limited', 'limited shade', 'limited natural shade',
+                           'significant', 'significant shade', 'significant natural shade'
+                       )
+                       OR EXISTS (
+                           SELECT 1
+                           FROM shade_labels AS sl
+                           WHERE sl.project_id = s.project_id AND sl.stop_id = s.stop_id
+                       )
+                   THEN 1 ELSE 0 END), 0) AS labeled_count,
                    COUNT(s.stop_id) - COALESCE(SUM(CASE WHEN s.review_status IN (
                        'Reviewed', 'Crowd Reviewed', 'Expert Reviewed', 'Accepted', 'Archived'
                    ) THEN 1 ELSE 0 END), 0) AS awaiting_review_count

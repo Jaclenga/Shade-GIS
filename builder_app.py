@@ -935,6 +935,22 @@ def format_project_updated(value: Any) -> str:
     return f"Updated {updated.strftime('%b %d, %Y').replace(' 0', ' ')}"
 
 
+def project_label_progress(labeled_count: int, location_count: int) -> tuple[float, str]:
+    """Return the exact bar width and a concise, non-misleading percentage label."""
+    if location_count <= 0 or labeled_count <= 0:
+        return 0.0, "0%"
+
+    percent = min(labeled_count / location_count * 100, 100.0)
+    if percent < 0.1:
+        return percent, "<0.1%"
+    if percent >= 100:
+        return percent, "100%"
+
+    displayed_percent = min(round(percent, 1), 99.9)
+    label = f"{displayed_percent:.1f}".rstrip("0").rstrip(".")
+    return percent, f"{label}%"
+
+
 def render_home_page() -> None:
     projects = list_projects()
     notice = st.session_state.pop("project_settings_notice", None)
@@ -1170,6 +1186,9 @@ def render_home_page() -> None:
             border-radius: inherit;
             height: 100%;
         }
+        .project-progress-fill.has-progress {
+            min-width: 2px;
+        }
         .project-card-stats {
             display: grid;
             gap: 0.6rem;
@@ -1241,9 +1260,12 @@ def render_home_page() -> None:
             visibility_class = "public" if visibility.lower() == "public" else "private"
             updated = html.escape(format_project_updated(project.get("updated_at")))
             location_count = int(project.get("location_count") or 0)
-            reviewed_count = int(project.get("reviewed_count") or 0)
-            awaiting_count = int(project.get("awaiting_review_count") or 0)
-            review_percent = round(reviewed_count / location_count * 100) if location_count else 0
+            labeled_count = int(project.get("labeled_count") or 0)
+            unlabeled_count = max(location_count - labeled_count, 0)
+            label_percent, label_percent_text = project_label_progress(
+                labeled_count, location_count
+            )
+            progress_fill_class = " has-progress" if label_percent > 0 else ""
             with card_columns[index % len(card_columns)]:
                 with st.container(key=f"project_card_{index}"):
                     st.markdown(
@@ -1255,12 +1277,12 @@ def render_home_page() -> None:
                             <span class="project-card-badge {visibility_class}">{visibility}</span>
                             <p class="project-card-location"><span class="project-location-label">Location</span> · {region} · {agency}</p>
                             <p class="project-card-meta">Dataset v{version} · {updated}</p>
-                            <div class="project-progress-label"><span>Review progress</span><strong>{review_percent}%</strong></div>
-                            <div class="project-progress-track"><div class="project-progress-fill" style="width: {review_percent}%"></div></div>
+                            <div class="project-progress-label"><span>Label progress</span><strong>{label_percent_text}</strong></div>
+                            <div class="project-progress-track"><div class="project-progress-fill{progress_fill_class}" style="width: {label_percent:.4f}%"></div></div>
                             <div class="project-card-stats">
                                 <div class="project-card-stat"><strong>{location_count:,}</strong><span>Locations</span></div>
-                                <div class="project-card-stat"><strong>{reviewed_count:,}</strong><span>Reviewed</span></div>
-                                <div class="project-card-stat"><strong>{awaiting_count:,}</strong><span>Need review</span></div>
+                                <div class="project-card-stat"><strong>{labeled_count:,}</strong><span>Labeled</span></div>
+                                <div class="project-card-stat"><strong>{unlabeled_count:,}</strong><span>Unlabeled</span></div>
                             </div>
                             <span class="project-card-action">Open Project →</span>
                         </div>

@@ -46,7 +46,31 @@ def test_save_project_updates_metadata_without_corrupting_stops(db_path, project
     assert projects[0]["id"] == project_id
     assert projects[0]["location_count"] == 2
     assert projects[0]["reviewed_count"] == 0
+    assert projects[0]["labeled_count"] == 2
     assert projects[0]["awaiting_review_count"] == 2
+
+
+def test_list_projects_counts_raw_labels_toward_label_progress(
+    db_path, project, taxonomy, methodology, visualization, minimal_stops
+):
+    minimal_stops[["shading", "shade_coverage"]] = "Unknown"
+    project_id = create_project(
+        project, taxonomy, methodology, visualization, minimal_stops, [], db_path
+    )
+    with sqlite3.connect(db_path) as conn:
+        conn.execute(
+            """
+            INSERT INTO shade_labels (id, project_id, stop_id, source, created_at)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            ("raw-label", project_id, "1001", "manual", "2026-07-16T12:00:00-04:00"),
+        )
+        conn.commit()
+
+    projects = list_projects(db_path)
+
+    assert projects[0]["location_count"] == 2
+    assert projects[0]["labeled_count"] == 1
 
 
 def test_deployment_settings_roundtrip_with_project(
