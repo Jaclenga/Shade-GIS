@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import sqlite3
+from datetime import datetime, timedelta, timezone
 
 import pandas as pd
+import pytest
 
 import published_app
 from public_voting import (
@@ -11,6 +13,7 @@ from public_voting import (
     PUBLIC_COVERAGE_DEFINITIONS,
     PUBLIC_SOURCE_DISPLAY_LABELS,
     PUBLIC_SOURCE_DEFINITIONS,
+    VoteRateLimitError,
     community_result,
     coverage_taxonomy_help,
     get_existing_vote,
@@ -18,6 +21,7 @@ from public_voting import (
     get_vote_counts,
     normalize_voting_config,
     normalize_vote_sources,
+    privacy_preserving_voter_id,
     save_vote,
     source_taxonomy_help,
 )
@@ -157,6 +161,49 @@ def test_voting_config_uses_taxonomy_and_preserves_admin_copy(taxonomy):
     assert config["title"] == "Rate this waiting area"
     assert config["options"] == ["No Shade", "Limited Shade"]
     assert config["minimum_votes_for_result"] == 100
+    assert config["abuse_protection_enabled"] is True
+    assert config["vote_cooldown_seconds"] == 5
+    assert config["max_new_votes_per_hour"] == 20
+
+
+def test_voting_config_clamps_robustness_limits():
+    config = normalize_voting_config(
+        {
+            "abuse_protection_enabled": True,
+            "vote_cooldown_seconds": 500,
+            "max_new_votes_per_hour": 0,
+        }
+    )
+
+    assert config["vote_cooldown_seconds"] == 60
+    assert config["max_new_votes_per_hour"] == 1
+
+
+def test_privacy_preserving_voter_id_is_stable_without_storing_raw_signals():
+    headers = {
+        "X-Forwarded-For": "203.0.113.42, 10.0.0.2",
+        "User-Agent": "ExampleBrowser/1.0",
+        "Accept-Language": "en-US",
+    }
+
+    first = privacy_preserving_voter_id(headers, "server-secret", "session-a")
+    second = privacy_preserving_voter_id(headers, "server-secret", "session-b")
+    other_network = privacy_preserving_voter_id(
+        {**headers, "X-Forwarded-For": "203.0.113.43"},
+        "server-secret",
+        "session-c",
+    )
+
+    assert first == second
+    assert first.startswith("visitor_")
+    assert "203.0.113.42" not in first
+    assert "ExampleBrowser" not in first
+    assert other_network != first
+    assert privacy_preserving_voter_id(
+        {"X-Forwarded-For": "not-an-ip", "User-Agent": "ExampleBrowser/1.0"},
+        "server-secret",
+        "session-fallback",
+    ) == "session-fallback"
 
 
 def test_voting_coverage_choices_never_include_source_or_review_categories():
@@ -309,6 +356,69 @@ def test_vote_changes_can_be_disabled_and_studies_are_isolated(db_path):
     assert get_vote_counts(
         "study-b", "1001", ["No Shade", "Limited Shade"], database_url="", sqlite_path=db_path
     ) == {"No Shade": 0, "Limited Shade": 1}
+
+
+def test_vote_store_enforces_cooldown_and_hourly_new_stop_limit(db_path):
+    started = datetime(2026, 7, 16, 12, 0, tzinfo=timezone.utc)
+    assert save_vote(
+        "study-a",
+        "1001",
+        "visitor-a",
+        "No Shade",
+        cooldown_seconds=5,
+        max_new_votes_per_hour=2,
+        database_url="",
+        sqlite_path=db_path,
+        now=started,
+    )
+
+    with pytest.raises(VoteRateLimitError, match="Please wait 3 seconds") as cooldown_error:
+        save_vote(
+            "study-a",
+            "1002",
+            "visitor-a",
+            "Limited Shade",
+            cooldown_seconds=5,
+            max_new_votes_per_hour=2,
+            database_url="",
+            sqlite_path=db_path,
+            now=started + timedelta(seconds=2),
+        )
+    assert cooldown_error.value.retry_after_seconds == 3
+
+    assert save_vote(
+        "study-a",
+        "1002",
+        "visitor-a",
+        "Limited Shade",
+        cooldown_seconds=5,
+        max_new_votes_per_hour=2,
+        database_url="",
+        sqlite_path=db_path,
+        now=started + timedelta(seconds=5),
+    )
+    with pytest.raises(VoteRateLimitError, match="hourly voting limit"):
+        save_vote(
+            "study-a",
+            "1003",
+            "visitor-a",
+            "Significant Shade",
+            max_new_votes_per_hour=2,
+            database_url="",
+            sqlite_path=db_path,
+            now=started + timedelta(seconds=10),
+        )
+
+    assert save_vote(
+        "study-a",
+        "1001",
+        "visitor-a",
+        "Limited Shade",
+        max_new_votes_per_hour=2,
+        database_url="",
+        sqlite_path=db_path,
+        now=started + timedelta(seconds=10),
+    )
 
 
 def test_community_result_requires_threshold_and_unique_leader():

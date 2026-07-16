@@ -74,6 +74,16 @@ CREATE TABLE IF NOT EXISTS shade_votes (
   UNIQUE (study_id, stop_id, voter_id)
 );
 
+-- Holds the random HMAC key used to pseudonymize voter network/browser signals when an
+-- external SHADE_GIS_VOTE_FINGERPRINT_SECRET is not configured. Raw signals are never stored.
+CREATE TABLE IF NOT EXISTS shade_vote_settings (
+  setting_key TEXT PRIMARY KEY,
+  setting_value TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS shade_votes_rate_limit_idx
+  ON shade_votes (study_id, voter_id, created_at);
+
 CREATE TABLE IF NOT EXISTS images (
   id TEXT PRIMARY KEY,
   project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,

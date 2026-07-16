@@ -128,17 +128,24 @@ The `Preview` page renders the public-facing study experience for the active pro
 
 The dedicated `Voting` page includes the Public Voting editor. An admin can enable or hide voting, choose the
 coverage categories visitors may submit, edit all visible voting copy including the separate shade-source
-checkbox prompt, control whether repeat votes
-from the same browser session may be changed, show or hide totals, and set the minimum vote count
+checkbox prompt, control whether a visitor may change an existing vote, show or hide totals, and set the minimum vote count
 before a unique leading status is reported. Community results stay separate from the reviewed stop
 dataset so public input does not silently overwrite an admin-approved classification.
+
+Robustness controls are enabled by default. The deployed app uses a server-keyed, one-way visitor
+pseudonym to make session resets less useful, enforces a short cooldown, and caps how many new stops
+the same pseudonymous visitor can vote on per hour. Raw IP addresses and browser headers are never stored.
 
 Generated apps use a local `.shade_gis_votes.sqlite3` file by default. That is useful for local
 testing, but hosted deployments should set the Streamlit secret
 `SHADE_GIS_VOTE_DATABASE_URL = "postgresql://..."` because Streamlit Community Cloud local files
 are ephemeral. The generated bundle README contains the complete setup note, and the app creates its
-`shade_votes` table automatically. Voter identifiers are random browser-session IDs rather than
-names or email addresses; this is lightweight crowdsourcing, not authenticated identity verification.
+`shade_votes` table automatically. When request metadata is available, voter identifiers are keyed
+HMAC pseudonyms derived from network/browser signals; those raw signals are not retained. The database
+creates a private fingerprint key automatically, or deployments can provide a stable random
+`SHADE_GIS_VOTE_FINGERPRINT_SECRET`. If request metadata is unavailable, the app falls back to a random
+browser-session identifier. These controls raise the cost of casual manipulation but do not replace
+authentication, CAPTCHA, or external abuse monitoring for high-stakes binding polls.
 
 ## Getting Started
 

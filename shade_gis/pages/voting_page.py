@@ -68,10 +68,50 @@ def render_voting_controls(
         key=f"{key_prefix}_success_message",
     )
     voting["allow_vote_changes"] = st.checkbox(
-        "Allow a browser session to change its vote",
+        "Allow a visitor to change an existing vote",
         value=voting["allow_vote_changes"],
         key=f"{key_prefix}_allow_changes",
+        help=(
+            "With robustness measures enabled, this follows the same pseudonymous visitor across "
+            "browser-session resets when request metadata is available."
+        ),
     )
+    with st.expander("Robustness measures", expanded=True):
+        voting["abuse_protection_enabled"] = st.checkbox(
+            "Limit repeated voting",
+            value=voting["abuse_protection_enabled"],
+            key=f"{key_prefix}_abuse_protection",
+            help=(
+                "Uses a one-way, server-keyed visitor fingerprint plus server-side timing limits. "
+                "Raw IP addresses and browser headers are not stored."
+            ),
+        )
+        if voting["abuse_protection_enabled"]:
+            voting["vote_cooldown_seconds"] = int(
+                st.number_input(
+                    "Seconds required between votes",
+                    min_value=0,
+                    max_value=60,
+                    value=int(voting["vote_cooldown_seconds"]),
+                    step=1,
+                    key=f"{key_prefix}_vote_cooldown",
+                    help="Applied across all stops in this study for the same pseudonymous visitor.",
+                )
+            )
+            voting["max_new_votes_per_hour"] = int(
+                st.number_input(
+                    "Maximum new stops per visitor per hour",
+                    min_value=1,
+                    max_value=100,
+                    value=int(voting["max_new_votes_per_hour"]),
+                    step=1,
+                    key=f"{key_prefix}_hourly_vote_limit",
+                    help=(
+                        "Limits how many different stops one pseudonymous visitor can vote on in an hour. "
+                        "Changing an existing vote does not consume another slot."
+                    ),
+                )
+            )
     voting["show_results"] = st.checkbox(
         "Show community vote totals and result",
         value=voting["show_results"],
@@ -166,5 +206,8 @@ def render_voting_page() -> None:
     st.markdown(
         "Generated apps use a local SQLite vote database for development. For durable hosted voting, "
         "set `SHADE_GIS_VOTE_DATABASE_URL` as a PostgreSQL secret in the deployment environment. "
-        "Streamlit Community Cloud local files are ephemeral and may be lost when the app restarts."
+        "Streamlit Community Cloud local files are ephemeral and may be lost when the app restarts. "
+        "Robustness controls store only a server-keyed pseudonym, never raw IP addresses or browser headers. "
+        "Optionally set `SHADE_GIS_VOTE_FINGERPRINT_SECRET` to a stable random secret; otherwise the voting "
+        "database creates and retains one automatically."
     )

@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import copy
 import hashlib
+import hmac
+import ipaddress
 import os
 import sqlite3
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
@@ -88,15 +90,27 @@ DEFAULT_VOTING_CONFIG = {
     "results_label": "Community result",
     "minimum_votes_for_result": 5,
     "allow_vote_changes": True,
+    "abuse_protection_enabled": True,
+    "vote_cooldown_seconds": 5,
+    "max_new_votes_per_hour": 20,
 }
 
 VOTE_DATABASE_URL_ENV = "SHADE_GIS_VOTE_DATABASE_URL"
 VOTE_DB_PATH_ENV = "SHADE_GIS_VOTE_DB_PATH"
+VOTE_FINGERPRINT_SECRET_ENV = "SHADE_GIS_VOTE_FINGERPRINT_SECRET"
 DEFAULT_VOTE_DB_FILENAME = ".shade_gis_votes.sqlite3"
 
 
 class VoteStorageError(RuntimeError):
     """Raised when the configured voting store cannot be used."""
+
+
+class VoteRateLimitError(VoteStorageError):
+    """Raised when a voter submits observations faster than the configured limits."""
+
+    def __init__(self, message: str, *, retry_after_seconds: int = 0) -> None:
+        super().__init__(message)
+        self.retry_after_seconds = max(0, int(retry_after_seconds))
 
 
 def normalize_vote_sources(value: Any) -> list[str]:
@@ -175,6 +189,17 @@ def normalize_voting_config(
     normalized["enabled"] = bool(normalized.get("enabled", False))
     normalized["show_results"] = bool(normalized.get("show_results", True))
     normalized["allow_vote_changes"] = bool(normalized.get("allow_vote_changes", True))
+    normalized["abuse_protection_enabled"] = bool(normalized.get("abuse_protection_enabled", True))
+    try:
+        cooldown = int(normalized.get("vote_cooldown_seconds", 5))
+    except (TypeError, ValueError):
+        cooldown = 5
+    normalized["vote_cooldown_seconds"] = max(0, min(60, cooldown))
+    try:
+        hourly_limit = int(normalized.get("max_new_votes_per_hour", 20))
+    except (TypeError, ValueError):
+        hourly_limit = 20
+    normalized["max_new_votes_per_hour"] = max(1, min(100, hourly_limit))
     return normalized
 
 
@@ -287,6 +312,18 @@ def _ensure_vote_table(connection: Any, dialect: str) -> None:
             )
         """
     connection.execute(statement)
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS shade_vote_settings (
+            setting_key TEXT PRIMARY KEY,
+            setting_value TEXT NOT NULL
+        )
+        """
+    )
+    connection.execute(
+        "CREATE INDEX IF NOT EXISTS shade_votes_rate_limit_idx "
+        "ON shade_votes (study_id, voter_id, created_at)"
+    )
     if dialect == "postgres":
         connection.execute("ALTER TABLE shade_votes ADD COLUMN IF NOT EXISTS shade_sources TEXT NOT NULL DEFAULT ''")
     else:
@@ -294,6 +331,90 @@ def _ensure_vote_table(connection: Any, dialect: str) -> None:
         if "shade_sources" not in columns:
             connection.execute("ALTER TABLE shade_votes ADD COLUMN shade_sources TEXT NOT NULL DEFAULT ''")
     connection.commit()
+
+
+def _fingerprint_secret(connection: Any, dialect: str) -> str:
+    configured = _secret_or_environment(VOTE_FINGERPRINT_SECRET_ENV)
+    if configured:
+        return configured
+    placeholder = "%s" if dialect == "postgres" else "?"
+    generated = uuid.uuid4().hex + uuid.uuid4().hex
+    connection.execute(
+        f"""
+        INSERT INTO shade_vote_settings (setting_key, setting_value)
+        VALUES ({placeholder}, {placeholder})
+        ON CONFLICT (setting_key) DO NOTHING
+        """,
+        ("fingerprint_secret", generated),
+    )
+    row = connection.execute(
+        f"SELECT setting_value FROM shade_vote_settings WHERE setting_key = {placeholder}",
+        ("fingerprint_secret",),
+    ).fetchone()
+    connection.commit()
+    if not row or not str(row[0]).strip():
+        raise VoteStorageError("The voter privacy key could not be initialized.")
+    return str(row[0]).strip()
+
+
+def privacy_preserving_voter_id(
+    headers: Any,
+    secret: str,
+    fallback_voter_id: str,
+) -> str:
+    """Return a stable pseudonym without persisting an IP address or browser headers."""
+    normalized_headers = {
+        str(key).strip().lower(): str(value).strip()
+        for key, value in dict(headers or {}).items()
+        if str(value).strip()
+    }
+    raw_ip = (
+        normalized_headers.get("cf-connecting-ip")
+        or normalized_headers.get("x-forwarded-for", "").split(",", 1)[0].strip()
+        or normalized_headers.get("x-real-ip")
+    )
+    try:
+        client_ip = ipaddress.ip_address(raw_ip).compressed
+    except ValueError:
+        return fallback_voter_id
+    user_agent = normalized_headers.get("user-agent", "")[:512]
+    accept_language = normalized_headers.get("accept-language", "")[:128]
+    if not user_agent:
+        return fallback_voter_id
+    payload = "\n".join((client_ip, user_agent, accept_language)).encode("utf-8")
+    digest = hmac.new(secret.encode("utf-8"), payload, hashlib.sha256).hexdigest()
+    return f"visitor_{digest}"
+
+
+def _request_voter_id(
+    *,
+    database_url: str | None = None,
+    sqlite_path: Path | None = None,
+) -> str:
+    fallback = _browser_voter_id()
+    try:
+        headers = st.context.headers
+    except Exception:
+        return fallback
+    connection, dialect = _connect(database_url, sqlite_path)
+    try:
+        _ensure_vote_table(connection, dialect)
+        return privacy_preserving_voter_id(headers, _fingerprint_secret(connection, dialect), fallback)
+    finally:
+        connection.close()
+
+
+def _as_utc_datetime(value: Any) -> datetime | None:
+    if isinstance(value, datetime):
+        parsed = value
+    else:
+        try:
+            parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        except (TypeError, ValueError):
+            return None
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
 
 
 def get_existing_vote(
@@ -352,8 +473,11 @@ def save_vote(
     *,
     shade_sources: list[str] | str | None = None,
     allow_vote_changes: bool = True,
+    cooldown_seconds: int = 0,
+    max_new_votes_per_hour: int | None = None,
     database_url: str | None = None,
     sqlite_path: Path | None = None,
+    now: datetime | None = None,
 ) -> bool:
     values = [str(value).strip() for value in (study_id, stop_id, voter_id, coverage_status)]
     if not all(values):
@@ -364,11 +488,43 @@ def save_vote(
         raise ValueError(f"coverage_status must be one of: {', '.join(PUBLIC_COVERAGE_OPTIONS)}")
     normalized_sources = [] if coverage_status == "No Shade" else normalize_vote_sources(shade_sources)
     serialized_sources = "; ".join(normalized_sources)
-    timestamp = datetime.now(timezone.utc).isoformat()
+    timestamp_dt = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
+    timestamp = timestamp_dt.isoformat()
     connection, dialect = _connect(database_url, sqlite_path)
     placeholder = "%s" if dialect == "postgres" else "?"
     try:
         _ensure_vote_table(connection, dialect)
+        existing_row = connection.execute(
+            f"SELECT 1 FROM shade_votes WHERE study_id = {placeholder} AND stop_id = {placeholder} AND voter_id = {placeholder}",
+            (study_id, stop_id, voter_id),
+        ).fetchone()
+        cooldown_seconds = max(0, min(60, int(cooldown_seconds or 0)))
+        if cooldown_seconds:
+            latest_row = connection.execute(
+                f"SELECT MAX(updated_at) FROM shade_votes WHERE study_id = {placeholder} AND voter_id = {placeholder}",
+                (study_id, voter_id),
+            ).fetchone()
+            latest_vote_at = _as_utc_datetime(latest_row[0]) if latest_row and latest_row[0] else None
+            if latest_vote_at:
+                elapsed = (timestamp_dt - latest_vote_at).total_seconds()
+                if elapsed < cooldown_seconds:
+                    retry_after = max(1, int(cooldown_seconds - elapsed + 0.999))
+                    raise VoteRateLimitError(
+                        f"Please wait {retry_after} second{'s' if retry_after != 1 else ''} before submitting another vote.",
+                        retry_after_seconds=retry_after,
+                    )
+        if max_new_votes_per_hour is not None and not existing_row:
+            hourly_limit = max(1, min(100, int(max_new_votes_per_hour)))
+            cutoff = (timestamp_dt - timedelta(hours=1)).isoformat()
+            recent_row = connection.execute(
+                f"SELECT COUNT(*) FROM shade_votes WHERE study_id = {placeholder} AND voter_id = {placeholder} AND created_at >= {placeholder}",
+                (study_id, voter_id, cutoff),
+            ).fetchone()
+            if recent_row and int(recent_row[0]) >= hourly_limit:
+                raise VoteRateLimitError(
+                    "This visitor has reached the hourly voting limit. Please try again later.",
+                    retry_after_seconds=3600,
+                )
         if allow_vote_changes:
             statement = f"""
                 INSERT INTO shade_votes
@@ -463,11 +619,15 @@ def render_voting_panel(
     if config.get("description"):
         st.markdown(str(config["description"]))
 
-    voter_id = _browser_voter_id()
     key_token = hashlib.sha256(f"{study_id}:{stop_id}".encode("utf-8")).hexdigest()[:16]
     database_url = configured_vote_database_url()
     sqlite_path = configured_vote_db_path(app_dir)
     try:
+        voter_id = (
+            _request_voter_id(database_url=database_url, sqlite_path=sqlite_path)
+            if config["abuse_protection_enabled"]
+            else _browser_voter_id()
+        )
         existing_vote = get_existing_vote_details(
             study_id,
             stop_id,
@@ -525,6 +685,12 @@ def render_voting_panel(
                 selected_status,
                 shade_sources=selected_sources,
                 allow_vote_changes=config["allow_vote_changes"],
+                cooldown_seconds=(
+                    config["vote_cooldown_seconds"] if config["abuse_protection_enabled"] else 0
+                ),
+                max_new_votes_per_hour=(
+                    config["max_new_votes_per_hour"] if config["abuse_protection_enabled"] else None
+                ),
                 database_url=database_url,
                 sqlite_path=sqlite_path,
             )
@@ -549,5 +715,7 @@ def render_voting_panel(
             if result["status"] == "pending":
                 remaining = config["minimum_votes_for_result"] - result["total"]
                 st.caption(f"{remaining} more vote{'s' if remaining != 1 else ''} needed before a result is reported.")
+    except VoteRateLimitError as exc:
+        st.warning(str(exc))
     except (VoteStorageError, OSError, sqlite3.Error) as exc:
         st.error(f"Voting storage is unavailable. {exc}")
