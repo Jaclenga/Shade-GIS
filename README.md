@@ -68,8 +68,9 @@ streamlit run app.py
 `builder_app.py` coordinates Streamlit state, navigation, and page rendering. Domain logic lives under
 `shade_gis/`; deployment bundle assembly and generated scripts are grouped under `shade_gis/deploy/`.
 
-The Data page includes a centralized `Data Quality` dashboard before the taxonomy and workflow
-sections. It reports duplicate stop IDs, missing coordinates, missing required fields, invalid point
+Data Overview includes a centralized `Data Quality` dashboard before the workflow sections. The
+separate Taxonomy page is available from the same Data menu. Data Quality reports duplicate stop
+IDs, missing coordinates, missing required fields, invalid point
 geometries, and images that do not reference a stop in the active dataset. Each check shows an
 affected-record count and a direct action that filters the paginated record viewer to the relevant
 stop or image rows. The publication-readiness banner passes only when the dataset contains at least
@@ -123,7 +124,7 @@ The `Preview` page renders the public-facing study experience for the active pro
 - `public_voting.py`: public voting interface and SQLite/PostgreSQL vote storage.
 - `shade_study_stops.csv`: exported stop dataset with current priority scores.
 - `shade_study_raw_labels.csv`: raw labels when labels have been collected.
-- `shade_study_config.json`: project metadata, data and shade taxonomies, methodology, visualization settings, and import log.
+- `shade_study_config.json`: project metadata, editable terminology, shade taxonomy, methodology, visualization settings, and import log.
 - `requirements.txt`, `.streamlit/config.toml`, generated `README.md`, and `deploy_to_github.ps1`.
 
 The dedicated `Voting` page includes the Public Voting editor. An admin can enable or hide voting, choose the
@@ -248,11 +249,17 @@ The reviewed example records focus on three shade fields:
 
 Manual coding used the visible waiting area as the unit of analysis. Reviewers should code what appears to shade the place where a rider would reasonably stand or sit while waiting, rather than nearby objects that do not visibly shade that space.
 
-Data taxonomy:
+Terminology:
 
 | Term | Operational definition |
 | --- | --- |
 | `Waiting Area` | The designated location where passengers would reasonably stand or sit while waiting to board the bus, including any bus stop pad, sidewalk immediately adjacent to the bus stop sign, or seating within a bus shelter. Grass, landscaping, roadway, bicycle lanes, and areas not reasonably intended for waiting are excluded. |
+
+The Taxonomy page under the Data menu provides compact inline editors for Terminology and both
+columns in the Shade Source and Shade Coverage taxonomies. Project-facing labels and operational definitions are editable;
+hidden canonical codes remain stable so renamed labels do not orphan existing labels, filters,
+votes, or exports. Each source and coverage editor also provides a **Reset definitions** action
+that restores the original operational definitions without replacing custom display labels.
 
 The example labels distinguish source and coverage as separate dimensions. Use `shade_sources` for
 what creates the shade and `shade_coverage` for how much of the waiting area is shaded. The derived

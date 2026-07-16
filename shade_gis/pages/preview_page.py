@@ -11,6 +11,13 @@ def render_preview_page() -> None:
     raw_labels = active_raw_labels()
     config = study_config_payload()
     voting = published_app.normalize_voting_config(visualization.get("voting"), taxonomy)
+    voting["shade_source_taxonomy"] = normalize_source_taxonomy(
+        methodology.get("shade_source_taxonomy")
+    )
+    voting["shade_coverage_taxonomy"] = normalize_coverage_display_taxonomy(
+        methodology.get("shade_coverage_taxonomy"),
+        taxonomy,
+    )
     study_id = str(config.get("study_id") or project.get("name") or "shade-study").strip()
 
     st.title(project["name"])

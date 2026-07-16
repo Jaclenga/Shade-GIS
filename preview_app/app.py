@@ -169,7 +169,7 @@ DEFAULT_COVERAGE_TAXONOMY = [
         "sort_order": 4,
     },
 ]
-DATA_TERM_TAXONOMY = [
+DEFAULT_TERMINOLOGY = [
     {
         "term": "Waiting Area",
         "operational_definition": (
@@ -1571,7 +1571,18 @@ def taxonomy_display_table(taxonomy: list[dict[str, Any]]) -> pd.DataFrame:
     return display.drop(columns=["sort_order"], errors="ignore").reset_index(drop=True)
 
 
-def coverage_schema_display_table(taxonomy: list[dict[str, Any]]) -> pd.DataFrame:
+def coverage_schema_display_table(
+    taxonomy: list[dict[str, Any]],
+    display_taxonomy: list[dict[str, Any]] | None = None,
+) -> pd.DataFrame:
+    if display_taxonomy is not None:
+        display = pd.DataFrame(
+            display_taxonomy,
+            columns=["shade_coverage", "operational_definition"],
+        )
+        return display.rename(
+            columns={"shade_coverage": "Shade Coverage", "operational_definition": "Operational Definition"}
+        )
     display = taxonomy_display_table(normalize_published_taxonomy(taxonomy))
     if display.empty:
         return pd.DataFrame(columns=["Shade Coverage", "Operational Definition"])
@@ -1580,12 +1591,18 @@ def coverage_schema_display_table(taxonomy: list[dict[str, Any]]) -> pd.DataFram
     ).drop(columns=["color"], errors="ignore")
 
 
-def source_schema_display_table() -> pd.DataFrame:
-    return pd.DataFrame(SHADE_SOURCE_TAXONOMY)
+def source_schema_display_table(taxonomy: list[dict[str, Any]] | None = None) -> pd.DataFrame:
+    if taxonomy is None:
+        return pd.DataFrame(SHADE_SOURCE_TAXONOMY)
+    display = pd.DataFrame(taxonomy, columns=["shade_source", "operational_definition"])
+    return display.rename(
+        columns={"shade_source": "Shade Source", "operational_definition": "Operational Definition"}
+    ).loc[:, ["Shade Source", "Operational Definition"]]
 
 
-def data_term_schema_display_table(taxonomy: list[dict[str, Any]] | None = None) -> pd.DataFrame:
-    display = pd.DataFrame(taxonomy or DATA_TERM_TAXONOMY)
+def terminology_display_table(terminology: list[dict[str, Any]] | None = None) -> pd.DataFrame:
+    source = DEFAULT_TERMINOLOGY if terminology is None else terminology
+    display = pd.DataFrame(source, columns=["term", "operational_definition"])
     return display.rename(
         columns={"term": "Term", "operational_definition": "Operational Definition"}
     ).loc[:, ["Term", "Operational Definition"]]
@@ -1644,16 +1661,27 @@ def render_methodology(config: dict[str, Any]) -> None:
             st.markdown(f"## {title}")
             st.markdown(body)
     taxonomy = config.get("taxonomy", [])
-    st.markdown("## Data Taxonomy")
+    terminology = config.get("terminology")
+    if terminology is None:
+        terminology = config.get("data_taxonomy")
+    st.markdown("## Terminology")
     st.dataframe(
-        data_term_schema_display_table(config.get("data_taxonomy")),
+        terminology_display_table(terminology),
         width="stretch",
         hide_index=True,
     )
     st.markdown("## Shade Coverage Taxonomy")
-    st.dataframe(coverage_schema_display_table(taxonomy), width="stretch", hide_index=True)
+    st.dataframe(
+        coverage_schema_display_table(taxonomy, config.get("shade_coverage_taxonomy")),
+        width="stretch",
+        hide_index=True,
+    )
     st.markdown("## Shade Source Taxonomy")
-    st.dataframe(source_schema_display_table(), width="stretch", hide_index=True)
+    st.dataframe(
+        source_schema_display_table(config.get("shade_source_taxonomy")),
+        width="stretch",
+        hide_index=True,
+    )
 
 
 def dataframe_to_geojson(df: pd.DataFrame) -> str:

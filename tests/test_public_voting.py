@@ -15,6 +15,7 @@ from public_voting import (
     PUBLIC_SOURCE_DEFINITIONS,
     VoteRateLimitError,
     community_result,
+    coverage_display_labels,
     coverage_taxonomy_help,
     get_existing_vote,
     get_existing_vote_details,
@@ -23,6 +24,7 @@ from public_voting import (
     normalize_vote_sources,
     privacy_preserving_voter_id,
     save_vote,
+    source_display_labels,
     source_taxonomy_help,
 )
 
@@ -41,6 +43,15 @@ def test_default_source_question_uses_plain_language_checkbox_copy():
         "Purpose-built",
         "Incidental",
     ]
+
+
+def test_project_taxonomy_labels_replace_visible_voting_copy_without_changing_codes():
+    assert source_display_labels(
+        [{"code": "Natural", "shade_source": "Vegetation"}]
+    )["Natural"] == "Vegetation"
+    assert coverage_display_labels(
+        [{"code": "Limited Shade", "shade_coverage": "Partial Shade"}]
+    )["Limited Shade"] == "Partial Shade"
 
 
 def test_default_voting_instructions_add_waiting_area_guidance_without_overwriting_custom_copy():
@@ -222,6 +233,15 @@ def test_source_heading_tooltip_explains_all_source_categories():
     all_sources_help = source_taxonomy_help()
     for source, definition in PUBLIC_SOURCE_DEFINITIONS.items():
         assert f"**{source}:** {definition}" in all_sources_help
+
+
+def test_source_heading_tooltip_uses_project_taxonomy_definitions():
+    source_help = source_taxonomy_help(
+        [{"shade_source": "Natural", "operational_definition": "Configured natural definition."}]
+    )
+
+    assert "**Natural:** Configured natural definition." in source_help
+    assert f"**Purpose-built:** {PUBLIC_SOURCE_DEFINITIONS['Purpose-built']}" in source_help
 
 
 def test_coverage_question_tooltip_explains_configured_taxonomy_choices():

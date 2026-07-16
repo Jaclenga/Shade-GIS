@@ -164,13 +164,16 @@ from shade_gis.deployment import (
     DEFAULT_DEPLOY_COMMIT_MESSAGE,
 )
 from shade_gis.shade_dimensions import (
-    DATA_TERM_TAXONOMY as CORE_DATA_TERM_TAXONOMY,
+    DEFAULT_TERMINOLOGY as CORE_DEFAULT_TERMINOLOGY,
     DEFAULT_COVERAGE_TAXONOMY,
     SHADE_COVERAGE_OPTIONS as CORE_SHADE_COVERAGE_OPTIONS,
     SHADE_COVERAGE_TAXONOMY as CORE_SHADE_COVERAGE_TAXONOMY,
     SHADE_SOURCE_OPTIONS as CORE_SHADE_SOURCE_OPTIONS,
     SHADE_SOURCE_TAXONOMY as CORE_SHADE_SOURCE_TAXONOMY,
     normalize_coverage_taxonomy,
+    normalize_coverage_display_taxonomy,
+    normalize_source_taxonomy,
+    normalize_terminology,
 )
 
 
@@ -207,7 +210,7 @@ DEFAULT_PROJECT = {
 }
 
 DEFAULT_TAXONOMY = [dict(item) for item in DEFAULT_COVERAGE_TAXONOMY]
-DATA_TERM_TAXONOMY = [dict(item) for item in CORE_DATA_TERM_TAXONOMY]
+DEFAULT_TERMINOLOGY = [dict(item) for item in CORE_DEFAULT_TERMINOLOGY]
 SHADE_SOURCE_TAXONOMY = [dict(item) for item in CORE_SHADE_SOURCE_TAXONOMY]
 SHADE_COVERAGE_TAXONOMY = [dict(item) for item in CORE_SHADE_COVERAGE_TAXONOMY]
 
@@ -278,6 +281,9 @@ DEFAULT_METHODOLOGY = {
         "releases should document these limitations and perform a project-specific review before use."
     ),
     "release_history": "- 0.1.0: Draft project configuration with Tampa/HART starter dataset and 34 manually reviewed, admin-accepted example datapoints",
+    "terminology": [dict(item) for item in DEFAULT_TERMINOLOGY],
+    "shade_source_taxonomy": [dict(item) for item in SHADE_SOURCE_TAXONOMY],
+    "shade_coverage_taxonomy": [dict(item) for item in SHADE_COVERAGE_TAXONOMY],
 }
 
 REVIEW_STATUS_COLORS = {
@@ -365,8 +371,15 @@ def with_default_project_values(project: dict[str, Any]) -> dict[str, Any]:
 
 
 def with_default_methodology_values(methodology: dict[str, Any]) -> dict[str, Any]:
-    merged = DEFAULT_METHODOLOGY.copy()
+    merged = json.loads(json.dumps(DEFAULT_METHODOLOGY))
     merged.update(methodology or {})
+    merged["terminology"] = normalize_terminology(merged.get("terminology"))
+    merged["shade_source_taxonomy"] = normalize_source_taxonomy(
+        merged.get("shade_source_taxonomy")
+    )
+    merged["shade_coverage_taxonomy"] = normalize_coverage_display_taxonomy(
+        merged.get("shade_coverage_taxonomy")
+    )
     return merged
 
 
@@ -565,16 +578,26 @@ def study_config_payload() -> dict[str, Any]:
     taxonomy = normalize_coverage_taxonomy(st.session_state["taxonomy"])
     public_project = with_default_project_values(st.session_state["project"])
     public_project.pop("deployment", None)
+    methodology = with_default_methodology_values(st.session_state["methodology"])
+    terminology = normalize_terminology(methodology.pop("terminology", None))
+    source_taxonomy = normalize_source_taxonomy(methodology.pop("shade_source_taxonomy", None))
+    coverage_taxonomy = normalize_coverage_display_taxonomy(
+        methodology.pop("shade_coverage_taxonomy", None),
+        taxonomy,
+    )
+    visualization = normalized_visualization_values(st.session_state["visualization"], taxonomy)
+    visualization["voting"]["shade_source_taxonomy"] = source_taxonomy
+    visualization["voting"]["shade_coverage_taxonomy"] = coverage_taxonomy
     return {
         "study_id": st.session_state.get("active_project_id")
         or slugify_repo_name(st.session_state["project"].get("name", "shade-study")),
         "project": public_project,
         "taxonomy": taxonomy,
-        "data_taxonomy": [dict(item) for item in DATA_TERM_TAXONOMY],
-        "methodology": with_default_methodology_values(st.session_state["methodology"]),
-        "visualization": normalized_visualization_values(
-            st.session_state["visualization"], taxonomy
-        ),
+        "terminology": terminology,
+        "shade_source_taxonomy": source_taxonomy,
+        "shade_coverage_taxonomy": coverage_taxonomy,
+        "methodology": methodology,
+        "visualization": visualization,
         "import_log": st.session_state["import_log"],
     }
 
@@ -1317,7 +1340,12 @@ def render_home_page() -> None:
 
 
 def render_header() -> str:
-    data_pages = [("Overview", "Data"), ("Labels", "Labels"), ("Voting", "Voting")]
+    data_pages = [
+        ("Overview", "Data"),
+        ("Taxonomy", "Taxonomy"),
+        ("Labels", "Labels"),
+        ("Voting", "Voting"),
+    ]
     build_pages = [
         ("Visuals", "Visuals"),
         ("Docs", "Docs"),
@@ -1444,6 +1472,7 @@ def main() -> None:
     from shade_gis.pages.docs_page import render_methodology_page
     from shade_gis.pages.labels_page import render_labels_page
     from shade_gis.pages.preview_page import render_preview_page
+    from shade_gis.pages.taxonomy_page import render_taxonomy_page
     from shade_gis.pages.visuals_page import render_visuals_page
     from shade_gis.pages.voting_page import render_voting_page
 
@@ -1456,6 +1485,8 @@ def main() -> None:
         render_home_page()
     elif page == "Labels":
         render_labels_page()
+    elif page == "Taxonomy":
+        render_taxonomy_page()
     elif page == "Visuals":
         render_visuals_page()
     elif page == "Voting":

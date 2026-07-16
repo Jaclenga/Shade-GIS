@@ -24,7 +24,7 @@ def render_about_page(
         the mere presence of nearby vegetation or structures. Code what visibly shades the waiting area, not what
         might shade it at another time.
 
-        ## Data Taxonomy
+        ## Terminology
 
         | Term | Operational Definition |
         | --- | --- |

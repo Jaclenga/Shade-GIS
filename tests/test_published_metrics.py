@@ -168,9 +168,34 @@ def test_public_schema_tables_separate_coverage_from_sources() -> None:
         {"name": "Intentional Built Shade", "description": "Shelter", "color": "#4682b4", "sort_order": 4},
     ]
 
-    coverage = published_app.coverage_schema_display_table(legacy)
-    sources = published_app.source_schema_display_table()
-    terms = published_app.data_term_schema_display_table(
+    coverage = published_app.coverage_schema_display_table(
+        legacy,
+        [
+            {
+                "code": "No Shade",
+                "shade_coverage": "Unshaded",
+                "operational_definition": "No visible shade.",
+            },
+            {
+                "code": "Limited Shade",
+                "shade_coverage": "Partial Shade",
+                "operational_definition": "Some visible shade.",
+            },
+            {
+                "code": "Significant Shade",
+                "shade_coverage": "Broad Shade",
+                "operational_definition": "Most of the area is shaded.",
+            },
+        ],
+    )
+    sources = published_app.source_schema_display_table(
+        [
+            {"shade_source": "Natural", "operational_definition": "Custom natural definition."},
+            {"shade_source": "Purpose-built", "operational_definition": "Custom built definition."},
+            {"shade_source": "Incidental", "operational_definition": "Custom incidental definition."},
+        ]
+    )
+    terms = published_app.terminology_display_table(
         [{"term": "Waiting Area", "operational_definition": "Project-specific definition."}]
     )
     legend = published_app.taxonomy_legend_markup(legacy)
@@ -178,17 +203,13 @@ def test_public_schema_tables_separate_coverage_from_sources() -> None:
     assert terms.columns.tolist() == ["Term", "Operational Definition"]
     assert terms["Term"].tolist() == ["Waiting Area"]
     assert terms.iloc[0]["Operational Definition"] == "Project-specific definition."
-    assert published_app.data_term_schema_display_table().iloc[0]["Operational Definition"].endswith(
+    assert coverage["Shade Coverage"].tolist() == ["Unshaded", "Partial Shade", "Broad Shade"]
+    assert published_app.terminology_display_table().iloc[0]["Operational Definition"].endswith(
         "for waiting are excluded."
     )
     assert coverage.columns.tolist() == ["Shade Coverage", "Operational Definition"]
-    assert coverage["Shade Coverage"].tolist() == [
-        "No Shade",
-        "Limited Shade",
-        "Significant Shade",
-        "Needs Review",
-    ]
     assert sources["Shade Source"].tolist() == ["Natural", "Purpose-built", "Incidental"]
+    assert sources.iloc[0]["Operational Definition"] == "Custom natural definition."
     assert "Limited Natural Shade" not in legend
     assert "Intentional Built Shade" not in legend
     assert "Limited Shade" in legend

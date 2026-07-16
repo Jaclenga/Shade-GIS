@@ -15,6 +15,27 @@ def builder_taxonomy_display_table(taxonomy: list[dict[str, Any]]) -> pd.DataFra
     return display.loc[:, visible_cols].reset_index(drop=True)
 
 
+def builder_terminology_display_table(terminology: list[dict[str, Any]]) -> pd.DataFrame:
+    display = pd.DataFrame(terminology, columns=["term", "operational_definition"])
+    return display.rename(
+        columns={"term": "Term", "operational_definition": "Operational Definition"}
+    )
+
+
+def builder_source_taxonomy_display_table(taxonomy: list[dict[str, Any]]) -> pd.DataFrame:
+    display = pd.DataFrame(taxonomy, columns=["shade_source", "operational_definition"])
+    return display.rename(
+        columns={"shade_source": "Shade Source", "operational_definition": "Operational Definition"}
+    )
+
+
+def builder_coverage_taxonomy_display_table(taxonomy: list[dict[str, Any]]) -> pd.DataFrame:
+    display = pd.DataFrame(taxonomy, columns=["shade_coverage", "operational_definition"])
+    return display.rename(
+        columns={"shade_coverage": "Shade Coverage", "operational_definition": "Operational Definition"}
+    )
+
+
 def render_grouped_citations(citation_text: str) -> None:
     lines = str(citation_text or "").splitlines()
     if not any(line.strip() for line in lines):
@@ -77,8 +98,30 @@ def render_builder_about_page(
     st.markdown("## Shade Assessment Method")
     st.markdown(methodology.get("shade_method", ""))
 
-    if taxonomy:
-        st.markdown("## Shade Taxonomy")
+    terminology = methodology.get("terminology", [])
+    if terminology:
+        st.markdown("## Terminology")
+        st.dataframe(builder_terminology_display_table(terminology), width="stretch", hide_index=True)
+
+    source_taxonomy = methodology.get("shade_source_taxonomy", [])
+    if source_taxonomy:
+        st.markdown("## Shade Source Taxonomy")
+        st.dataframe(
+            builder_source_taxonomy_display_table(source_taxonomy),
+            width="stretch",
+            hide_index=True,
+        )
+
+    coverage_taxonomy = methodology.get("shade_coverage_taxonomy", [])
+    if coverage_taxonomy:
+        st.markdown("## Shade Coverage Taxonomy")
+        st.dataframe(
+            builder_coverage_taxonomy_display_table(coverage_taxonomy),
+            width="stretch",
+            hide_index=True,
+        )
+    elif taxonomy:
+        st.markdown("## Shade Coverage Taxonomy")
         st.dataframe(builder_taxonomy_display_table(taxonomy), width="stretch", hide_index=True)
 
     st.markdown("## Data Sources")

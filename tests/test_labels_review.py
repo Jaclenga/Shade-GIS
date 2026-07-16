@@ -14,7 +14,7 @@ from platform_store import (
     list_shade_labels,
 )
 from builder_app import (
-    DATA_TERM_TAXONOMY,
+    DEFAULT_TERMINOLOGY,
     SHADE_COVERAGE_OPTIONS,
     SHADE_COVERAGE_TAXONOMY,
     SHADE_SOURCE_OPTIONS,
@@ -367,7 +367,7 @@ def test_label_code_definition_tables_include_core_schema_terms(taxonomy):
     tables = labels_page.label_code_definition_tables(taxonomy)
 
     assert set(tables) == {
-        "Data terms",
+        "Terminology",
         "Stored fields",
         "Coverage codes",
         "Source codes",
@@ -381,7 +381,7 @@ def test_label_code_definition_tables_include_core_schema_terms(taxonomy):
         "review_status",
         "confidence",
     ]
-    assert tables["Data terms"].to_dict("records") == [
+    assert tables["Terminology"].to_dict("records") == [
         {
             "Code": "Waiting Area",
             "Definition": (
@@ -392,7 +392,29 @@ def test_label_code_definition_tables_include_core_schema_terms(taxonomy):
             ),
         }
     ]
-    assert DATA_TERM_TAXONOMY[0]["term"] == "Waiting Area"
+    assert DEFAULT_TERMINOLOGY[0]["term"] == "Waiting Area"
+    custom_taxonomy = [dict(item) for item in taxonomy]
+    custom_taxonomy[1]["description"] = "Project-specific limited definition."
+    custom_tables = labels_page.label_code_definition_tables(
+        custom_taxonomy,
+        [{"term": "Boarding Zone", "operational_definition": "Project-specific definition."}],
+        [
+            {"code": "Natural", "shade_source": "Vegetation", "operational_definition": "Project-specific natural definition."},
+            *SHADE_SOURCE_TAXONOMY[1:],
+        ],
+        [
+            {"code": "No Shade", "shade_coverage": "Unshaded", "operational_definition": "No shade."},
+            {"code": "Limited Shade", "shade_coverage": "Partial Shade", "operational_definition": "Project-specific limited definition."},
+            {"code": "Significant Shade", "shade_coverage": "Mostly Shaded", "operational_definition": "Mostly shade."},
+        ],
+    )
+    assert custom_tables["Terminology"].to_dict("records") == [
+        {"Code": "Boarding Zone", "Definition": "Project-specific definition."}
+    ]
+    assert custom_tables["Coverage codes"].iloc[1]["Definition"] == "Project-specific limited definition."
+    assert custom_tables["Coverage codes"].iloc[1]["Code"] == "Partial Shade"
+    assert custom_tables["Source codes"].iloc[0]["Definition"] == "Project-specific natural definition."
+    assert custom_tables["Source codes"].iloc[0]["Code"] == "Vegetation"
     assert tables["Coverage codes"]["Code"].tolist() == ["No Shade", "Limited Shade", "Significant Shade"]
     assert tables["Source codes"]["Code"].tolist() == ["Natural", "Purpose-built", "Incidental"]
     assert tables["Map label codes"]["Code"].tolist() == [

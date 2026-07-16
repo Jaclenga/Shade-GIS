@@ -465,6 +465,51 @@ def test_builder_navigation_pages_render(playwright_api, streamlit_server: Strea
             confirm_seed_project_open(page)
             page.get_by_role("heading", name="Project Data", exact=True).wait_for(timeout=30_000)
             page.get_by_role("heading", name="Data Quality", exact=True).wait_for(timeout=30_000)
+            playwright_api.expect(
+                page.get_by_role("heading", name="Terminology", exact=True)
+            ).to_have_count(0)
+
+            page.get_by_role("button", name="Data", exact=True).click(timeout=30_000)
+            taxonomy_nav = page.get_by_test_id("stPopoverBody").get_by_role(
+                "button", name="Taxonomy", exact=True
+            )
+            taxonomy_nav.click(timeout=30_000)
+            page.get_by_role("heading", name="Taxonomy", exact=True).wait_for(timeout=30_000)
+            page.get_by_role("heading", name="Terminology", exact=True).wait_for(timeout=30_000)
+            page.get_by_role("heading", name="Shade source taxonomy", exact=True).wait_for(timeout=30_000)
+            page.get_by_role("heading", name="Shade coverage taxonomy", exact=True).wait_for(timeout=30_000)
+            taxonomy_editors = page.get_by_test_id("stDataFrame")
+            playwright_api.expect(taxonomy_editors).to_have_count(0, timeout=30_000)
+            for table_key in [
+                "terminology_table",
+                "shade_source_taxonomy_table",
+                "shade_coverage_taxonomy_table",
+            ]:
+                playwright_api.expect(
+                    page.locator(f".st-key-{table_key} table.data-page-table")
+                ).to_be_visible(timeout=30_000)
+            for card_key in [
+                "taxonomy_card_terminology",
+                "taxonomy_card_source",
+                "taxonomy_card_coverage",
+            ]:
+                playwright_api.expect(page.locator(f".st-key-{card_key}")).to_be_visible(timeout=30_000)
+
+            page.get_by_role("button", name="Edit", exact=True).first.click(timeout=30_000)
+            wait_for_streamlit_idle(playwright_api, page, streamlit_server)
+            playwright_api.expect(page.get_by_test_id("stDataFrame")).to_have_count(1, timeout=30_000)
+            playwright_api.expect(
+                page.get_by_role("button", name="Done", exact=True)
+            ).to_be_visible(timeout=30_000)
+            page.get_by_role("button", name="Done", exact=True).click(timeout=30_000)
+            wait_for_streamlit_idle(playwright_api, page, streamlit_server)
+            page.get_by_role("button", name="Edit", exact=True).nth(1).click(timeout=30_000)
+            wait_for_streamlit_idle(playwright_api, page, streamlit_server)
+            reset_definitions = page.get_by_role("button", name="Reset definitions", exact=True)
+            playwright_api.expect(reset_definitions).to_be_visible(timeout=30_000)
+            reset_definitions.click(timeout=30_000)
+            wait_for_streamlit_idle(playwright_api, page, streamlit_server)
+            playwright_api.expect(page.get_by_test_id("stDataFrame")).to_have_count(1, timeout=30_000)
             playwright_api.expect(page.get_by_role("button", name="Data", exact=True)).to_be_enabled(timeout=30_000)
             playwright_api.expect(page.get_by_role("button", name="Build", exact=True)).to_be_enabled(timeout=30_000)
             wait_for_streamlit_idle(playwright_api, page, streamlit_server)

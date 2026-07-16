@@ -137,8 +137,8 @@ def test_summary_metrics_only_render_in_analytics():
 def test_public_taxonomy_table_does_not_expose_sort_order():
     source = Path("published_app.py").read_text(encoding="utf-8")
 
-    assert 'st.dataframe(coverage_schema_display_table(taxonomy)' in source
-    assert "st.dataframe(source_schema_display_table()" in source
+    assert 'coverage_schema_display_table(taxonomy, config.get("shade_coverage_taxonomy"))' in source
+    assert 'source_schema_display_table(config.get("shade_source_taxonomy"))' in source
     assert 'drop(columns=["sort_order"]' in source
 
 
@@ -159,7 +159,10 @@ def test_agreement_workflow_is_embedded_in_preview_analytics_not_top_level_navig
     builder_source = Path("builder_app.py").read_text(encoding="utf-8")
     preview_source = Path("shade_gis/pages/preview_page.py").read_text(encoding="utf-8")
 
-    assert 'data_pages = [("Overview", "Data"), ("Labels", "Labels"), ("Voting", "Voting")]' in builder_source
+    assert '("Overview", "Data")' in builder_source
+    assert '("Taxonomy", "Taxonomy")' in builder_source
+    assert '("Labels", "Labels")' in builder_source
+    assert '("Voting", "Voting")' in builder_source
     assert '(cols[2], "Build", build_pages)' in builder_source
     assert 'elif page == "Agreement"' not in builder_source
     assert 'agreement_enabled = "Agreement metrics" in selected_sections' in preview_source
@@ -208,9 +211,29 @@ def test_data_page_uses_progress_dashboard_and_collapsed_dataset_preview():
 
 def test_manual_entry_form_does_not_use_arrow_backed_dataframe_widget():
     source = Path("shade_gis/pages/data_page.py").read_text(encoding="utf-8")
+    manual_entry_source = source.split("with manual_tab:", 1)[1].split("source_cols = st.columns", 1)[0]
 
     assert 'st.form("manual_entry_form", clear_on_submit=True)' in source
-    assert "st.data_editor(" not in source
+    assert "st.data_editor(" not in manual_entry_source
+    assert 'with st.container(key="taxonomy_workspace")' not in source
+
+
+def test_taxonomy_has_a_dedicated_data_menu_page():
+    source = Path("shade_gis/pages/taxonomy_page.py").read_text(encoding="utf-8")
+
+    assert 'st.title("Taxonomy")' in source
+    assert "terminology_editing = render_taxonomy_section_header(" in source
+    assert "render_terminology_editor(methodology)" in source
+    assert "render_shade_source_taxonomy_editor(methodology)" in source
+    assert "render_shade_coverage_taxonomy_editor(methodology, taxonomy)" in source
+    assert '"Reset definitions"' in Path("shade_gis/pages/data_page.py").read_text(encoding="utf-8")
+    assert 'with st.container(key="terminology_table")' in source
+    assert 'with st.container(key="taxonomy_workspace")' in source
+    assert 'with st.container(key="taxonomy_card_terminology")' in source
+    assert 'with st.container(key="taxonomy_card_source")' in source
+    assert 'with st.container(key="taxonomy_card_coverage")' in source
+    assert "max-width: 1120px" in source
+    assert "table-layout: fixed" in source
 
 
 def test_preview_exports_use_catalog_and_provenance_sections():

@@ -8,7 +8,7 @@ from typing import Any
 SHADE_COVERAGE_OPTIONS = ["No Shade", "Limited Shade", "Significant Shade"]
 SHADE_SOURCE_OPTIONS = ["Natural", "Purpose-built", "Incidental"]
 
-DATA_TERM_TAXONOMY = [
+DEFAULT_TERMINOLOGY = [
     {
         "term": "Waiting Area",
         "operational_definition": (
@@ -19,6 +19,102 @@ DATA_TERM_TAXONOMY = [
         ),
     },
 ]
+
+
+def normalize_terminology(terminology: Any) -> list[dict[str, str]]:
+    source = DEFAULT_TERMINOLOGY if not isinstance(terminology, list) else terminology
+    normalized: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for item in source:
+        if not isinstance(item, dict):
+            continue
+        raw_term = item.get("term", "")
+        raw_definition = item.get("operational_definition", "")
+        term = "" if raw_term is None or raw_term != raw_term else str(raw_term).strip()
+        definition = (
+            ""
+            if raw_definition is None or raw_definition != raw_definition
+            else str(raw_definition).strip()
+        )
+        if not term or term.casefold() in seen:
+            continue
+        seen.add(term.casefold())
+        normalized.append({"term": term, "operational_definition": definition})
+    return normalized
+
+
+def normalize_source_taxonomy(taxonomy: Any) -> list[dict[str, str]]:
+    configured: dict[str, tuple[str, str]] = {}
+    if isinstance(taxonomy, list):
+        for item in taxonomy:
+            if not isinstance(item, dict):
+                continue
+            source = normalize_shade_source(item.get("code") or item.get("shade_source", ""))
+            display_label = str(item.get("shade_source", "") or "").strip()
+            raw_definition = item.get("operational_definition", "")
+            definition = (
+                ""
+                if raw_definition is None or raw_definition != raw_definition
+                else str(raw_definition).strip()
+            )
+            if source:
+                configured[source] = (display_label or source, definition)
+    normalized = []
+    used_labels: set[str] = set()
+    for default in SHADE_SOURCE_TAXONOMY:
+        code = default["shade_source"]
+        display_label, definition = configured.get(
+            code,
+            (code, default["operational_definition"]),
+        )
+        if display_label.casefold() in used_labels:
+            display_label = code
+        used_labels.add(display_label.casefold())
+        normalized.append(
+            {
+                "code": code,
+                "shade_source": display_label,
+                "operational_definition": definition or default["operational_definition"],
+            }
+        )
+    return normalized
+
+
+def normalize_coverage_display_taxonomy(
+    taxonomy: Any,
+    canonical_taxonomy: list[dict[str, Any]] | None = None,
+) -> list[dict[str, str]]:
+    configured: dict[str, tuple[str, str]] = {}
+    if isinstance(taxonomy, list):
+        for item in taxonomy:
+            if not isinstance(item, dict):
+                continue
+            code = normalize_shade_coverage(item.get("code") or item.get("shade_coverage", ""), "")
+            display_label = str(item.get("shade_coverage", "") or "").strip()
+            definition = str(item.get("operational_definition", "") or "").strip()
+            if code in SHADE_COVERAGE_OPTIONS:
+                configured[code] = (display_label or code, definition)
+    canonical_definitions = {
+        item.get("name"): str(item.get("description", "") or "").strip()
+        for item in normalize_coverage_taxonomy(canonical_taxonomy)
+        if item.get("name") in SHADE_COVERAGE_OPTIONS
+    }
+    normalized = []
+    used_labels: set[str] = set()
+    for code in SHADE_COVERAGE_OPTIONS:
+        default_definition = canonical_definitions.get(code, "")
+        display_label, definition = configured.get(code, (code, default_definition))
+        if display_label.casefold() in used_labels:
+            display_label = code
+        used_labels.add(display_label.casefold())
+        normalized.append(
+            {
+                "code": code,
+                "shade_coverage": display_label,
+                "operational_definition": definition or default_definition,
+            }
+        )
+    return normalized
 
 SHADE_COVERAGE_TAXONOMY = [
     {

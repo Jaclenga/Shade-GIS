@@ -18,6 +18,9 @@ from platform_store import (
 
 
 def test_create_project_roundtrip(db_path, project, taxonomy, methodology, visualization, minimal_stops):
+    methodology["terminology"] = [
+        {"term": "Boarding Zone", "operational_definition": "Project-specific boarding location."}
+    ]
     project_id = create_project(project, taxonomy, methodology, visualization, minimal_stops, [], db_path)
 
     bundle = load_project_bundle(project_id, db_path)
@@ -29,6 +32,7 @@ def test_create_project_roundtrip(db_path, project, taxonomy, methodology, visua
     assert set(bundle["stops"]["stop_id"]) == {"1001", "1002"}
     assert bundle["stops"].loc[bundle["stops"]["stop_id"] == "1001", "context_label"].iloc[0] == "High"
     assert bundle["taxonomy"][0]["name"] == taxonomy[0]["name"]
+    assert bundle["methodology"]["terminology"] == methodology["terminology"]
 
 
 def test_save_project_updates_metadata_without_corrupting_stops(db_path, project, taxonomy, methodology, visualization, minimal_stops):

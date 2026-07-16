@@ -131,8 +131,45 @@ def taxonomy_help_text(options: list[str], definitions: dict[str, str]) -> str:
     )
 
 
-def source_taxonomy_help() -> str:
-    return taxonomy_help_text(PUBLIC_SOURCE_OPTIONS, PUBLIC_SOURCE_DEFINITIONS)
+def source_taxonomy_help(taxonomy: list[dict[str, Any]] | None = None) -> str:
+    definitions = copy.deepcopy(PUBLIC_SOURCE_DEFINITIONS)
+    for category in taxonomy or []:
+        if not isinstance(category, dict):
+            continue
+        canonical = _PUBLIC_SOURCE_ALIASES.get(
+            str(category.get("code") or category.get("shade_source") or category.get("name") or "").strip().lower(),
+            "",
+        )
+        description = str(
+            category.get("operational_definition") or category.get("description") or ""
+        ).strip()
+        if canonical and description:
+            definitions[canonical] = description
+    return taxonomy_help_text(PUBLIC_SOURCE_OPTIONS, definitions)
+
+
+def source_display_labels(taxonomy: list[dict[str, Any]] | None = None) -> dict[str, str]:
+    labels = copy.deepcopy(PUBLIC_SOURCE_DISPLAY_LABELS)
+    for category in taxonomy or []:
+        if not isinstance(category, dict):
+            continue
+        canonical = _PUBLIC_SOURCE_ALIASES.get(str(category.get("code") or "").strip().lower(), "")
+        display_label = str(category.get("shade_source") or "").strip()
+        if canonical and display_label:
+            labels[canonical] = display_label
+    return labels
+
+
+def coverage_display_labels(taxonomy: list[dict[str, Any]] | None = None) -> dict[str, str]:
+    labels = {option: option for option in PUBLIC_COVERAGE_OPTIONS}
+    for category in taxonomy or []:
+        if not isinstance(category, dict):
+            continue
+        canonical = _PUBLIC_COVERAGE_ALIASES.get(str(category.get("code") or "").strip().lower(), "")
+        display_label = str(category.get("shade_coverage") or "").strip()
+        if canonical and display_label:
+            labels[canonical] = display_label
+    return labels
 
 
 def coverage_taxonomy_help(
@@ -143,7 +180,7 @@ def coverage_taxonomy_help(
     for category in taxonomy or []:
         if not isinstance(category, dict):
             continue
-        raw_name = category.get("shade_coverage") or category.get("name")
+        raw_name = category.get("code") or category.get("shade_coverage") or category.get("name")
         canonical = _PUBLIC_COVERAGE_ALIASES.get(str(raw_name or "").strip().lower(), "")
         description = str(
             category.get("operational_definition") or category.get("description") or ""
@@ -648,6 +685,9 @@ def render_voting_panel(
             index=default_index,
             key=f"public_vote_choice_{key_token}",
             label_visibility="collapsed",
+            format_func=lambda option: coverage_display_labels(
+                config.get("shade_coverage_taxonomy")
+            ).get(option, option),
         )
         changes_disabled = bool(existing_vote and not config["allow_vote_changes"])
         source_keys = {
@@ -657,7 +697,10 @@ def render_voting_panel(
             for source_key in source_keys.values():
                 st.session_state[source_key] = False
         st.divider()
-        st.markdown(f"**{config['source_question']}**", help=source_taxonomy_help())
+        st.markdown(
+            f"**{config['source_question']}**",
+            help=source_taxonomy_help(config.get("shade_source_taxonomy")),
+        )
         selected_sources = []
         if selected_status == "No Shade":
             st.caption("No shade source is needed when **No Shade** is selected.")
@@ -669,7 +712,10 @@ def render_voting_panel(
                 }
                 if source_keys[source] not in st.session_state:
                     checkbox_args["value"] = source in existing_sources
-                if st.checkbox(PUBLIC_SOURCE_DISPLAY_LABELS[source], **checkbox_args):
+                if st.checkbox(
+                    source_display_labels(config.get("shade_source_taxonomy")).get(source, source),
+                    **checkbox_args,
+                ):
                     selected_sources.append(source)
         if st.button(
             str(config["submit_label"]),

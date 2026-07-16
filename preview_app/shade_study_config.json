@@ -39,10 +39,44 @@
       "sort_order": 4
     }
   ],
-  "data_taxonomy": [
+  "terminology": [
     {
       "term": "Waiting Area",
       "operational_definition": "The designated location where passengers would reasonably stand or sit while waiting to board the bus, including any bus stop pad, sidewalk immediately adjacent to the bus stop sign, or seating within a bus shelter. Grass, landscaping, roadway, bicycle lanes, and areas not reasonably intended for waiting are excluded."
+    }
+  ],
+  "shade_source_taxonomy": [
+    {
+      "code": "Natural",
+      "shade_source": "Natural",
+      "operational_definition": "Trees, palms, hedges, or other vegetation visibly shade the waiting area."
+    },
+    {
+      "code": "Purpose-built",
+      "shade_source": "Purpose-built",
+      "operational_definition": "A designated, purpose-built bus shelter, awning, canopy, overhang, or similar passenger shelter visibly shades the waiting area."
+    },
+    {
+      "code": "Incidental",
+      "shade_source": "Incidental",
+      "operational_definition": "A nearby building or other non-shelter built feature visibly shades the waiting area."
+    }
+  ],
+  "shade_coverage_taxonomy": [
+    {
+      "code": "No Shade",
+      "shade_coverage": "No Shade",
+      "operational_definition": "No shade visibly reaches the waiting area."
+    },
+    {
+      "code": "Limited Shade",
+      "shade_coverage": "Limited Shade",
+      "operational_definition": "Shade visibly covers part of the waiting area, but not most of it."
+    },
+    {
+      "code": "Significant Shade",
+      "shade_coverage": "Significant Shade",
+      "operational_definition": "Shade visibly covers most of the waiting area or seating area."
     }
   ],
   "methodology": {
@@ -102,7 +136,41 @@
       "show_results": true,
       "results_label": "Community result",
       "minimum_votes_for_result": 3,
-      "allow_vote_changes": true
+      "allow_vote_changes": true,
+      "shade_source_taxonomy": [
+        {
+          "code": "Natural",
+          "shade_source": "Natural",
+          "operational_definition": "Trees, palms, hedges, or other vegetation visibly shade the waiting area."
+        },
+        {
+          "code": "Purpose-built",
+          "shade_source": "Purpose-built",
+          "operational_definition": "A designated, purpose-built bus shelter, awning, canopy, overhang, or similar passenger shelter visibly shades the waiting area."
+        },
+        {
+          "code": "Incidental",
+          "shade_source": "Incidental",
+          "operational_definition": "A nearby building or other non-shelter built feature visibly shades the waiting area."
+        }
+      ],
+      "shade_coverage_taxonomy": [
+        {
+          "code": "No Shade",
+          "shade_coverage": "No Shade",
+          "operational_definition": "No shade visibly reaches the waiting area."
+        },
+        {
+          "code": "Limited Shade",
+          "shade_coverage": "Limited Shade",
+          "operational_definition": "Shade visibly covers part of the waiting area, but not most of it."
+        },
+        {
+          "code": "Significant Shade",
+          "shade_coverage": "Significant Shade",
+          "operational_definition": "Shade visibly covers most of the waiting area or seating area."
+        }
+      ]
     },
     "display_columns": [
       "stop_id",

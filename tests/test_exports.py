@@ -27,6 +27,23 @@ from shade_gis.deploy import (
 
 
 def test_export_csv_geojson_raw_labels_and_config(db_path, project, taxonomy, methodology, visualization, minimal_stops):
+    terminology = [
+        {"term": "Boarding Zone", "operational_definition": "Project-specific boarding location."}
+    ]
+    source_taxonomy = [
+        {"code": "Natural", "shade_source": "Vegetation", "operational_definition": "Custom natural definition."},
+        {"code": "Purpose-built", "shade_source": "Shelter", "operational_definition": "Custom built definition."},
+        {"code": "Incidental", "shade_source": "Nearby Structure", "operational_definition": "Custom incidental definition."},
+    ]
+    coverage_taxonomy = [
+        {"code": "No Shade", "shade_coverage": "Unshaded", "operational_definition": "Custom no-shade definition."},
+        {"code": "Limited Shade", "shade_coverage": "Partial Shade", "operational_definition": "Custom limited definition."},
+        {"code": "Significant Shade", "shade_coverage": "Mostly Shaded", "operational_definition": "Custom significant definition."},
+    ]
+    methodology["terminology"] = terminology
+    methodology["shade_source_taxonomy"] = source_taxonomy
+    methodology["shade_coverage_taxonomy"] = coverage_taxonomy
+    taxonomy[1]["description"] = "Custom limited definition."
     project["deployment"] = {
         "github_username": "private-owner-setting",
         "destination_repository": "private-repository-setting",
@@ -67,6 +84,14 @@ def test_export_csv_geojson_raw_labels_and_config(db_path, project, taxonomy, me
     assert "deployment" not in config["project"]
     assert config["study_id"] == project_id
     assert config["taxonomy"][0]["name"] == taxonomy[0]["name"]
+    assert config["terminology"] == terminology
+    assert config["shade_source_taxonomy"] == source_taxonomy
+    assert config["shade_coverage_taxonomy"] == coverage_taxonomy
+    assert config["taxonomy"][1]["description"] == "Custom limited definition."
+    assert config["visualization"]["voting"]["shade_source_taxonomy"] == source_taxonomy
+    assert "terminology" not in config["methodology"]
+    assert "shade_source_taxonomy" not in config["methodology"]
+    assert "shade_coverage_taxonomy" not in config["methodology"]
     assert config["import_log"][0]["rows"] == 2
 
     commit_message = "Publish July field review"
@@ -110,7 +135,10 @@ def test_export_csv_geojson_raw_labels_and_config(db_path, project, taxonomy, me
             "deploy_to_github.ps1"
         ).decode("utf-8")
         deployed_config = json.loads(bundle.read("shade_study_config.json"))
-        assert deployed_config["data_taxonomy"] == builder_app.DATA_TERM_TAXONOMY
+        assert deployed_config["terminology"] == terminology
+        assert deployed_config["shade_source_taxonomy"] == source_taxonomy
+        assert deployed_config["shade_coverage_taxonomy"] == coverage_taxonomy
+        assert "data_taxonomy" not in deployed_config
         assert deployed_config["visualization"]["voting"]["enabled"] is False
         assert deployed_config["visualization"]["voting"]["options"] == [
             "No Shade",

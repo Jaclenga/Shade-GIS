@@ -8,14 +8,21 @@ pre-release phase while the reusable platform stabilizes.
 ## [Unreleased]
 
 ### Added
-- Canonical `Waiting Area` data-taxonomy term and operational definition across builder labeling,
-  published methodology, documentation, and starter preview surfaces.
+- Editable project terminology, seeded with the `Waiting Area` operational definition and carried
+  through builder labeling, published methodology, exports, documentation, and starter previews.
+- Inline editors for Shade Source and Shade Coverage display labels and operational definitions,
+  with hidden stable category codes, per-taxonomy definition reset actions, and project-specific
+  wording propagated to labeling and voting.
 - Centralized Data Quality dashboard with record-level filters for duplicate stop IDs, missing
   coordinates, missing required fields, invalid geometries, orphaned images, and publication readiness.
 - Compact Export Files catalog with descriptions, record counts, generated sizes, data dates,
   per-row downloads, and a separate Dataset Provenance section.
 
 ### Changed
+- Redesigned the terminology and taxonomy workspace as a centered, research-oriented card layout
+  with lighter tables, roomier wrapped definitions, sentence-case headings, and compact inline actions.
+- Moved terminology and taxonomy editing from Data Overview to a dedicated Taxonomy page under
+  the Data menu.
 - Deploy is now a nontechnical publishing wizard with automatic repository and branch detection,
   one-click packaging and repository updates, four plain-language stages, website verification,
   success/update/unpublish actions, and the former ZIP/PowerShell workflow retained as an advanced fallback.

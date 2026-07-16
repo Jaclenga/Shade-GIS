@@ -128,11 +128,24 @@ the full dataset is never mounted as one browser table.
 
 ## Shade Taxonomies
 
-The core data taxonomy defines the unit used when assessing shade:
+The default terminology defines the unit used when assessing shade. Project editors can revise,
+add, or remove these terms directly from the Data page:
 
 | Term | Operational Definition |
 | --- | --- |
 | `Waiting Area` | The designated location where passengers would reasonably stand or sit while waiting to board the bus, including any bus stop pad, sidewalk immediately adjacent to the bus stop sign, or seating within a bus shelter. Grass, landscaping, roadway, bicycle lanes, and areas not reasonably intended for waiting are excluded. |
+
+Terminology rows are stored with the project's methodology settings and exported as the top-level
+`terminology` list in `shade_study_config.json`. Generated apps still accept the retired
+`data_taxonomy` key when loading an older configuration, but new exports use `terminology` only.
+
+The Taxonomy page under the Data menu lets project editors revise Shade Source and Shade Coverage
+display labels and operational definitions inline. Each editable row retains a hidden canonical `code` because stored
+labels, voting records, filters, and analytics depend on stable values. Project-facing coverage and
+source labels persist with methodology settings and export through `shade_coverage_taxonomy` and
+`shade_source_taxonomy`; coverage definitions also remain synchronized with `shade_taxonomy`.
+The **Reset definitions** action restores the original source or coverage definitions while
+preserving any project-specific display labels.
 
 The core source taxonomy is:
 
@@ -245,7 +258,7 @@ The `Preview` page exports:
 - Stops CSV.
 - Stops GeoJSON.
 - Raw labels CSV, when raw labels have been submitted.
-- Study configuration JSON containing project metadata, the `data_taxonomy` term definitions, shade taxonomy,
+- Study configuration JSON containing project metadata, the editable `terminology` definitions, shade taxonomy,
   methodology copy, visualization settings, and import log.
 
 The Exports tab presents these files in one compact catalog. Each row explains the file's purpose,
@@ -268,7 +281,7 @@ and the deployment service packages as its standalone `app.py`. The package incl
 - `public_voting.py` with the configured crowd interface and vote-store implementation.
 - `shade_study_stops.csv` with the active stop dataset and current priority scores.
 - `shade_study_raw_labels.csv` with raw label submissions, when labels have been collected.
-- `shade_study_config.json` with project metadata, data and shade taxonomies, methodology copy,
+- `shade_study_config.json` with project metadata, editable terminology, shade taxonomy, methodology copy,
   visualization settings, and import log.
 - `requirements.txt`, `.streamlit/config.toml`, generated `README.md`, `.gitignore`, and optional `deploy_to_github.ps1` helper.
 

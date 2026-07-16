@@ -1,11 +1,12 @@
 from builder_app import *
 from public_voting import (
     PUBLIC_COVERAGE_OPTIONS,
-    PUBLIC_SOURCE_DISPLAY_LABELS,
     PUBLIC_SOURCE_OPTIONS,
+    coverage_display_labels,
     coverage_taxonomy_help,
     normalize_voting_config,
     source_taxonomy_help,
+    source_display_labels,
 )
 
 
@@ -162,12 +163,18 @@ def render_voting_preview(
                 disabled=True,
                 key="voting_interface_preview_choice",
                 label_visibility="collapsed",
+                format_func=lambda option: coverage_display_labels(
+                    voting.get("shade_coverage_taxonomy")
+                ).get(option, option),
             )
             st.divider()
-            st.markdown(f"**{voting['source_question']}**", help=source_taxonomy_help())
+            st.markdown(
+                f"**{voting['source_question']}**",
+                help=source_taxonomy_help(voting.get("shade_source_taxonomy")),
+            )
             for source in PUBLIC_SOURCE_OPTIONS:
                 st.checkbox(
-                    PUBLIC_SOURCE_DISPLAY_LABELS[source],
+                    source_display_labels(voting.get("shade_source_taxonomy")).get(source, source),
                     disabled=True,
                     key=f"voting_interface_preview_source_{source.lower()}",
                 )
@@ -193,11 +200,20 @@ def render_voting_page() -> None:
 
     visualization = st.session_state["visualization"]
     taxonomy = st.session_state["taxonomy"]
+    source_taxonomy = normalize_source_taxonomy(
+        st.session_state.get("methodology", {}).get("shade_source_taxonomy")
+    )
+    coverage_taxonomy = normalize_coverage_display_taxonomy(
+        st.session_state.get("methodology", {}).get("shade_coverage_taxonomy"),
+        taxonomy,
+    )
     controls, preview = st.columns([0.95, 1.05], gap="large")
 
     with controls:
         st.subheader("Voting Settings")
         voting = render_voting_controls(visualization, taxonomy)
+        voting["shade_source_taxonomy"] = source_taxonomy
+        voting["shade_coverage_taxonomy"] = coverage_taxonomy
     with preview:
         render_voting_preview(voting, taxonomy)
 

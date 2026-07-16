@@ -1,6 +1,10 @@
 from builder_app import *
 from shade_gis.data_quality import DATA_QUALITY_ISSUES, ISSUE_BY_KEY, evaluate_data_quality
-from shade_gis.shade_dimensions import normalize_shade_coverage
+from shade_gis.shade_dimensions import (
+    normalize_shade_coverage,
+    normalize_source_taxonomy,
+    normalize_terminology,
+)
 
 
 DATASET_REVIEWED_STATUSES = {"Crowd Reviewed", "Expert Reviewed", "Accepted", "Archived"}
@@ -48,6 +52,226 @@ def render_dataframe_table(frame: pd.DataFrame, column_labels: dict[str, str] | 
         "</div>",
         unsafe_allow_html=True,
     )
+
+
+def taxonomy_edit_mode_key(section: str) -> str:
+    project_id = st.session_state.get("active_project_id", "draft")
+    return f"taxonomy_edit_mode:{project_id}:{section}"
+
+
+def toggle_taxonomy_edit_mode(mode_key: str) -> None:
+    st.session_state[mode_key] = not bool(st.session_state.get(mode_key, False))
+
+
+def taxonomy_editor_revision_key(section: str) -> str:
+    project_id = st.session_state.get("active_project_id", "draft")
+    return f"taxonomy_editor_revision:{project_id}:{section}"
+
+
+def taxonomy_editor_key(section: str) -> str:
+    project_id = st.session_state.get("active_project_id", "draft")
+    base_key = f"{section}_taxonomy_editor:{project_id}"
+    revision = int(st.session_state.get(taxonomy_editor_revision_key(section), 0) or 0)
+    return f"{base_key}:{revision}" if revision else base_key
+
+
+def bump_taxonomy_editor_revision(section: str) -> None:
+    revision_key = taxonomy_editor_revision_key(section)
+    st.session_state[revision_key] = int(st.session_state.get(revision_key, 0) or 0) + 1
+
+
+def reset_shade_source_definitions(methodology: dict[str, Any]) -> None:
+    default_definitions = {
+        item["shade_source"]: item["operational_definition"]
+        for item in SHADE_SOURCE_TAXONOMY
+    }
+    source_taxonomy = normalize_source_taxonomy(methodology.get("shade_source_taxonomy"))
+    for item in source_taxonomy:
+        item["operational_definition"] = default_definitions[item["code"]]
+    methodology["shade_source_taxonomy"] = source_taxonomy
+    bump_taxonomy_editor_revision("shade_source")
+
+
+def reset_shade_coverage_definitions(
+    methodology: dict[str, Any],
+    taxonomy: list[dict[str, Any]],
+) -> None:
+    default_definitions = {
+        item["shade_coverage"]: item["operational_definition"]
+        for item in SHADE_COVERAGE_TAXONOMY
+    }
+    coverage_taxonomy = normalize_coverage_display_taxonomy(
+        methodology.get("shade_coverage_taxonomy"),
+        taxonomy,
+    )
+    for item in coverage_taxonomy:
+        item["operational_definition"] = default_definitions[item["code"]]
+    methodology["shade_coverage_taxonomy"] = coverage_taxonomy
+
+    canonical_taxonomy = normalize_coverage_taxonomy(taxonomy)
+    for item in canonical_taxonomy:
+        if item["name"] in default_definitions:
+            item["description"] = default_definitions[item["name"]]
+    taxonomy[:] = normalize_coverage_taxonomy(canonical_taxonomy)
+    bump_taxonomy_editor_revision("shade_coverage")
+
+
+def render_taxonomy_section_header(
+    title: str,
+    section: str,
+    help_text: str,
+    *,
+    reset_callback: Any | None = None,
+    reset_args: tuple[Any, ...] = (),
+) -> bool:
+    mode_key = taxonomy_edit_mode_key(section)
+    editing = bool(st.session_state.get(mode_key, False))
+    if editing and reset_callback is not None:
+        title_column, reset_column, action_column = st.columns(
+            [0.68, 0.20, 0.12],
+            vertical_alignment="center",
+        )
+    else:
+        title_column, action_column = st.columns([0.88, 0.12], vertical_alignment="center")
+        reset_column = None
+    with title_column:
+        st.subheader(title, help=help_text)
+    if reset_column is not None:
+        with reset_column:
+            st.button(
+                "Reset definitions",
+                type="secondary",
+                width="stretch",
+                key=f"taxonomy_reset_{section}_{st.session_state.get('active_project_id', 'draft')}",
+                help="Restore the original operational definitions while keeping your display labels.",
+                on_click=reset_callback,
+                args=reset_args,
+            )
+    with action_column:
+        st.button(
+            "Done" if editing else "Edit",
+            type="secondary",
+            width="stretch",
+            key=f"taxonomy_toggle_{section}_{st.session_state.get('active_project_id', 'draft')}",
+            on_click=toggle_taxonomy_edit_mode,
+            args=(mode_key,),
+        )
+    return editing
+
+
+def terminology_table_frame(methodology: dict[str, Any]) -> pd.DataFrame:
+    return pd.DataFrame(
+        normalize_terminology(methodology.get("terminology")),
+        columns=["term", "operational_definition"],
+    )
+
+
+def source_taxonomy_table_frame(methodology: dict[str, Any]) -> pd.DataFrame:
+    return pd.DataFrame(
+        normalize_source_taxonomy(methodology.get("shade_source_taxonomy")),
+        columns=["code", "shade_source", "operational_definition"],
+    )
+
+
+def coverage_taxonomy_table_frame(
+    methodology: dict[str, Any],
+    taxonomy: list[dict[str, Any]],
+) -> pd.DataFrame:
+    return pd.DataFrame(
+        normalize_coverage_display_taxonomy(
+            methodology.get("shade_coverage_taxonomy"),
+            taxonomy,
+        ),
+        columns=["code", "shade_coverage", "operational_definition"],
+    )
+
+
+def render_terminology_editor(methodology: dict[str, Any]) -> list[dict[str, str]]:
+    frame = terminology_table_frame(methodology)
+    edited = st.data_editor(
+        frame,
+        column_config={
+            "term": st.column_config.TextColumn("Term", required=True, width="small"),
+            "operational_definition": st.column_config.TextColumn(
+                "Operational definition",
+                width="large",
+            ),
+        },
+        num_rows="dynamic",
+        hide_index=True,
+        width="stretch",
+        height="auto",
+        row_height=44,
+        key=f"terminology_editor:{st.session_state.get('active_project_id', 'draft')}",
+    )
+    normalized = normalize_terminology(edited.to_dict(orient="records"))
+    methodology["terminology"] = normalized
+    return normalized
+
+
+def render_shade_source_taxonomy_editor(methodology: dict[str, Any]) -> list[dict[str, str]]:
+    frame = source_taxonomy_table_frame(methodology)
+    edited = st.data_editor(
+        frame,
+        column_config={
+            "shade_source": st.column_config.TextColumn("Shade source", width="small"),
+            "operational_definition": st.column_config.TextColumn(
+                "Operational definition",
+                required=True,
+                width="large",
+            ),
+        },
+        column_order=["shade_source", "operational_definition"],
+        num_rows="fixed",
+        hide_index=True,
+        width="stretch",
+        height="auto",
+        row_height=44,
+        key=taxonomy_editor_key("shade_source"),
+    )
+    normalized = normalize_source_taxonomy(edited.to_dict(orient="records"))
+    methodology["shade_source_taxonomy"] = normalized
+    return normalized
+
+
+def render_shade_coverage_taxonomy_editor(
+    methodology: dict[str, Any],
+    taxonomy: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    normalized_taxonomy = normalize_coverage_taxonomy(taxonomy)
+    frame = coverage_taxonomy_table_frame(methodology, normalized_taxonomy)
+    edited = st.data_editor(
+        frame,
+        column_config={
+            "shade_coverage": st.column_config.TextColumn("Shade coverage", width="small"),
+            "operational_definition": st.column_config.TextColumn(
+                "Operational definition",
+                required=True,
+                width="large",
+            ),
+        },
+        column_order=["shade_coverage", "operational_definition"],
+        num_rows="fixed",
+        hide_index=True,
+        width="stretch",
+        height="auto",
+        row_height=44,
+        key=taxonomy_editor_key("shade_coverage"),
+    )
+    display_taxonomy = normalize_coverage_display_taxonomy(
+        edited.to_dict(orient="records"),
+        normalized_taxonomy,
+    )
+    methodology["shade_coverage_taxonomy"] = display_taxonomy
+    definitions = {
+        item["code"]: item["operational_definition"]
+        for item in display_taxonomy
+    }
+    for item in normalized_taxonomy:
+        if item["name"] in definitions and definitions[item["name"]]:
+            item["description"] = definitions[item["name"]]
+    taxonomy[:] = normalize_coverage_taxonomy(normalized_taxonomy)
+    return taxonomy
 
 
 def dataset_status_table(
@@ -448,6 +672,7 @@ def render_data_page() -> None:
     render_project_storage_controls()
     project = st.session_state["project"]
     taxonomy = st.session_state["taxonomy"]
+    methodology = st.session_state["methodology"]
 
     left, right = st.columns([1, 1])
     with left:
@@ -649,24 +874,155 @@ def render_data_page() -> None:
     images = list_images(project_id) if project_id else pd.DataFrame()
     render_data_quality_dashboard(st.session_state["stops"], images)
 
-    st.subheader("Data Taxonomy")
-    render_dataframe_table(
-        pd.DataFrame(DATA_TERM_TAXONOMY),
-        {"term": "Term", "operational_definition": "Operational Definition"},
+    st.markdown(
+        """
+        <style>
+        .st-key-taxonomy_workspace {
+            gap: 1.75rem;
+            max-width: 1120px;
+            margin: 2rem auto 2.25rem;
+        }
+        .st-key-taxonomy_card_terminology,
+        .st-key-taxonomy_card_source,
+        .st-key-taxonomy_card_coverage {
+            background: #fbfcfd;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.025);
+            gap: 1rem;
+            padding: 1.35rem 1.5rem 1.5rem;
+        }
+        .st-key-taxonomy_card_terminology h3,
+        .st-key-taxonomy_card_source h3,
+        .st-key-taxonomy_card_coverage h3 {
+            color: #172033;
+            font-size: 1.3rem;
+            font-weight: 700;
+            letter-spacing: -0.015em;
+            line-height: 1.3;
+            margin: 0;
+        }
+        .st-key-taxonomy_card_terminology h3::before,
+        .st-key-taxonomy_card_source h3::before,
+        .st-key-taxonomy_card_coverage h3::before {
+            color: #64748b;
+            display: inline-block;
+            font-family: "Material Symbols Rounded";
+            font-size: 1.2rem;
+            font-weight: 400;
+            margin-right: 0.25rem;
+            vertical-align: -0.13em;
+        }
+        .st-key-taxonomy_card_terminology h3::before { content: "menu_book"; }
+        .st-key-taxonomy_card_source h3::before { content: "account_tree"; }
+        .st-key-taxonomy_card_coverage h3::before { content: "pie_chart"; }
+        div[class*="st-key-taxonomy_toggle_"] button,
+        div[class*="st-key-taxonomy_reset_"] button {
+            background: transparent;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            box-shadow: none;
+            color: #334155;
+            font-size: 0.875rem;
+            font-weight: 550;
+            min-height: 2.25rem;
+            padding: 0.35rem 0.75rem;
+            transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+        }
+        div[class*="st-key-taxonomy_toggle_"] button:hover,
+        div[class*="st-key-taxonomy_reset_"] button:hover {
+            background: #f1f5f9;
+            border-color: #94a3b8;
+            color: #0f172a;
+        }
+        div[class*="st-key-taxonomy_toggle_"] button:focus-visible,
+        div[class*="st-key-taxonomy_reset_"] button:focus-visible {
+            border-color: #64748b;
+            box-shadow: 0 0 0 3px rgba(100, 116, 139, 0.16);
+            outline: none;
+        }
+        .st-key-terminology_table [data-testid="stDataFrame"],
+        .st-key-shade_source_taxonomy_table [data-testid="stDataFrame"],
+        .st-key-shade_coverage_taxonomy_table [data-testid="stDataFrame"] {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .st-key-terminology_table [data-testid="stDataFrame"] > div,
+        .st-key-shade_source_taxonomy_table [data-testid="stDataFrame"] > div,
+        .st-key-shade_coverage_taxonomy_table [data-testid="stDataFrame"] > div {
+            border-radius: 10px;
+        }
+        .st-key-taxonomy_workspace table.data-page-table {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-collapse: separate;
+            border-radius: 10px;
+            border-spacing: 0;
+            color: #334155;
+            overflow: hidden;
+            table-layout: fixed;
+            width: 100%;
+        }
+        .st-key-taxonomy_workspace table.data-page-table th,
+        .st-key-taxonomy_workspace table.data-page-table td {
+            border: 0;
+            text-align: left;
+            vertical-align: middle;
+            white-space: normal;
+        }
+        .st-key-taxonomy_workspace table.data-page-table th {
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+            color: #64748b;
+            font-size: 0.84rem;
+            font-weight: 600;
+            line-height: 1.35;
+            padding: 0.78rem 1.05rem;
+        }
+        .st-key-taxonomy_workspace table.data-page-table td {
+            background: #ffffff;
+            border-bottom: 1px solid #edf1f5;
+            font-size: 0.96rem;
+            font-weight: 400;
+            line-height: 1.62;
+            overflow-wrap: anywhere;
+            padding: 1rem 1.05rem;
+        }
+        .st-key-taxonomy_workspace table.data-page-table tbody tr:last-child td {
+            border-bottom: 0;
+        }
+        .st-key-taxonomy_workspace table.data-page-table th:first-child,
+        .st-key-taxonomy_workspace table.data-page-table td:first-child {
+            color: #1e293b;
+            font-weight: 500;
+            width: 30%;
+        }
+        .st-key-taxonomy_workspace table.data-page-table th:last-child,
+        .st-key-taxonomy_workspace table.data-page-table td:last-child {
+            width: 70%;
+        }
+        @media (max-width: 760px) {
+            .st-key-taxonomy_workspace {
+                margin-top: 1.25rem;
+            }
+            .st-key-taxonomy_card_terminology,
+            .st-key-taxonomy_card_source,
+            .st-key-taxonomy_card_coverage {
+                border-radius: 12px;
+                padding: 1rem;
+            }
+            .st-key-taxonomy_workspace table.data-page-table th,
+            .st-key-taxonomy_workspace table.data-page-table td {
+                padding-left: 0.8rem;
+                padding-right: 0.8rem;
+            }
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
     )
-
-    st.subheader("Shade Source Taxonomy")
-    render_dataframe_table(
-        pd.DataFrame(SHADE_SOURCE_TAXONOMY),
-        {"shade_source": "Shade Source", "operational_definition": "Operational Definition"},
-    )
-
-    st.subheader("Shade Coverage Taxonomy")
-    render_dataframe_table(
-        pd.DataFrame(SHADE_COVERAGE_TAXONOMY),
-        {"shade_coverage": "Shade Coverage", "operational_definition": "Operational Definition"},
-    )
-
     labels = list_shade_labels(project_id) if project_id else pd.DataFrame()
     review_history = list_review_history(project_id) if project_id else pd.DataFrame()
     render_dataset_status(st.session_state["stops"], labels, review_history)

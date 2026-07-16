@@ -21,6 +21,27 @@ LABEL_WORKFLOW_OPTIONS = ["Review labels", "Submit raw label"]
 CONFIDENCE_LEVEL_SCORES = {"Low": 0.35, "Medium": 0.7, "High": 1.0}
 
 
+def project_source_display_labels() -> dict[str, str]:
+    methodology = st.session_state.get("methodology", {})
+    return {
+        item["code"]: item["shade_source"]
+        for item in normalize_source_taxonomy(methodology.get("shade_source_taxonomy"))
+    }
+
+
+def project_coverage_display_labels(
+    taxonomy: list[dict[str, Any]],
+) -> dict[str, str]:
+    methodology = st.session_state.get("methodology", {})
+    return {
+        item["code"]: item["shade_coverage"]
+        for item in normalize_coverage_display_taxonomy(
+            methodology.get("shade_coverage_taxonomy"),
+            taxonomy,
+        )
+    }
+
+
 def confidence_level_from_score(score: Any) -> str:
     try:
         numeric_score = float(score)
@@ -31,7 +52,12 @@ def confidence_level_from_score(score: Any) -> str:
     return min(CONFIDENCE_LEVEL_SCORES, key=lambda label: abs(CONFIDENCE_LEVEL_SCORES[label] - numeric_score))
 
 
-def label_code_definition_tables(taxonomy: list[dict[str, Any]]) -> dict[str, pd.DataFrame]:
+def label_code_definition_tables(
+    taxonomy: list[dict[str, Any]],
+    terminology: list[dict[str, Any]] | None = None,
+    source_taxonomy: list[dict[str, Any]] | None = None,
+    coverage_taxonomy: list[dict[str, Any]] | None = None,
+) -> dict[str, pd.DataFrame]:
     active_taxonomy = taxonomy or DEFAULT_TAXONOMY
     terms = pd.DataFrame(
         [
@@ -39,7 +65,7 @@ def label_code_definition_tables(taxonomy: list[dict[str, Any]]) -> dict[str, pd
                 "Code": item.get("term", ""),
                 "Definition": item.get("operational_definition", ""),
             }
-            for item in DATA_TERM_TAXONOMY
+            for item in normalize_terminology(terminology)
         ]
     )
     coverage = pd.DataFrame(
@@ -48,7 +74,7 @@ def label_code_definition_tables(taxonomy: list[dict[str, Any]]) -> dict[str, pd
                 "Code": item.get("shade_coverage", ""),
                 "Definition": item.get("operational_definition", ""),
             }
-            for item in SHADE_COVERAGE_TAXONOMY
+            for item in normalize_coverage_display_taxonomy(coverage_taxonomy, active_taxonomy)
         ]
     )
     sources = pd.DataFrame(
@@ -57,7 +83,7 @@ def label_code_definition_tables(taxonomy: list[dict[str, Any]]) -> dict[str, pd
                 "Code": item.get("shade_source", ""),
                 "Definition": item.get("operational_definition", ""),
             }
-            for item in SHADE_SOURCE_TAXONOMY
+            for item in normalize_source_taxonomy(source_taxonomy)
         ]
     )
     map_label_rows = [
@@ -106,7 +132,7 @@ def label_code_definition_tables(taxonomy: list[dict[str, Any]]) -> dict[str, pd
         ]
     )
     return {
-        "Data terms": terms,
+        "Terminology": terms,
         "Stored fields": storage_fields,
         "Coverage codes": coverage,
         "Source codes": sources,
@@ -117,7 +143,16 @@ def label_code_definition_tables(taxonomy: list[dict[str, Any]]) -> dict[str, pd
 
 def render_label_code_helper(taxonomy: list[dict[str, Any]], title: str = "Label/code definitions") -> None:
     with st.expander(title, expanded=False):
-        for section, table in label_code_definition_tables(taxonomy).items():
+        methodology = st.session_state.get("methodology", {})
+        terminology = methodology.get("terminology")
+        source_taxonomy = methodology.get("shade_source_taxonomy")
+        coverage_taxonomy = methodology.get("shade_coverage_taxonomy")
+        for section, table in label_code_definition_tables(
+            taxonomy,
+            terminology,
+            source_taxonomy,
+            coverage_taxonomy,
+        ).items():
             st.markdown(f"##### {section}")
             st.dataframe(table, width="stretch", hide_index=True)
 
@@ -273,6 +308,8 @@ def render_admin_review_decision(
 ) -> None:
     previous = stop_review_snapshot(selected_stop)
     coverage_options = SHADE_COVERAGE_OPTIONS
+    coverage_labels = project_coverage_display_labels(taxonomy)
+    source_labels = project_source_display_labels()
     current_coverage = previous["shade_coverage"]
     coverage_index = coverage_options.index(current_coverage) if current_coverage in coverage_options else len(coverage_options) - 1
     current_sources = [source for source in normalized_shade_sources(previous["shade_sources"]) if source in SHADE_SOURCE_OPTIONS]
@@ -317,7 +354,13 @@ def render_admin_review_decision(
 
         lower_cols = st.columns([1, 1])
         with lower_cols[0]:
-            final_coverage = st.selectbox("Final shade coverage", coverage_options, index=coverage_index, key="review_final_coverage")
+            final_coverage = st.selectbox(
+                "Final shade coverage",
+                coverage_options,
+                index=coverage_index,
+                key="review_final_coverage",
+                format_func=lambda option: coverage_labels.get(option, option),
+            )
         with lower_cols[1]:
             st.markdown("Final shade source(s)")
             final_sources = []
@@ -325,7 +368,7 @@ def render_admin_review_decision(
             for index, source in enumerate(SHADE_SOURCE_OPTIONS):
                 with final_source_cols[index]:
                     if st.checkbox(
-                        source,
+                        source_labels.get(source, source),
                         value=source in current_sources and final_coverage != "No Shade",
                         key=f"review_final_source_{source.lower()}",
                         disabled=final_coverage == "No Shade",
@@ -784,6 +827,7 @@ def render_raw_label_collection(
     render_shared_label_reference_map(stops, selected_stop_id, taxonomy)
 
     coverage_default, existing_sources = raw_label_form_defaults(selected_stop)
+    source_labels = project_source_display_labels()
     st.subheader("Submit Raw Shade Label")
     render_label_code_helper(taxonomy, "Raw label/code definitions")
     manual_source_index = LABEL_SOURCE_OPTIONS.index("Manual review") if "Manual review" in LABEL_SOURCE_OPTIONS else 0
@@ -791,12 +835,14 @@ def render_raw_label_collection(
 
     st.markdown("##### Label")
     coverage_labels = SHADE_COVERAGE_OPTIONS
+    coverage_display = project_coverage_display_labels(taxonomy)
     coverage_index = coverage_labels.index(coverage_default) if coverage_default in coverage_labels else 0
     shade_coverage = st.selectbox(
         "Coverage",
         coverage_labels,
         index=coverage_index,
         key=raw_label_widget_key(selected_stop_id, "coverage"),
+        format_func=lambda option: coverage_display.get(option, option),
     )
 
     selected_sources = []
@@ -805,7 +851,7 @@ def render_raw_label_collection(
     for index, source in enumerate(SHADE_SOURCE_OPTIONS):
         with source_cols[index]:
             if st.checkbox(
-                source,
+                source_labels.get(source, source),
                 value=source in existing_sources and shade_coverage != "No Shade",
                 key=raw_label_widget_key(selected_stop_id, f"source:{source}"),
                 disabled=shade_coverage == "No Shade",
