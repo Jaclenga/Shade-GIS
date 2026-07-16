@@ -835,14 +835,12 @@ def render_raw_label_collection(
 
     st.markdown("##### Label")
     coverage_labels = SHADE_COVERAGE_OPTIONS
-    coverage_display = project_coverage_display_labels(taxonomy)
     coverage_index = coverage_labels.index(coverage_default) if coverage_default in coverage_labels else 0
     shade_coverage = st.selectbox(
         "Coverage",
         coverage_labels,
         index=coverage_index,
         key=raw_label_widget_key(selected_stop_id, "coverage"),
-        format_func=lambda option: coverage_display.get(option, option),
     )
 
     selected_sources = []
