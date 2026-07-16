@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import inspect
+
 import pandas as pd
 
 from platform_store import (
@@ -736,3 +738,11 @@ def test_raw_label_form_state_is_scoped_to_each_stop():
     assert labels_page.raw_label_widget_key("first-stop", "coverage") != labels_page.raw_label_widget_key(
         "second-stop", "coverage"
     )
+
+
+def test_raw_label_coverage_and_source_controls_rerun_outside_form():
+    source = inspect.getsource(labels_page.render_raw_label_collection)
+
+    assert "st.form(" not in source
+    assert "st.form_submit_button" not in source
+    assert "submitted = st.button(" in source

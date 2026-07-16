@@ -518,7 +518,27 @@ def test_builder_navigation_pages_render(playwright_api, streamlit_server: Strea
                         "button", name=nav_label, exact=True
                     )
                 wait_for_streamlit_idle(playwright_api, page, streamlit_server)
-                if nav_label == "Visuals":
+                if nav_label == "Labels":
+                    page.get_by_text("Submit raw label", exact=True).click(timeout=30_000)
+                    wait_for_streamlit_idle(playwright_api, page, streamlit_server)
+
+                    coverage_control = page.get_by_test_id("stSelectbox").filter(has_text="Coverage")
+                    coverage_control.get_by_role("combobox").click()
+                    page.get_by_role("option", name="No Shade", exact=True).click()
+                    wait_for_streamlit_idle(playwright_api, page, streamlit_server)
+                    natural_source = page.get_by_test_id("stCheckbox").filter(
+                        has_text="Natural"
+                    ).get_by_role("checkbox")
+                    playwright_api.expect(natural_source).to_be_disabled(timeout=30_000)
+
+                    coverage_control.get_by_role("combobox").click()
+                    page.get_by_role("option", name="Limited Shade", exact=True).click()
+                    wait_for_streamlit_idle(playwright_api, page, streamlit_server)
+                    natural_source = page.get_by_test_id("stCheckbox").filter(
+                        has_text="Natural"
+                    ).get_by_role("checkbox")
+                    playwright_api.expect(natural_source).to_be_enabled(timeout=30_000)
+                elif nav_label == "Visuals":
                     marker_shape_control = page.get_by_test_id("stSelectbox").filter(
                         has_text="Marker shape"
                     )
