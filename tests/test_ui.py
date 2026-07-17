@@ -144,6 +144,33 @@ def reconnect_streamlit_page(page, streamlit_server: StreamlitServer, attempts: 
     raise RuntimeError(f"Could not reconnect to the Streamlit test server: {last_error}") from last_error
 
 
+def choose_streamlit_selectbox_option(
+    playwright_api,
+    page,
+    selectbox,
+    option_name: str,
+    attempts: int = 2,
+) -> None:
+    """Choose an option even if a late Streamlit rerun closes the popup once."""
+    last_error: Exception | None = None
+    for attempt in range(attempts):
+        combobox = selectbox.get_by_role("combobox")
+        playwright_api.expect(combobox).to_be_enabled(timeout=30_000)
+        combobox.click(timeout=30_000)
+        option = page.get_by_role("option", name=option_name, exact=True)
+        try:
+            option.click(timeout=15_000)
+            return
+        except Exception as error:
+            last_error = error
+            if attempt + 1 < attempts:
+                page.keyboard.press("Escape")
+                page.wait_for_timeout(500)
+
+    assert last_error is not None
+    raise last_error
+
+
 @pytest.fixture
 def playwright_api():
     return pytest.importorskip("playwright.sync_api")
@@ -568,16 +595,24 @@ def test_builder_navigation_pages_render(playwright_api, streamlit_server: Strea
                     wait_for_streamlit_idle(playwright_api, page, streamlit_server)
 
                     coverage_control = page.get_by_test_id("stSelectbox").filter(has_text="Coverage")
-                    coverage_control.get_by_role("combobox").click()
-                    page.get_by_role("option", name="No Shade", exact=True).click()
+                    choose_streamlit_selectbox_option(
+                        playwright_api,
+                        page,
+                        coverage_control,
+                        "No Shade",
+                    )
                     wait_for_streamlit_idle(playwright_api, page, streamlit_server)
                     natural_source = page.get_by_test_id("stCheckbox").filter(
                         has_text="Natural"
                     ).get_by_role("checkbox")
                     playwright_api.expect(natural_source).to_be_disabled(timeout=30_000)
 
-                    coverage_control.get_by_role("combobox").click()
-                    page.get_by_role("option", name="Limited Shade", exact=True).click()
+                    choose_streamlit_selectbox_option(
+                        playwright_api,
+                        page,
+                        coverage_control,
+                        "Limited Shade",
+                    )
                     wait_for_streamlit_idle(playwright_api, page, streamlit_server)
                     natural_source = page.get_by_test_id("stCheckbox").filter(
                         has_text="Natural"
